@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/zuleemamalya/Hope-Found-PCR-System/rubric.schema.json",
+  "title": "PCR Master Rubric Import",
+  "description": "Schema for Rubric Manager > Import JSON in index.html. Either a bare array of items, or an object with a 'rubric' array (the shape produced by Export, so exports round-trip). Import REPLACES the entire stored rubric; existing compliance ratings re-attach by item id.",
+  "oneOf": [
+    { "$ref": "#/$defs/itemArray" },
+    {
+      "type": "object",
+      "required": ["rubric"],
+      "properties": { "rubric": { "$ref": "#/$defs/itemArray" } }
+    }
+  ],
+  "$defs": {
+    "itemArray": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/item" }
+    },
+    "item": {
+      "type": "object",
+      "required": ["id", "serviceLine", "questionText", "weight", "type"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Official indicator identifier (e.g. 'CQ.A.2'), unique across the file. Compliance ratings attach by this id, and gateParent references it."
+        },
+        "serviceLine": {
+          "type": "string",
+          "enum": ["ihs", "hh", "sl", "ids", "comp"],
+          "description": "ihs=In-Home Supports, hh=Host Home, sl=Supported Living, ids=Individualized Day Supports, comp=Companion. An indicator used by several service lines appears once per line with a distinct id."
+        },
+        "domain": {
+          "type": "string",
+          "default": "General",
+          "description": "Outcome/domain grouping; indicators render grouped under it in file order."
+        },
+        "weight": {
+          "type": "number",
+          "enum": [0, 3, 5, 10],
+          "description": "0 for GATE and QI items; 5 = critical indicator (feeds the critical score); 3 and 10 are standard/high-value QA weights."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["QA", "QI", "GATE"],
+          "description": "QA counts toward certification scores; QI is an unweighted quality-improvement measure (Satisfaction-domain QI items feed the Excellent-tier satisfaction check); GATE is a Yes/No applicability control."
+        },
+        "alert": {
+          "type": "boolean",
+          "default": false,
+          "description": "true: scoring this Not Met overrides the tier display and triggers the mandatory 30-day Follow-Up PCR banner."
+        },
+        "gateParent": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "id of the controlling GATE item (same service line, present in this file), or null. Gate answered No forces this item to N/A, excluded from scoring, controls disabled. Single-level only: a GATE item must have gateParent null — model nested gates as sibling gates with their own flagKey."
+        },
+        "flagKey": {
+          "type": ["string", "null"],
+          "enum": ["hasBSP", "hasRestrictiveComponents", "takesMedications", null],
+          "default": null,
+          "description": "GATE items only: the client attribute flag that pre-answers this gate (flag true = Yes, false = No). QA can override per review. Null on non-gate items."
+        },
+        "questionText": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Full official indicator/question text."
+        },
+        "intentText": {
+          "type": "string",
+          "default": "",
+          "description": "Interpretive guide — what the surveyor actually looks for. Shown inline under 'Show what the surveyor looks for'."
+        },
+        "appliesTo": {
+          "default": "all",
+          "description": "\"all\", or an array of living arrangements the indicator applies to. Entries must exactly match the configured strings.",
+          "oneOf": [
+            { "const": "all" },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": ["Family/Own Home", "Host Home", "Supported Living Residence", "Independent Living"]
+              }
+            }
+          ]
+        },
+        "hcbsSettings": {
+          "type": "boolean",
+          "default": false,
+          "description": "true marks an HCBS Settings indicator: 100% of rated HCBS indicators must be Met for the Excellent tier."
+        },
+        "effectiveDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "YYYY-MM-DD. Defaults to the import date if omitted."
+        },
+        "active": {
+          "type": "boolean",
+          "default": true,
+          "description": "false = retired: kept in history and the Rubric Manager, excluded from reviews and scoring. Never hard-delete retired items — send them with active:false."
+        }
+      }
+    }
+  }
+}

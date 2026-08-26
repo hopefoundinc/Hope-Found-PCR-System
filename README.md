@@ -71,7 +71,11 @@ full JSON backup export/import.
 ## Replacing the starter rubric with the official one
 
 The app ships with a clearly-labeled representative starter rubric. To load the official
-Qlarant-extracted indicators: **Rubric Manager → Import JSON** with an array of items shaped like:
+Qlarant-extracted indicators: **Rubric Manager → Import JSON**. The formal contract is
+[`rubric.schema.json`](rubric.schema.json) (JSON Schema draft 2020-12) — validate your file with
+`npx ajv-cli validate --spec=draft2020 -s rubric.schema.json -d your-rubric.json` before importing.
+The import accepts a bare array of items, or the `{ "rubric": [...] }` object that Export produces.
+Each item looks like:
 
 ```json
 {
@@ -84,10 +88,15 @@ Qlarant-extracted indicators: **Rubric Manager → Import JSON** with an array o
 }
 ```
 
-`type` is `QA` (scored), `QI` (unweighted quality measure), or `GATE` (Yes/No applicability
-control). `weight` is 0, 3, 5 (critical), or 10. `serviceLine` is one of `ihs`, `hh`, `sl`, `ids`,
-`comp` (or `org`). `appliesTo` is `"all"` or an array of living arrangements. Existing ratings stay
-attached by indicator ID across imports.
+Required fields: `id`, `serviceLine`, `questionText`, `weight`, `type` — everything else defaults
+(see the schema for defaults and enums). `type` is `QA` (scored), `QI` (unweighted quality
+measure), or `GATE` (Yes/No applicability control). `weight` is 0, 3, 5 (critical), or 10.
+`serviceLine` is one of `ihs`, `hh`, `sl`, `ids`, `comp`. `appliesTo` is `"all"` or an array of
+living arrangements matching the configured strings exactly. Gates are single-level: a GATE item's
+own `gateParent` must be null — model a nested gate (e.g. restrictive components under BSP) as a
+sibling gate with its own `flagKey`. Import replaces the whole rubric, so include retired items
+with `"active": false` rather than omitting them; existing ratings stay attached by indicator ID
+across imports.
 
 ## Onboarding another agency (resale)
 
