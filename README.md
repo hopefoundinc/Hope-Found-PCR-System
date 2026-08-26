@@ -68,10 +68,13 @@ The app adapts to its runtime, in order of preference:
 Data is keyed compactly (one key per client bundling all their compliance records). Settings has a
 full JSON backup export/import.
 
-## Replacing the starter rubric with the official one
+## The rubric
 
-The app ships with a clearly-labeled representative starter rubric. To load the official
-Qlarant-extracted indicators: **Rubric Manager → Import JSON**. The formal contract is
+The app ships **pre-loaded with the official Qlarant-extracted rubric**
+([`hopefound_pcr_rubric.json`](hopefound_pcr_rubric.json), 465 indicators, effective 2022-11-07
+across all five service lines — Companion included; no version dates are hardcoded anywhere, the
+`effectiveDate` field on each item is the only source). When criteria change next audit cycle:
+**Rubric Manager → Import JSON** with the new set — no rebuild. The formal contract is
 [`rubric.schema.json`](rubric.schema.json) (JSON Schema draft 2020-12) — validate your file with
 `npx ajv-cli validate --spec=draft2020 -s rubric.schema.json -d your-rubric.json` before importing.
 The import accepts a bare array of items, or the `{ "rubric": [...] }` object that Export produces.
@@ -90,7 +93,7 @@ Each item looks like:
 
 Required fields: `id`, `serviceLine`, `questionText`, `weight`, `type` — everything else defaults
 (see the schema for defaults and enums). `type` is `QA` (scored), `QI` (unweighted quality
-measure), or `GATE` (Yes/No applicability control). `weight` is 0, 3, 5 (critical), or 10.
+measure), or `GATE` (Yes/No applicability control). `weight` is 0, 1, 3, 5 (critical), 10, or 15.
 `serviceLine` is one of `ihs`, `hh`, `sl`, `ids`, `comp`. `appliesTo` is `"all"` or an array of
 living arrangements matching the configured strings exactly. Gates are single-level: a GATE item's
 own `gateParent` must be null — model a nested gate (e.g. restrictive components under BSP) as a

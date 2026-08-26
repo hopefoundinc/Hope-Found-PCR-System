@@ -39,8 +39,8 @@
         },
         "weight": {
           "type": "number",
-          "enum": [0, 3, 5, 10],
-          "description": "0 for GATE and QI items; 5 = critical indicator (feeds the critical score); 3 and 10 are standard/high-value QA weights."
+          "enum": [0, 1, 3, 5, 10, 15],
+          "description": "0 for GATE and QI items; 5 = critical indicator (feeds the critical score); 1, 3, 10, and 15 are the remaining QA weights in the official Qlarant set."
         },
         "type": {
           "type": "string",
