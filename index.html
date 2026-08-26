@@ -1,0 +1,1894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PCR Audit-Readiness System</title>
+<style>
+:root{
+  --teal:#10474A; --teal-dark:#0B3335; --teal-tint:#E8EFEE;
+  --ink:#1E2A2B; --muted:#5C6B6A; --hairline:#D5DDDB;
+  --met:#2F6B4E; --gap:#A63B2C; --na:#7C8A88; --alert:#7E1C1C; --warn:#9A6A00;
+  --paper:#FFFFFF; --paper-alt:#F6F8F7;
+  --serif:Georgia,'Times New Roman',serif;
+  --sans:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;border-radius:0}
+html{background:#F6F8F7}
+body{background:#F6F8F7;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:700;color:var(--teal-dark);line-height:1.2}
+button{font-family:var(--sans);cursor:pointer}
+input,select,textarea{font-family:var(--sans);font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--hairline);padding:7px 9px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--teal);outline-offset:-1px}
+label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px}
+a{color:var(--teal)}
+
+/* header */
+.app-header{background:var(--teal);color:#fff;padding:14px 18px;border-bottom:4px solid var(--teal-dark)}
+.app-header h1{color:#fff;font-size:21px;margin:0}
+.app-header .sub{color:#CBDBD9;font-size:12.5px;margin-top:2px}
+.header-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;max-width:1180px;margin:0 auto}
+.header-actions{display:flex;gap:8px;flex-shrink:0}
+.btn-ghost{background:transparent;color:#fff;border:1px solid #3E6D6F;padding:6px 12px;font-size:13px}
+.btn-ghost:hover{background:var(--teal-dark)}
+
+/* alert banner */
+#alertBanner{display:none;background:var(--alert);color:#fff;padding:10px 18px;font-size:14px;font-weight:600}
+#alertBanner.on{display:block}
+#alertBanner .inner{max-width:1180px;margin:0 auto}
+#alertBanner a{color:#fff;text-decoration:underline;cursor:pointer}
+#storageNote{display:none;background:var(--warn);color:#fff;padding:7px 18px;font-size:13px}
+#storageNote.on{display:block}
+#storageNote .inner{max-width:1180px;margin:0 auto}
+
+/* nav */
+.nav-tabs{background:var(--teal-dark);overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
+.nav-tabs .inner{max-width:1180px;margin:0 auto;display:flex}
+.nav-tabs button{background:transparent;color:#B9CCCA;border:none;border-bottom:3px solid transparent;padding:11px 15px;font-size:14px;font-weight:600;flex-shrink:0}
+.nav-tabs button.active{color:#fff;border-bottom-color:#fff}
+.nav-tabs button:hover{color:#fff}
+
+/* layout */
+main{max-width:1180px;margin:0 auto;padding:18px 14px 60px}
+.view-title{font-size:24px;margin-bottom:2px}
+.view-sub{color:var(--muted);font-size:13.5px;margin-bottom:16px;max-width:70em}
+.grid{display:grid;gap:14px}
+.grid-cards{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.card{background:var(--paper);border:1px solid var(--hairline);padding:14px}
+.card h3{font-size:17px;margin-bottom:8px}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.section-title{font-size:19px;margin:22px 0 8px}
+
+/* buttons */
+.btn{background:var(--teal);color:#fff;border:1px solid var(--teal);padding:8px 14px;font-size:13.5px;font-weight:600}
+.btn:hover{background:var(--teal-dark)}
+.btn.secondary{background:#fff;color:var(--teal);border:1px solid var(--teal)}
+.btn.secondary:hover{background:var(--teal-tint)}
+.btn.danger{background:#fff;color:var(--gap);border:1px solid var(--gap)}
+.btn.small{padding:4px 9px;font-size:12.5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* rating buttons */
+.rate-group{display:flex;gap:0}
+.rate-group button{border:1px solid var(--hairline);background:#fff;color:var(--muted);padding:6px 11px;font-size:12.5px;font-weight:700;border-left-width:0}
+.rate-group button:first-child{border-left-width:1px}
+.rate-group button.on-met{background:var(--met);border-color:var(--met);color:#fff}
+.rate-group button.on-not_met{background:var(--gap);border-color:var(--gap);color:#fff}
+.rate-group button.on-na{background:var(--na);border-color:var(--na);color:#fff}
+.rate-group button:disabled{opacity:.4;cursor:not-allowed}
+
+/* badges + status */
+.badge{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;letter-spacing:.03em;text-transform:uppercase}
+.badge.met{background:var(--met);color:#fff}
+.badge.gap{background:var(--gap);color:#fff}
+.badge.na{background:var(--na);color:#fff}
+.badge.alert{background:var(--alert);color:#fff}
+.badge.warn{background:var(--warn);color:#fff}
+.badge.neutral{background:var(--teal-tint);color:var(--teal-dark)}
+.badge.outline{background:#fff;color:var(--muted);border:1px solid var(--hairline)}
+
+/* score bars */
+.scorebar{position:relative;height:18px;background:var(--teal-tint);border:1px solid var(--hairline);margin:5px 0 3px}
+.scorebar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--teal)}
+.scorebar .fill.bad{background:var(--gap)}
+.scorebar .fill.warn{background:var(--warn)}
+.scorebar .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--muted);opacity:.75}
+.scorebar .tick.t90{background:var(--met)}
+.bar-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.pct{font-family:var(--serif);font-size:26px;color:var(--teal-dark);font-weight:700}
+.pct.small{font-size:20px}
+
+/* tables */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--hairline);background:#fff}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:13.5px}
+th{background:var(--teal-tint);color:var(--teal-dark);text-align:left;padding:8px 10px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--hairline);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--hairline);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr.flag-row td{background:#FBF3F1}
+
+/* indicator rows (client review) */
+.domain-block{margin-bottom:14px}
+.domain-head{background:var(--teal-dark);color:#fff;padding:8px 12px;font-family:var(--serif);font-size:15.5px;font-weight:700}
+.ind{background:#fff;border:1px solid var(--hairline);border-top:none;padding:12px}
+.ind.gated-off{background:var(--paper-alt)}
+.ind-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.ind-id{font-weight:700;color:var(--teal);font-size:12.5px;white-space:nowrap}
+.ind-q{font-size:14.5px;margin:3px 0 8px;max-width:62em}
+.ind-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.intent-toggle{background:none;border:none;color:var(--teal);font-size:12.5px;font-weight:600;padding:0;text-decoration:underline}
+.intent-body{display:none;background:var(--teal-tint);border-left:3px solid var(--teal);padding:9px 11px;font-size:13px;margin:7px 0;max-width:70em}
+.intent-body.open{display:block}
+.ind-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:9px}
+.gate-note{font-size:12.5px;color:var(--muted);font-style:italic;margin-top:5px}
+
+/* sticky summary */
+.sticky-score{position:sticky;top:0;z-index:40;background:var(--teal-dark);color:#fff;padding:9px 14px;display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.sticky-score .num{font-family:var(--serif);font-size:20px;font-weight:700}
+.sticky-score .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#B9CCCA}
+.sticky-score .cell{min-width:70px}
+
+/* modal */
+.modal-back{display:none;position:fixed;inset:0;background:rgba(11,51,53,.55);z-index:100;padding:20px;overflow-y:auto}
+.modal-back.open{display:block}
+.modal{background:#fff;border:1px solid var(--hairline);max-width:680px;margin:30px auto;padding:18px}
+.modal h3{font-size:19px;margin-bottom:12px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.form-grid .full{grid-column:1 / -1}
+.check-line{display:flex;align-items:center;gap:7px;font-size:14px;padding:4px 0}
+.check-line input{width:auto}
+
+/* misc */
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.toolbar .field{min-width:150px;flex:1;max-width:260px}
+.muted{color:var(--muted)}
+.small{font-size:12.5px}
+.note-box{background:var(--teal-tint);border-left:3px solid var(--teal);padding:10px 13px;font-size:13.5px;margin-bottom:14px;max-width:72em}
+.rule-box{background:#fff;border:1px solid var(--alert);border-left:5px solid var(--alert);padding:11px 14px;margin-bottom:14px}
+.rule-box h4{color:var(--alert);font-size:15px;margin-bottom:4px}
+.ai-out{background:var(--paper-alt);border:1px solid var(--hairline);padding:12px;font-size:13.5px;white-space:pre-wrap;margin-top:10px;max-height:420px;overflow-y:auto}
+#saveStatus{position:fixed;bottom:14px;right:14px;background:var(--teal-dark);color:#fff;padding:6px 12px;font-size:12.5px;display:none;z-index:200}
+#saveStatus.on{display:block}
+.empty{padding:26px;text-align:center;color:var(--muted);background:#fff;border:1px solid var(--hairline)}
+.stat-row{display:flex;gap:14px;flex-wrap:wrap}
+.stat{background:#fff;border:1px solid var(--hairline);padding:10px 14px;min-width:150px;flex:1}
+.stat .lbl{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.tier-line{font-size:13px;margin-top:6px}
+@media (max-width:640px){
+  .app-header h1{font-size:18px}
+  main{padding:12px 8px 60px}
+  .ind-fields{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<header class="app-header">
+  <div class="header-row">
+    <div>
+      <h1 id="brandName">PCR Audit-Readiness System</h1>
+      <div class="sub" id="brandSub"></div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-ghost" data-action="open-settings" type="button">Settings</button>
+    </div>
+  </div>
+</header>
+<div id="alertBanner"><div class="inner"></div></div>
+<div id="storageNote"><div class="inner"></div></div>
+<nav class="nav-tabs"><div class="inner" id="navTabs"></div></nav>
+<main id="view"></main>
+<div class="modal-back" id="modalBack"><div class="modal" id="modalBox"></div></div>
+<div id="saveStatus"></div>
+<script>
+(function(){"use strict";
+
+/* =====================================================================
+   PROVIDER CONFIG — everything agency-specific lives here.
+   Onboarding a new agency = replace this object + import rubric JSON.
+   The engine below never references Hope Found or DC-specific content
+   directly; it only reads this configuration and stored data.
+   ===================================================================== */
+var PROVIDER_CONFIG = {
+  meta: {
+    providerName: "Hope Found, Inc.",
+    appTitle: "PCR Audit-Readiness System",
+    subtitle: "Hope Found, Inc. — DC DDA Person-Centered Review preparation",
+    reviewName: "Person-Centered Review (PCR)",
+    auditor: "Qlarant (DC DDS/DDA)"
+  },
+  theme: {
+    "--teal": "#10474A", "--teal-dark": "#0B3335", "--teal-tint": "#E8EFEE",
+    "--ink": "#1E2A2B", "--muted": "#5C6B6A", "--hairline": "#D5DDDB",
+    "--met": "#2F6B4E", "--gap": "#A63B2C", "--na": "#7C8A88",
+    "--alert": "#7E1C1C", "--warn": "#9A6A00"
+  },
+  serviceLines: [
+    { id: "ihs",  name: "In-Home Supports" },
+    { id: "hh",   name: "Host Home" },
+    { id: "sl",   name: "Supported Living" },
+    { id: "ids",  name: "Individualized Day Supports" },
+    { id: "comp", name: "Companion" }
+  ],
+  livingArrangements: ["Family/Own Home", "Host Home", "Supported Living Residence", "Independent Living"],
+  clientFlags: [
+    { key: "hasBSP", short: "BSP", label: "Behaviors that may benefit from a BSP" },
+    { key: "hasRestrictiveComponents", short: "Restrictive", label: "BSP includes restrictive components" },
+    { key: "takesMedications", short: "Meds", label: "Takes provider-administered/overseen medications" }
+  ],
+  /* Scoring thresholds & tier table (Qlarant 2022 procedures) */
+  scoring: {
+    criticalWeight: 5,
+    thresholds: { excellent: 90, satisfactory: 80, needsImprovement: 70, unsatisfactory: 51 },
+    satisfactionMin: 80,
+    tiers: {
+      excellent:      { label: "Excellent",          consequence: "Biannual (2-year) certification" },
+      satisfactory:   { label: "Satisfactory",       consequence: "Annual certification" },
+      needsImprovement:{ label: "Needs Improvement", consequence: "Do Not Refer list; CAP + Follow-Up PCR in 30–60 days" },
+      unsatisfactory: { label: "Unsatisfactory",     consequence: "Do Not Refer; CAP + follow-up; passing yields only 6-month provisional certification" },
+      failed:         { label: "Failed",             consequence: "Do Not Refer + Enhanced Monitoring; Certification Review Panel; possible Medicaid Provider Agreement termination" },
+      alert:          { label: "ALERT — Automatic Follow-Up", consequence: "Mandatory Follow-Up PCR within 30 days regardless of score" }
+    }
+  },
+  /* Sampling matrix: [maxCensus, sampleSize]; smallServiceFormula applies under 10 */
+  sampling: {
+    matrix: [[1,1],[24,2],[34,3],[44,4],[54,5],[64,6],[74,7],[84,8],[94,9],[Infinity,10]],
+    smallServiceMax: 9
+  },
+  productionRules: {
+    windowHours: 2,
+    sameDayDeadline: "4:00 PM",
+    text: "Once the sample key is delivered, all records for sampled people, staff training, and personnel files must be produced within 2 hours. Records held at other locations are due by 4:00 PM on day one. Anything later is treated as NOT DELIVERED and NOT REVIEWED — a well-documented file still fails if it cannot be located in time."
+  },
+  capRules: {
+    text: "CAP due 5 business days after the Exit Conference. Appeals within 5 business days of the written report. CAPs must be applied systemically: when an indicator fails for one person, review it across ALL people in that service line, not just the sampled ones."
+  },
+  /* Organization-level tools (always reviewed at every PCR) */
+  orgTools: [
+    { id: "org-outcomes", name: "PCR Organizational Outcomes", excludedServiceLines: [],
+      items: [
+        { id: "OO.1", weight: 5, text: "Incident management system meets DDS reporting requirements; serious reportable incidents filed within required timeframes." },
+        { id: "OO.2", weight: 5, text: "Human Rights Committee is constituted and meets as required; restrictive interventions receive prior HRC review." },
+        { id: "OO.3", weight: 3, text: "QIDP oversight is documented for every person served (monthly reviews current)." },
+        { id: "OO.4", weight: 3, text: "Provider participates in mortality review and quality improvement processes as required." },
+        { id: "OO.5", weight: 3, text: "Policies for abuse/neglect prevention, reporting, and staff screening are current and implemented." }
+      ]},
+    { id: "org-60day", name: "60 Day Organizational", excludedServiceLines: [],
+      items: [
+        { id: "SD.1", weight: 5, text: "For people new to the provider: ISP and required assessments in place within 60 days of admission." },
+        { id: "SD.2", weight: 3, text: "Staff serving newly admitted people were trained on the person's ISP/BSP before working alone." },
+        { id: "SD.3", weight: 3, text: "Service authorizations current for all newly admitted people; services began as authorized." },
+        { id: "SD.4", weight: 3, text: "Transition/discharge documentation from prior provider obtained and reconciled." }
+      ]},
+    { id: "org-hcbs", name: "PCR HCBS Org Assessment Validation",
+      excludedServiceLines: ["ihs", "comp"], /* not applicable to In-Home Supports, Respite, or Companion 1:1 */
+      items: [
+        { id: "HV.1", weight: 5, text: "HCBS Settings self-assessment complete and validated for each applicable site." },
+        { id: "HV.2", weight: 5, text: "Remediation plan for any settings deficiencies is current and on schedule." },
+        { id: "HV.3", weight: 3, text: "Site policies support choice, privacy, visitors, and access to food consistent with the HCBS Settings Rule." }
+      ]}
+  ],
+  /* Staff sampling & requirements: up to 5 direct-care staff per service (serving sampled
+     people) plus QIDP, nurse, and Program Manager are reviewed at every PCR. */
+  staffRoles: ["Direct Support Professional", "QIDP", "Nurse (RN/LPN)", "Program Manager"],
+  staffRequirements: [
+    { id: "bg",     label: "Criminal Background Check",              expires: true },
+    { id: "reg",    label: "Abuse & Neglect Registry Screening",     expires: true },
+    { id: "cpr",    label: "CPR / First Aid Certification",          expires: true },
+    { id: "tme",    label: "Trained Medication Employee (TME) Cert", expires: true },
+    { id: "tb",     label: "TB Screening",                           expires: true },
+    { id: "core",   label: "DDS Core Competency Training",           expires: false },
+    { id: "rights", label: "Rights, Dignity & Abuse Reporting Training", expires: false },
+    { id: "isp",    label: "Person-Specific ISP/BSP Training",       expires: false }
+  ],
+  expiryWarningDays: 60,
+  /* Fire & emergency readiness module */
+  fire: {
+    shifts: ["Day", "Evening", "Overnight"],
+    drillTypes: ["Fire drill", "Emergency evacuation", "Shelter-in-place"],
+    drillFrequencyDays: 92, /* quarterly, per site per shift */
+    checklist: [
+      { id: "diagrams",  label: "Evacuation diagrams posted at each site",        frequencyDays: 365 },
+      { id: "exting",    label: "Fire extinguisher inspection",                   frequencyDays: 31 },
+      { id: "smoke",     label: "Smoke detector / alarm test",                    frequencyDays: 31 },
+      { id: "contacts",  label: "Emergency contact lists current",                frequencyDays: 184 },
+      { id: "disaster",  label: "Disaster / continuity-of-operations plan review", frequencyDays: 365 },
+      { id: "firstaid",  label: "First aid kits stocked and accessible",          frequencyDays: 92 },
+      { id: "personal",  label: "Individualized emergency plans on file for all people served", frequencyDays: 184 }
+    ]
+  }
+};
+
+/* =====================================================================
+   STARTER RUBRIC TEMPLATE
+   Instantiated per service line at first boot (id prefix = service line).
+   This is a representative PCR-style placeholder set: replace it with the
+   official Qlarant-extracted rubric via Rubric Manager > Import JSON.
+   weight: 0 = gate/QI, 3 = standard, 5 = critical, 10 = high-value.
+   ===================================================================== */
+var RUBRIC_TEMPLATE = [
+  /* Service Planning */
+  { code:"SP.1", domain:"Service Planning", weight:10, type:"QA", alert:false, gateParent:null,
+    q:"The person's current ISP is complete, signed by required parties, and available in the record.",
+    intent:"Surveyor checks the ISP date against the annual requirement, verifies signatures (person, guardian where applicable, QIDP), and confirms the plan in the record is the version in use by staff." },
+  { code:"SP.2", domain:"Service Planning", weight:5, type:"QA", alert:false, gateParent:null,
+    q:"Services and supports are delivered consistent with the ISP outcomes and the person's stated goals.",
+    intent:"Observation and interview: what staff actually do day-to-day should trace to ISP outcomes. Discrepancies between the plan and practice are scored here." },
+  { code:"SP.3", domain:"Service Planning", weight:3, type:"QA", alert:false, gateParent:null,
+    q:"Progress toward ISP outcomes is documented at the required frequency and reviewed by the QIDP.",
+    intent:"Look for progress notes/data at the frequency the ISP specifies, plus evidence of QIDP monthly review and follow-up on stalled outcomes." },
+  /* Health & Wellness */
+  { code:"HW.G1", domain:"Health & Wellness", weight:0, type:"GATE", alert:false, gateParent:null, flagKey:"takesMedications",
+    q:"GATE: Does the person take medications administered or overseen by the provider?",
+    intent:"If No, the medication indicator family below is Not Applicable for this person and is excluded from scoring." },
+  { code:"HW.1", domain:"Health & Wellness", weight:5, type:"QA", alert:false, gateParent:"HW.G1",
+    q:"Medications are administered as prescribed; MARs are complete with no unexplained gaps.",
+    intent:"Surveyor reconciles physician orders against the MAR for the review period. Missing initials, transcription errors, and undocumented refusals are common failure points." },
+  { code:"HW.2", domain:"Health & Wellness", weight:5, type:"QA", alert:true, gateParent:"HW.G1",
+    q:"All staff administering medications hold current Trained Medication Employee (TME) certification.",
+    intent:"Cross-check MAR initials against staff certification records. Any administration by uncertified staff is an Alert-level finding (health & safety)." },
+  { code:"HW.3", domain:"Health & Wellness", weight:5, type:"QA", alert:false, gateParent:null,
+    q:"Health care appointments (annual physical, dental, specialists) are current and recommendations followed up.",
+    intent:"Verify appointment dates and, critically, evidence that follow-up recommendations from each visit were acted on and documented." },
+  { code:"HW.4", domain:"Health & Wellness", weight:3, type:"QA", alert:false, gateParent:null,
+    q:"Dietary, nutrition, and health protocols in the ISP are implemented as written.",
+    intent:"Check for special diet orders, choking/aspiration protocols, seizure protocols, etc., and evidence staff follow them." },
+  /* Behavior Support */
+  { code:"BS.G1", domain:"Behavior Support", weight:0, type:"GATE", alert:false, gateParent:null, flagKey:"hasBSP",
+    q:"GATE: Does the person exhibit behaviors that would benefit from a Behavior Support Plan?",
+    intent:"If No, the entire BSP indicator family (development, content, monitoring) is Not Applicable and excluded from scoring." },
+  { code:"BS.1", domain:"Behavior Support", weight:5, type:"QA", alert:false, gateParent:"BS.G1",
+    q:"A current BSP developed by a qualified professional is in the record and accessible to staff.",
+    intent:"Verify author credentials, plan date, and that direct support staff can locate and describe the plan." },
+  { code:"BS.2", domain:"Behavior Support", weight:3, type:"QA", alert:false, gateParent:"BS.G1",
+    q:"The BSP contains required components: target behaviors, proactive strategies, data collection, and fading criteria.",
+    intent:"Content review against DDS BSP requirements; missing data-collection methodology is the most common gap." },
+  { code:"BS.3", domain:"Behavior Support", weight:3, type:"QA", alert:false, gateParent:"BS.G1",
+    q:"BSP implementation data is collected and reviewed at the required frequency.",
+    intent:"Look for behavior data sheets and evidence of periodic review/plan adjustment by the author or QIDP." },
+  { code:"BS.G2", domain:"Behavior Support", weight:0, type:"GATE", alert:false, gateParent:null, flagKey:"hasRestrictiveComponents",
+    q:"GATE: Does the person's BSP include restrictive components?",
+    intent:"If No, HRC approval and consent indicators below are Not Applicable and excluded from scoring." },
+  { code:"BS.4", domain:"Behavior Support", weight:5, type:"QA", alert:true, gateParent:"BS.G2",
+    q:"Restrictive components were approved by the Human Rights Committee before implementation and remain current.",
+    intent:"Alert-level: verify HRC approval date precedes implementation and approval has not lapsed. Unapproved restrictions trigger mandatory follow-up." },
+  { code:"BS.5", domain:"Behavior Support", weight:5, type:"QA", alert:true, gateParent:"BS.G2",
+    q:"Informed consent from the person/guardian for restrictive components is documented and current.",
+    intent:"Alert-level: consent must be informed, specific to the restriction, signed, and renewed as required." },
+  /* Rights & Dignity */
+  { code:"RD.1", domain:"Rights & Dignity", weight:5, type:"QA", alert:true, gateParent:null,
+    q:"The person is free from abuse, neglect, and exploitation; staff recognize and report incidents per DDS policy.",
+    intent:"Alert-level: interviews with the person and staff, incident report review, and observation. Any credible unreported allegation is an automatic Alert." },
+  { code:"RD.2", domain:"Rights & Dignity", weight:5, type:"QA", alert:false, gateParent:null,
+    q:"Rights education was provided, and any rights restrictions carry due-process documentation.",
+    intent:"Annual rights training for the person (in accessible format) plus documentation for any restriction: justification, oversight, and restoration plan." },
+  { code:"RD.3", domain:"Rights & Dignity", weight:3, type:"QA", alert:false, gateParent:null,
+    q:"The person's privacy is respected and personal funds are managed with documentation and receipts.",
+    intent:"Fund ledgers reconcile with receipts; the person accesses their own money; privacy practices observed at the site." },
+  /* Safety */
+  { code:"SF.1", domain:"Safety", weight:5, type:"QA", alert:false, gateParent:null,
+    q:"The person has an individualized emergency/evacuation plan and staff can describe it.",
+    intent:"Plan reflects the person's mobility and support needs; staff interviewed can state evacuation roles; drills documented." },
+  { code:"SF.2", domain:"Safety", weight:3, type:"QA", alert:false, gateParent:null,
+    q:"The environment is free of hazards; required safety equipment is present and functional.",
+    intent:"Site walkthrough: water temperature, egress, extinguishers, smoke detectors, medication storage, hazard-specific safeguards." },
+  /* HCBS Settings (100% required for Excellent tier) */
+  { code:"HC.1", domain:"HCBS Settings", weight:5, type:"QA", alert:false, gateParent:null, hcbsSettings:true,
+    q:"The person chooses their daily schedule, activities, and with whom they spend time.",
+    intent:"HCBS Settings Rule: schedules driven by the person, not staffing convenience. Interview the person; compare stated preferences to actual routines." },
+  { code:"HC.2", domain:"HCBS Settings", weight:5, type:"QA", alert:false, gateParent:null, hcbsSettings:true,
+    q:"The person has access to food at any time, visitors of their choosing, and a lockable private space where applicable.",
+    intent:"Physical check plus interview. Restrictions require an individualized, documented justification in the ISP." },
+  { code:"HC.3", domain:"HCBS Settings", weight:3, type:"QA", alert:false, gateParent:null, hcbsSettings:true,
+    q:"The setting supports community access and integration to the same degree as people not receiving HCBS.",
+    intent:"Evidence of regular, person-chosen community activity — not group outings only. Transportation barriers should have documented workarounds." },
+  /* Satisfaction (QI — unweighted quality-improvement measures) */
+  { code:"ST.1", domain:"Satisfaction", weight:0, type:"QI", alert:false, gateParent:null,
+    q:"The person reports satisfaction with services and feels heard by staff.",
+    intent:"QI measure (unweighted, feeds the Excellent-tier satisfaction requirement): direct interview responses, with communication accommodations." },
+  { code:"ST.2", domain:"Satisfaction", weight:0, type:"QI", alert:false, gateParent:null,
+    q:"The person/family reports meaningful involvement in planning and decision-making.",
+    intent:"QI measure: interview evidence that the person led or shaped their ISP, chose goals, and can request changes." }
+];
+
+function buildSeedRubric() {
+  var items = [];
+  var today = new Date().toISOString().slice(0, 10);
+  PROVIDER_CONFIG.serviceLines.forEach(function (sl) {
+    RUBRIC_TEMPLATE.forEach(function (t) {
+      items.push({
+        id: sl.id.toUpperCase() + "-" + t.code,
+        serviceLine: sl.id,
+        domain: t.domain,
+        weight: t.weight,
+        type: t.type,
+        alert: !!t.alert,
+        gateParent: t.gateParent ? (sl.id.toUpperCase() + "-" + t.gateParent) : null,
+        flagKey: t.flagKey || null,
+        questionText: t.q,
+        intentText: t.intent,
+        appliesTo: "all",
+        hcbsSettings: !!t.hcbsSettings,
+        effectiveDate: today,
+        active: true
+      });
+    });
+  });
+  return items;
+}
+
+var SEED_CLIENTS = [
+  { id: "c-demo1", name: "Jordan M. (Demo)", serviceLine: "hh", livingArrangement: "Host Home",
+    flags: { hasBSP: true, hasRestrictiveComponents: false, takesMedications: true },
+    priorPCRParticipant: true, sampled: true, activeStatus: true },
+  { id: "c-demo2", name: "Renee T. (Demo)", serviceLine: "sl", livingArrangement: "Supported Living Residence",
+    flags: { hasBSP: false, hasRestrictiveComponents: false, takesMedications: true },
+    priorPCRParticipant: false, sampled: true, activeStatus: true },
+  { id: "c-demo3", name: "Marcus B. (Demo)", serviceLine: "ids", livingArrangement: "Family/Own Home",
+    flags: { hasBSP: true, hasRestrictiveComponents: true, takesMedications: false },
+    priorPCRParticipant: false, sampled: false, activeStatus: true }
+];
+
+var SEED_CENSUS = { ihs: 12, hh: 8, sl: 15, ids: 20, comp: 5 };
+
+/* =====================================================================
+   STORAGE ADAPTER
+   Priority: window.storage (claude.ai artifact runtime, shared dataset)
+   -> localStorage (plain browser) -> in-memory (export/import only).
+   All async, all try/catch. Compact keys; records bundled per client.
+   ===================================================================== */
+var Store = (function () {
+  var mode = "memory";
+  var mem = {};
+
+  function hasWindowStorage() {
+    try {
+      return typeof window.storage === "object" && window.storage !== null &&
+        typeof window.storage.get === "function" && typeof window.storage.set === "function";
+    } catch (e) { return false; }
+  }
+  function hasLocalStorage() {
+    try {
+      var k = "__pcr_test__";
+      window.localStorage.setItem(k, "1");
+      window.localStorage.removeItem(k);
+      return true;
+    } catch (e) { return false; }
+  }
+  function init() {
+    if (hasWindowStorage()) { mode = "shared"; }
+    else if (hasLocalStorage()) { mode = "local"; }
+    else { mode = "memory"; }
+    return mode;
+  }
+  function unwrap(res) {
+    if (res && typeof res === "object" && "value" in res) { return res.value; }
+    return res;
+  }
+  async function get(key) {
+    try {
+      if (mode === "shared") {
+        var res = await window.storage.get(key, { shared: true });
+        var v = unwrap(res);
+        return (typeof v === "string" && v.length) ? JSON.parse(v) : (v || null);
+      }
+      if (mode === "local") {
+        var s = window.localStorage.getItem(key);
+        return s ? JSON.parse(s) : null;
+      }
+      return mem.hasOwnProperty(key) ? JSON.parse(mem[key]) : null;
+    } catch (e) { return null; }
+  }
+  async function set(key, value) {
+    var payload = JSON.stringify(value);
+    try {
+      if (mode === "shared") { await window.storage.set(key, payload, { shared: true }); return true; }
+      if (mode === "local") { window.localStorage.setItem(key, payload); return true; }
+      mem[key] = payload; return true;
+    } catch (e) {
+      try { mem[key] = payload; } catch (e2) {}
+      return false;
+    }
+  }
+  async function del(key) {
+    try {
+      if (mode === "shared") { await window.storage.delete(key, { shared: true }); return true; }
+      if (mode === "local") { window.localStorage.removeItem(key); return true; }
+      delete mem[key]; return true;
+    } catch (e) { return false; }
+  }
+  return { init: init, get: get, set: set, del: del, getMode: function () { return mode; } };
+})();
+
+/* ============================ APP STATE ============================ */
+var S = {
+  rubric: [], clients: [], records: {}, /* records[clientId] = { indicatorId: rec } */
+  staff: { roster: [], records: {} },   /* records[staffId] = { reqId: rec } */
+  org: {},                              /* org[toolId] = { itemId: rec } */
+  fire: { drills: [], checks: {} },     /* checks[itemId] = { lastDone, notes } */
+  census: {}, settings: {},
+  ui: { tab: "dashboard", reviewClient: null, locatorQuery: "", locatorFilter: "all",
+        rubricFilterSL: "all", rubricFilterType: "all", rubricShowRetired: false, saveFails: 0 }
+};
+
+var K = { rubric: "pcr:rubric", clients: "pcr:clients", staff: "pcr:staff", org: "pcr:org",
+          fire: "pcr:fire", census: "pcr:census", settings: "pcr:settings", rec: "pcr:rec:" };
+
+async function loadAll() {
+  S.rubric  = (await Store.get(K.rubric))  || [];
+  S.clients = (await Store.get(K.clients)) || [];
+  S.staff   = (await Store.get(K.staff))   || { roster: [], records: {} };
+  S.org     = (await Store.get(K.org))     || {};
+  S.fire    = (await Store.get(K.fire))    || { drills: [], checks: {} };
+  S.census  = (await Store.get(K.census))  || {};
+  S.settings= (await Store.get(K.settings))|| {};
+  if (!S.rubric.length) { S.rubric = buildSeedRubric(); await Store.set(K.rubric, S.rubric); }
+  if (!S.clients.length && !S.settings.seeded) {
+    S.clients = SEED_CLIENTS.slice();
+    S.census = Object.assign({}, SEED_CENSUS);
+    S.settings.seeded = true;
+    await Store.set(K.clients, S.clients);
+    await Store.set(K.census, S.census);
+    await Store.set(K.settings, S.settings);
+  }
+  for (var i = 0; i < S.clients.length; i++) {
+    var c = S.clients[i];
+    S.records[c.id] = (await Store.get(K.rec + c.id)) || {};
+  }
+}
+
+var saveTimer = null;
+function flashSave(ok) {
+  var el = document.getElementById("saveStatus");
+  el.textContent = ok ? "Saved" : "Save failed — use Settings > Export to back up";
+  el.style.background = ok ? "var(--teal-dark)" : "var(--alert)";
+  el.classList.add("on");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(function () { el.classList.remove("on"); }, ok ? 1200 : 4000);
+}
+function persist(key, value) {
+  Store.set(key, value).then(function (ok) { flashSave(ok); });
+}
+
+/* ============================ ENGINE ============================
+   Pure scoring/business logic. Config-driven; no provider names. */
+var Engine = {
+  slName: function (id) {
+    var sl = PROVIDER_CONFIG.serviceLines.filter(function (s) { return s.id === id; })[0];
+    return sl ? sl.name : id;
+  },
+  activeItems: function (serviceLine) {
+    return S.rubric.filter(function (r) { return r.active && r.serviceLine === serviceLine; });
+  },
+  itemById: function (id) {
+    return S.rubric.filter(function (r) { return r.id === id; })[0] || null;
+  },
+  applies: function (item, client) {
+    if (item.appliesTo === "all" || !item.appliesTo) { return true; }
+    var list = Array.isArray(item.appliesTo) ? item.appliesTo : [item.appliesTo];
+    return list.indexOf(client.livingArrangement) !== -1;
+  },
+  /* Gate answer: explicit QA override in the record wins; else client flag default; else Yes. */
+  gateAnswer: function (client, gateItem) {
+    var rec = (S.records[client.id] || {})[gateItem.id];
+    if (rec && (rec.gateAnswer === "yes" || rec.gateAnswer === "no")) { return rec.gateAnswer; }
+    if (gateItem.flagKey) { return (client.flags && client.flags[gateItem.flagKey]) ? "yes" : "no"; }
+    return "yes";
+  },
+  /* Effective rating for a QA/QI item: gated-off children are forced N/A. */
+  effective: function (item, client) {
+    if (item.gateParent) {
+      var gate = Engine.itemById(item.gateParent);
+      if (gate && Engine.gateAnswer(client, gate) === "no") {
+        return { rating: "na", forced: true };
+      }
+    }
+    var rec = (S.records[client.id] || {})[item.id];
+    return { rating: rec ? (rec.rating || null) : null, forced: false };
+  },
+  scoreClient: function (client) {
+    var cw = PROVIDER_CONFIG.scoring.criticalWeight;
+    var r = { earned: 0, possible: 0, critEarned: 0, critPossible: 0, alerts: 0, notMet: 0,
+              hcbsRated: 0, hcbsMet: 0, satRated: 0, satMet: 0, ratedCount: 0, applicableQA: 0 };
+    Engine.activeItems(client.serviceLine).forEach(function (item) {
+      if (!Engine.applies(item, client)) { return; }
+      var eff = Engine.effective(item, client);
+      if (item.type === "QI") {
+        if (eff.rating === "met") { r.satRated++; r.satMet++; }
+        else if (eff.rating === "not_met") { r.satRated++; }
+        return;
+      }
+      if (item.type !== "QA") { return; } /* gates don't score */
+      r.applicableQA++;
+      if (eff.rating === "met" || eff.rating === "not_met") {
+        r.ratedCount++;
+        r.possible += item.weight;
+        if (item.weight === cw) { r.critPossible += item.weight; }
+        if (eff.rating === "met") {
+          r.earned += item.weight;
+          if (item.weight === cw) { r.critEarned += item.weight; }
+          if (item.hcbsSettings) { r.hcbsRated++; r.hcbsMet++; }
+        } else {
+          r.notMet++;
+          if (item.alert) { r.alerts++; }
+          if (item.hcbsSettings) { r.hcbsRated++; }
+        }
+      }
+    });
+    return r;
+  },
+  scoreServiceLine: function (slId) {
+    var agg = { earned: 0, possible: 0, critEarned: 0, critPossible: 0, alerts: 0, notMet: 0,
+                hcbsRated: 0, hcbsMet: 0, satRated: 0, satMet: 0, ratedCount: 0, clients: 0 };
+    S.clients.forEach(function (c) {
+      if (!c.activeStatus || c.serviceLine !== slId) { return; }
+      var r = Engine.scoreClient(c);
+      if (r.ratedCount === 0 && r.satRated === 0) { return; }
+      agg.clients++;
+      ["earned","possible","critEarned","critPossible","alerts","notMet","hcbsRated","hcbsMet","satRated","satMet","ratedCount"]
+        .forEach(function (k) { agg[k] += r[k]; });
+    });
+    agg.totalPct = agg.possible ? Math.round(100 * agg.earned / agg.possible) : null;
+    agg.critPct = agg.critPossible ? Math.round(100 * agg.critEarned / agg.critPossible) : null;
+    agg.hcbs100 = agg.hcbsRated === 0 ? null : (agg.hcbsMet === agg.hcbsRated);
+    agg.satPct = agg.satRated ? Math.round(100 * agg.satMet / agg.satRated) : null;
+    agg.tier = Engine.tier(agg.totalPct, agg.critPct, agg.hcbs100, agg.satPct, agg.alerts);
+    return agg;
+  },
+  tier: function (totalPct, critPct, hcbs100, satPct, alerts) {
+    var T = PROVIDER_CONFIG.scoring.tiers, th = PROVIDER_CONFIG.scoring.thresholds;
+    if (alerts > 0) { return Object.assign({ key: "alert" }, T.alert); }
+    if (totalPct === null || critPct === null) { return { key: "none", label: "Not yet scored", consequence: "" }; }
+    var m = Math.min(totalPct, critPct);
+    if (m >= th.excellent && hcbs100 !== false && (satPct === null || satPct >= PROVIDER_CONFIG.scoring.satisfactionMin)) {
+      return Object.assign({ key: "excellent" }, T.excellent);
+    }
+    if (m >= th.satisfactory) { return Object.assign({ key: "satisfactory" }, T.satisfactory); }
+    if (m >= th.needsImprovement) { return Object.assign({ key: "needsImprovement" }, T.needsImprovement); }
+    if (m >= th.unsatisfactory) { return Object.assign({ key: "unsatisfactory" }, T.unsatisfactory); }
+    return Object.assign({ key: "failed" }, T.failed);
+  },
+  sampleSize: function (census) {
+    census = parseInt(census, 10);
+    if (!census || census < 1) { return { size: 0, rule: "—" }; }
+    var matrix = PROVIDER_CONFIG.sampling.matrix, mVal = 0;
+    for (var i = 0; i < matrix.length; i++) {
+      if (census <= matrix[i][0]) { mVal = matrix[i][1]; break; }
+    }
+    var rule = "matrix";
+    var size = mVal;
+    if (census <= PROVIDER_CONFIG.sampling.smallServiceMax) {
+      var fVal = Math.ceil(census * 0.10 + 1);
+      if (fVal > size) { size = fVal; rule = "10% + 1"; }
+    }
+    if (size > census) { size = census; rule = "capped at census"; }
+    return { size: size, rule: rule };
+  },
+  systemAlerts: function () {
+    var out = [];
+    S.clients.forEach(function (c) {
+      if (!c.activeStatus) { return; }
+      Engine.activeItems(c.serviceLine).forEach(function (item) {
+        if (item.type !== "QA" || !item.alert || !Engine.applies(item, c)) { return; }
+        var eff = Engine.effective(item, c);
+        if (eff.rating === "not_met") { out.push({ client: c, item: item }); }
+      });
+    });
+    return out;
+  },
+  retrievalRate: function () {
+    var located = 0, rated = 0;
+    S.clients.forEach(function (c) {
+      if (!c.activeStatus) { return; }
+      var recs = S.records[c.id] || {};
+      Object.keys(recs).forEach(function (iid) {
+        var rec = recs[iid];
+        if (rec.rating === "met" || rec.rating === "not_met") {
+          rated++;
+          if (rec.evidenceLocation && rec.evidenceLocation.trim()) { located++; }
+        }
+      });
+    });
+    S.staff.roster.forEach(function (st) {
+      var recs = S.staff.records[st.id] || {};
+      Object.keys(recs).forEach(function (rid) {
+        var rec = recs[rid];
+        if (rec.status === "current" || rec.status === "expired") {
+          rated++;
+          if (rec.evidenceLocation && rec.evidenceLocation.trim()) { located++; }
+        }
+      });
+    });
+    return { located: located, rated: rated, pct: rated ? Math.round(100 * located / rated) : null };
+  },
+  orgScore: function () {
+    var earned = 0, possible = 0, openItems = 0;
+    PROVIDER_CONFIG.orgTools.forEach(function (tool) {
+      var recs = S.org[tool.id] || {};
+      tool.items.forEach(function (item) {
+        var rec = recs[item.id];
+        if (rec && (rec.rating === "met" || rec.rating === "not_met")) {
+          possible += item.weight;
+          if (rec.rating === "met") { earned += item.weight; } else { openItems++; }
+        }
+      });
+    });
+    return { pct: possible ? Math.round(100 * earned / possible) : null, openItems: openItems };
+  },
+  staffReqStatus: function (staffId, req) {
+    var rec = (S.staff.records[staffId] || {})[req.id];
+    if (!rec || !rec.status || rec.status === "missing") { return { key: "missing", label: "Missing" }; }
+    if (rec.status === "na") { return { key: "na", label: "N/A" }; }
+    if (req.expires && rec.expires) {
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      var exp = new Date(rec.expires + "T00:00:00");
+      if (!isNaN(exp.getTime())) {
+        var days = Math.floor((exp - today) / 86400000);
+        if (days < 0) { return { key: "expired", label: "Expired " + rec.expires }; }
+        if (days <= PROVIDER_CONFIG.expiryWarningDays) { return { key: "expiring", label: "Expires in " + days + "d" }; }
+      }
+    }
+    return { key: "ok", label: req.expires && rec.expires ? "Current thru " + rec.expires : "Current" };
+  },
+  staffCompliance: function () {
+    var ok = 0, total = 0;
+    S.staff.roster.forEach(function (st) {
+      PROVIDER_CONFIG.staffRequirements.forEach(function (req) {
+        var status = Engine.staffReqStatus(st.id, req);
+        if (status.key === "na") { return; }
+        total++;
+        if (status.key === "ok" || status.key === "expiring") { ok++; }
+      });
+    });
+    return { ok: ok, total: total, pct: total ? Math.round(100 * ok / total) : null };
+  },
+  fireCheckStatus: function (item) {
+    var rec = S.fire.checks[item.id];
+    if (!rec || !rec.lastDone) { return { key: "missing", label: "Never recorded" }; }
+    var last = new Date(rec.lastDone + "T00:00:00");
+    if (isNaN(last.getTime())) { return { key: "missing", label: "Never recorded" }; }
+    var days = Math.floor((new Date() - last) / 86400000);
+    var due = item.frequencyDays;
+    if (days > due) { return { key: "overdue", label: "Overdue (" + days + "d ago)" }; }
+    if (days > due * 0.75) { return { key: "soon", label: "Due soon (" + days + "d ago)" }; }
+    return { key: "ok", label: "Done " + rec.lastDone };
+  },
+  fireReadiness: function () {
+    var ok = 0, total = 0;
+    PROVIDER_CONFIG.fire.checklist.forEach(function (item) {
+      total++;
+      var st = Engine.fireCheckStatus(item);
+      if (st.key === "ok" || st.key === "soon") { ok++; }
+    });
+    var sites = {};
+    S.fire.drills.forEach(function (d) {
+      var days = Math.floor((new Date() - new Date(d.date + "T00:00:00")) / 86400000);
+      if (days <= PROVIDER_CONFIG.fire.drillFrequencyDays) {
+        sites[d.site + "|" + d.shift] = true;
+      }
+    });
+    return { ok: ok, total: total, pct: total ? Math.round(100 * ok / total) : null,
+             recentDrillCells: Object.keys(sites).length };
+  }
+};
+
+/* ============================ AI (dual mode) ============================
+   Optional Anthropic API assist. Everything has an offline fallback;
+   scoring never depends on this. Key is stored via the storage adapter. */
+var AI = {
+  enabled: function () { return !!(S.settings.aiKey && S.settings.aiKey.trim()); },
+  model: function () { return S.settings.aiModel || "claude-opus-5"; },
+  call: async function (systemPrompt, userPrompt) {
+    var resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": S.settings.aiKey.trim(),
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: AI.model(),
+        max_tokens: 4000,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }]
+      })
+    });
+    if (!resp.ok) {
+      var errText = "";
+      try { var j = await resp.json(); errText = (j.error && j.error.message) || resp.status; } catch (e) { errText = String(resp.status); }
+      throw new Error("API error: " + errText);
+    }
+    var data = await resp.json();
+    if (data.stop_reason === "refusal") { throw new Error("The model declined this request."); }
+    var text = "";
+    (data.content || []).forEach(function (b) { if (b.type === "text") { text += b.text; } });
+    if (!text) { throw new Error("Empty response."); }
+    return text;
+  },
+  /* Offline CAP draft: deterministic template from the same data */
+  offlineCap: function (slId, findings) {
+    var cfg = PROVIDER_CONFIG;
+    var lines = [];
+    lines.push("CORRECTIVE ACTION PLAN (draft — offline template)");
+    lines.push("Provider: " + cfg.meta.providerName);
+    lines.push("Service line: " + Engine.slName(slId));
+    lines.push("Prepared: " + new Date().toISOString().slice(0, 10));
+    lines.push("");
+    lines.push("Reminder: " + cfg.capRules.text);
+    lines.push("");
+    if (!findings.length) { lines.push("No Not Met indicators recorded for this service line."); return lines.join("\n"); }
+    findings.forEach(function (f, i) {
+      lines.push((i + 1) + ". INDICATOR " + f.item.id + (f.item.alert ? "  [ALERT]" : "") + " (weight " + f.item.weight + ")");
+      lines.push("   Finding: " + f.item.questionText);
+      lines.push("   Affected (sampled): " + f.clients.map(function (c) { return c.name; }).join(", "));
+      lines.push("   Corrective action: [describe the fix for the sampled person(s) above]");
+      lines.push("   Systemic action: Review this indicator for ALL people in " + Engine.slName(slId) +
+                 ", not only those sampled; document the sweep and remediate every instance.");
+      lines.push("   Responsible person: [name/title]    Target date: [within CAP window]");
+      lines.push("   Evidence of completion: [what will be produced]");
+      lines.push("");
+    });
+    return lines.join("\n");
+  },
+  capPrompt: function (slId, findings) {
+    var cfg = PROVIDER_CONFIG;
+    var payload = findings.map(function (f) {
+      return { indicator: f.item.id, weight: f.item.weight, alert: f.item.alert,
+               question: f.item.questionText, surveyorIntent: f.item.intentText,
+               affectedSampledPeople: f.clients.map(function (c) { return c.name; }) };
+    });
+    var system = "You are a compliance consultant drafting a Corrective Action Plan for a Medicaid HCBS waiver provider preparing for a " +
+      cfg.meta.reviewName + " conducted by " + cfg.meta.auditor + ". Write in a formal, institutional tone. " +
+      "Rules: " + cfg.capRules.text + " Structure each finding as: Finding, Root Cause Considerations, Corrective Action (individual), " +
+      "Systemic Action (all people in the service line), Responsible Party placeholder, Target Date placeholder, Evidence of Completion.";
+    var user = "Provider: " + cfg.meta.providerName + "\nService line: " + Engine.slName(slId) +
+      "\nNot Met indicators (JSON):\n" + JSON.stringify(payload, null, 2) +
+      "\nDraft the CAP now. Use placeholders in [brackets] where provider-specific detail is needed.";
+    return { system: system, user: user };
+  },
+  offlineBriefing: function () {
+    var lines = [];
+    lines.push("READINESS BRIEFING (offline summary)");
+    lines.push("Generated: " + new Date().toISOString().slice(0, 10));
+    lines.push("");
+    var alerts = Engine.systemAlerts();
+    if (alerts.length) {
+      lines.push("!! " + alerts.length + " ALERT indicator(s) scored Not Met — a Follow-Up PCR within 30 days is mandatory regardless of overall score:");
+      alerts.forEach(function (a) { lines.push("   - " + a.item.id + " (" + a.client.name + "): " + a.item.questionText); });
+      lines.push("");
+    }
+    PROVIDER_CONFIG.serviceLines.forEach(function (sl) {
+      var sc = Engine.scoreServiceLine(sl.id);
+      if (sc.totalPct === null) { lines.push(sl.name + ": no scored reviews yet."); return; }
+      lines.push(sl.name + ": total " + sc.totalPct + "%, critical " + sc.critPct + "% -> " + sc.tier.label +
+        (sc.notMet ? " (" + sc.notMet + " not met)" : ""));
+    });
+    var rr = Engine.retrievalRate();
+    var org = Engine.orgScore();
+    var stf = Engine.staffCompliance();
+    var fire = Engine.fireReadiness();
+    lines.push("");
+    lines.push("Record retrieval rate: " + (rr.pct === null ? "n/a" : rr.pct + "% (" + rr.located + "/" + rr.rated + " rated records have a verified location)"));
+    lines.push("Organizational tools: " + (org.pct === null ? "not yet scored" : org.pct + "%, " + org.openItems + " open item(s)"));
+    lines.push("Staff records compliance: " + (stf.pct === null ? "no staff entered" : stf.pct + "%"));
+    lines.push("Fire/emergency checklist: " + (fire.pct === null ? "n/a" : fire.pct + "% current"));
+    lines.push("");
+    lines.push("Priority order: clear Alerts first, then critical (weight-" + PROVIDER_CONFIG.scoring.criticalWeight +
+      ") Not Mets, then documents with no verified location (2-hour production rule).");
+    return lines.join("\n");
+  },
+  briefingPrompt: function () {
+    var data = { serviceLines: {}, alerts: Engine.systemAlerts().map(function (a) {
+      return { indicator: a.item.id, person: a.client.name, question: a.item.questionText }; }) };
+    PROVIDER_CONFIG.serviceLines.forEach(function (sl) {
+      var sc = Engine.scoreServiceLine(sl.id);
+      data.serviceLines[sl.name] = { totalPct: sc.totalPct, criticalPct: sc.critPct, tier: sc.tier.label,
+        notMet: sc.notMet, alerts: sc.alerts, clientsScored: sc.clients };
+    });
+    data.recordRetrieval = Engine.retrievalRate();
+    data.orgTools = Engine.orgScore();
+    data.staffCompliance = Engine.staffCompliance();
+    data.fireReadiness = Engine.fireReadiness();
+    var system = "You are a compliance readiness advisor for a Medicaid HCBS waiver provider preparing for a " +
+      PROVIDER_CONFIG.meta.reviewName + " (" + PROVIDER_CONFIG.meta.auditor + "). Tier rules: Excellent >=90% total AND critical " +
+      "(plus 100% HCBS settings, >=80% satisfaction) = 2-yr cert; >=80 = annual; 70-79 = Do Not Refer + CAP + follow-up; 51-69 = provisional at best; <=50 = enhanced monitoring. " +
+      "Any Alert-flagged Not Met forces a follow-up review within 30 days. Write a short, direct readiness briefing: current standing per service line, the top risks in priority order, and concrete next actions. No fluff.";
+    return { system: system, user: "Current readiness data (JSON):\n" + JSON.stringify(data, null, 2) };
+  }
+};
+
+/* ============================ VIEW HELPERS ============================ */
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+function fmtPct(p) { return p === null || p === undefined ? "—" : p + "%"; }
+function badge(cls, text) { return '<span class="badge ' + cls + '">' + esc(text) + "</span>"; }
+function tierBadgeCls(key) {
+  return { excellent: "met", satisfactory: "met", needsImprovement: "warn",
+           unsatisfactory: "gap", failed: "alert", alert: "alert", none: "outline" }[key] || "outline";
+}
+function barHtml(pct) {
+  var th = PROVIDER_CONFIG.scoring.thresholds;
+  var w = pct === null ? 0 : Math.max(0, Math.min(100, pct));
+  var cls = pct === null ? "" : (pct >= th.satisfactory ? "" : (pct >= th.needsImprovement ? "warn" : "bad"));
+  return '<div class="scorebar">' +
+    '<div class="fill ' + cls + '" style="width:' + w + '%"></div>' +
+    '<div class="tick" style="left:' + th.needsImprovement + '%"></div>' +
+    '<div class="tick" style="left:' + th.satisfactory + '%"></div>' +
+    '<div class="tick t90" style="left:' + th.excellent + '%"></div></div>';
+}
+function slOptions(selected, includeAll) {
+  var out = includeAll ? '<option value="all">All service lines</option>' : "";
+  PROVIDER_CONFIG.serviceLines.forEach(function (sl) {
+    out += '<option value="' + sl.id + '"' + (selected === sl.id ? " selected" : "") + ">" + esc(sl.name) + "</option>";
+  });
+  return out;
+}
+function openModal(html) {
+  document.getElementById("modalBox").innerHTML = html;
+  document.getElementById("modalBack").classList.add("open");
+}
+function closeModal() {
+  document.getElementById("modalBack").classList.remove("open");
+  document.getElementById("modalBox").innerHTML = "";
+}
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function safeConfirm(msg) { try { return window.confirm(msg); } catch (e) { return false; } }
+function safeAlert(msg) { try { window.alert(msg); } catch (e) { console.log(msg); } }
+function showTextModal(title, text, filename) {
+  openModal("<h3>" + esc(title) + '</h3>' +
+    '<div class="small muted" style="margin-bottom:6px">If the download did not start (some viewers block downloads), copy the text below and save it as ' + esc(filename) + '.</div>' +
+    '<textarea rows="14" id="text-modal-out" style="font-family:monospace;font-size:12px">' + esc(text) + '</textarea>' +
+    '<div class="modal-actions"><button class="btn secondary" type="button" id="text-modal-copy">Copy</button>' +
+    '<button class="btn" type="button" data-action="close-modal">Close</button></div>');
+  document.getElementById("text-modal-copy").addEventListener("click", function () {
+    var ta = document.getElementById("text-modal-out");
+    try { ta.select(); navigator.clipboard.writeText(ta.value); this.textContent = "Copied"; } catch (e) {}
+  });
+}
+
+/* ============================ ALERT BANNER ============================ */
+function renderAlertBanner() {
+  var banner = document.getElementById("alertBanner");
+  var alerts = Engine.systemAlerts();
+  if (!alerts.length) { banner.classList.remove("on"); banner.querySelector(".inner").innerHTML = ""; return; }
+  banner.classList.add("on");
+  banner.querySelector(".inner").innerHTML =
+    "⚠ " + alerts.length + " ALERT indicator(s) Not Met — mandatory Follow-Up PCR within 30 days. " +
+    alerts.slice(0, 3).map(function (a) { return esc(a.item.id) + " (" + esc(a.client.name) + ")"; }).join("; ") +
+    (alerts.length > 3 ? " +" + (alerts.length - 3) + " more" : "");
+}
+
+/* ============================ DASHBOARD ============================ */
+function renderDashboard() {
+  var th = PROVIDER_CONFIG.scoring.thresholds;
+  var html = '<h2 class="view-title">Readiness Dashboard</h2>' +
+    '<p class="view-sub">Projected standing for the next ' + esc(PROVIDER_CONFIG.meta.reviewName) +
+    ', computed live from entered reviews. Thresholds: ' + th.needsImprovement + ' / ' + th.satisfactory + ' / ' + th.excellent + '%.</p>';
+
+  html += '<div class="rule-box"><h4>The 2-hour production rule</h4><div class="small">' +
+    esc(PROVIDER_CONFIG.productionRules.text) + "</div></div>";
+
+  html += '<div class="grid grid-cards">';
+  PROVIDER_CONFIG.serviceLines.forEach(function (sl) {
+    var sc = Engine.scoreServiceLine(sl.id);
+    var samp = Engine.sampleSize(S.census[sl.id] || 0);
+    html += '<div class="card"><div class="card-head"><h3>' + esc(sl.name) + "</h3>" +
+      badge(tierBadgeCls(sc.tier.key), sc.tier.label) + "</div>";
+    html += '<div class="bar-label"><span>Total score</span><span class="pct small">' + fmtPct(sc.totalPct) + "</span></div>" + barHtml(sc.totalPct);
+    html += '<div class="bar-label"><span>Critical (weight-' + PROVIDER_CONFIG.scoring.criticalWeight + ')</span><span class="pct small">' + fmtPct(sc.critPct) + "</span></div>" + barHtml(sc.critPct);
+    if (sc.tier.consequence) { html += '<div class="tier-line muted">' + esc(sc.tier.consequence) + "</div>"; }
+    html += '<div class="ind-meta" style="margin-top:8px">' +
+      (sc.alerts ? badge("alert", sc.alerts + " alert") : "") +
+      (sc.notMet ? badge("gap", sc.notMet + " not met") : "") +
+      badge("neutral", sc.clients + " reviewed") +
+      badge("outline", "min sample " + samp.size + (S.census[sl.id] ? " of " + S.census[sl.id] : "")) +
+      (sc.hcbs100 === false ? badge("warn", "HCBS < 100%") : "") +
+      (sc.satPct !== null ? badge(sc.satPct >= PROVIDER_CONFIG.scoring.satisfactionMin ? "neutral" : "warn", "satisfaction " + sc.satPct + "%") : "") +
+      "</div>";
+    html += '<div style="margin-top:10px"><button class="btn secondary small" type="button" data-action="cap-draft" data-sl="' + sl.id + '">CAP draft</button></div>';
+    html += "</div>";
+  });
+  html += "</div>";
+
+  var rr = Engine.retrievalRate(), org = Engine.orgScore(), stf = Engine.staffCompliance(), fire = Engine.fireReadiness();
+  html += '<h3 class="section-title">Standing measures</h3><div class="stat-row">';
+  html += '<div class="stat"><div class="lbl">Record retrieval rate</div><div class="pct">' + fmtPct(rr.pct) + '</div><div class="small muted">' + rr.located + "/" + rr.rated + " rated records have a verified location</div></div>";
+  html += '<div class="stat"><div class="lbl">Organizational tools</div><div class="pct">' + fmtPct(org.pct) + '</div><div class="small muted">' + org.openItems + " open item(s) across the 3 mandatory tools</div></div>";
+  html += '<div class="stat"><div class="lbl">Staff records compliance</div><div class="pct">' + fmtPct(stf.pct) + '</div><div class="small muted">' + stf.ok + "/" + stf.total + " requirements current</div></div>";
+  html += '<div class="stat"><div class="lbl">Fire &amp; emergency</div><div class="pct">' + fmtPct(fire.pct) + '</div><div class="small muted">' + fire.recentDrillCells + " site/shift cell(s) drilled this quarter</div></div>";
+  html += "</div>";
+
+  html += '<div style="margin-top:16px"><button class="btn" type="button" data-action="ai-briefing">Readiness briefing</button></div>';
+  html += '<div class="note-box" style="margin-top:14px"><strong>CAP &amp; appeals timing.</strong> ' + esc(PROVIDER_CONFIG.capRules.text) + "</div>";
+  return html;
+}
+
+/* ============================ CLIENT REVIEW ============================ */
+function clientById(id) { return S.clients.filter(function (c) { return c.id === id; })[0] || null; }
+
+function renderReview() {
+  var html = '<h2 class="view-title">Client Review</h2>' +
+    '<p class="view-sub">Work through the full rubric with live scoring. Gate answers default from the person\'s attribute flags; QA can override. Children of a gate answered No are auto-set N/A and excluded from scoring.</p>';
+  html += '<div class="toolbar"><div class="field"><label>Person</label><select data-bind="review-client">' +
+    '<option value="">— select —</option>' +
+    S.clients.filter(function (c) { return c.activeStatus; }).map(function (c) {
+      return '<option value="' + c.id + '"' + (S.ui.reviewClient === c.id ? " selected" : "") + ">" +
+        esc(c.name) + " — " + esc(Engine.slName(c.serviceLine)) + "</option>";
+    }).join("") + "</select></div>" +
+    '<button class="btn secondary" type="button" data-action="add-client">+ Add person</button>' +
+    (S.ui.reviewClient ? '<button class="btn secondary" type="button" data-action="edit-client" data-id="' + S.ui.reviewClient + '">Edit person</button>' : "") +
+    "</div>";
+
+  var c = clientById(S.ui.reviewClient);
+  if (!c) { return html + '<div class="empty">Select a person above, or add one to begin a review.</div>'; }
+
+  var flagBadges = PROVIDER_CONFIG.clientFlags.map(function (f) {
+    return badge(c.flags && c.flags[f.key] ? "neutral" : "outline", (f.short || f.label) + ": " + (c.flags && c.flags[f.key] ? "Yes" : "No"));
+  }).join(" ");
+  html += '<div class="card" style="margin-bottom:12px"><div class="ind-meta">' +
+    badge("neutral", Engine.slName(c.serviceLine)) + badge("outline", c.livingArrangement) +
+    (c.sampled ? badge("warn", "In sample") : "") +
+    (c.priorPCRParticipant ? badge("outline", "Prior PCR participant") : "") + " " + flagBadges + "</div></div>";
+
+  var sc = Engine.scoreClient(c);
+  var totalPct = sc.possible ? Math.round(100 * sc.earned / sc.possible) : null;
+  var critPct = sc.critPossible ? Math.round(100 * sc.critEarned / sc.critPossible) : null;
+  var hcbs100 = sc.hcbsRated === 0 ? null : sc.hcbsMet === sc.hcbsRated;
+  var satPct = sc.satRated ? Math.round(100 * sc.satMet / sc.satRated) : null;
+  var tier = Engine.tier(totalPct, critPct, hcbs100, satPct, sc.alerts);
+  html += '<div class="sticky-score">' +
+    '<div class="cell"><div class="num">' + fmtPct(totalPct) + '</div><div class="lbl">Total</div></div>' +
+    '<div class="cell"><div class="num">' + fmtPct(critPct) + '</div><div class="lbl">Critical</div></div>' +
+    '<div class="cell"><div class="num">' + sc.alerts + '</div><div class="lbl">Alerts</div></div>' +
+    '<div class="cell"><div class="num">' + sc.ratedCount + "/" + sc.applicableQA + '</div><div class="lbl">Rated</div></div>' +
+    '<div class="cell" style="flex:1"><div>' + badge(tierBadgeCls(tier.key), tier.label) + '</div><div class="lbl">Projected tier</div></div>' +
+    "</div>";
+
+  var items = Engine.activeItems(c.serviceLine).filter(function (it) { return Engine.applies(it, c); });
+  var domains = [];
+  items.forEach(function (it) { if (domains.indexOf(it.domain) === -1) { domains.push(it.domain); } });
+
+  domains.forEach(function (dom) {
+    html += '<div class="domain-block"><div class="domain-head">' + esc(dom) + "</div>";
+    items.filter(function (it) { return it.domain === dom; }).forEach(function (it) {
+      html += indicatorHtml(it, c);
+    });
+    html += "</div>";
+  });
+  return html;
+}
+
+function indicatorHtml(it, c) {
+  var rec = (S.records[c.id] || {})[it.id] || {};
+  var typeBadges = badge(it.type === "GATE" ? "neutral" : (it.type === "QI" ? "outline" : "neutral"), it.type) +
+    (it.type === "QA" ? badge(it.weight === PROVIDER_CONFIG.scoring.criticalWeight ? "warn" : "outline", "w" + it.weight) : "") +
+    (it.alert ? badge("alert", "Alert") : "") +
+    (it.hcbsSettings ? badge("outline", "HCBS") : "");
+  var intentOpen = S.ui.openIntents && S.ui.openIntents[it.id];
+
+  if (it.type === "GATE") {
+    var ans = Engine.gateAnswer(c, it);
+    var flagDefault = it.flagKey ? ((c.flags && c.flags[it.flagKey]) ? "yes" : "no") : "yes";
+    var overridden = rec.gateAnswer && rec.gateAnswer !== flagDefault;
+    return '<div class="ind"><div class="ind-top"><div>' +
+      '<span class="ind-id">' + esc(it.id) + "</span> " + typeBadges +
+      '<div class="ind-q">' + esc(it.questionText) + "</div></div>" +
+      '<div class="rate-group">' +
+      '<button type="button" data-action="gate" data-client="' + c.id + '" data-ind="' + it.id + '" data-val="yes" class="' + (ans === "yes" ? "on-met" : "") + '">Yes</button>' +
+      '<button type="button" data-action="gate" data-client="' + c.id + '" data-ind="' + it.id + '" data-val="no" class="' + (ans === "no" ? "on-na" : "") + '">No</button>' +
+      "</div></div>" +
+      '<div class="gate-note">Defaults to <strong>' + flagDefault.toUpperCase() + "</strong> from the person's attribute flags" +
+      (overridden ? " — overridden by QA" : "") + ". No = the dependent indicators below are auto-N/A.</div>" +
+      intentBlock(it, intentOpen) + "</div>";
+  }
+
+  var eff = Engine.effective(it, c);
+  var disabled = eff.forced;
+  var current = eff.forced ? "na" : (rec.rating || null);
+  var btns = ["met", "not_met", "na"].map(function (v) {
+    var lbl = v === "met" ? "Met" : (v === "not_met" ? "Not Met" : "N/A");
+    return '<button type="button" data-action="rate" data-client="' + c.id + '" data-ind="' + it.id + '" data-val="' + v + '"' +
+      (disabled ? " disabled" : "") + ' class="' + (current === v ? "on-" + v : "") + '">' + lbl + "</button>";
+  }).join("");
+
+  return '<div class="ind' + (disabled ? " gated-off" : "") + '"><div class="ind-top"><div>' +
+    '<span class="ind-id">' + esc(it.id) + "</span> " + typeBadges +
+    '<div class="ind-q">' + esc(it.questionText) + "</div></div>" +
+    '<div class="rate-group">' + btns + "</div></div>" +
+    (disabled ? '<div class="gate-note">Auto N/A — gate ' + esc(it.gateParent) + " is answered No. Excluded from scoring.</div>" : "") +
+    intentBlock(it, intentOpen) +
+    (!disabled ? '<div class="ind-fields">' +
+      '<div><label>Verified by</label><input type="text" value="' + esc(rec.verifiedBy || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="verifiedBy"></div>' +
+      '<div><label>Verified date</label><input type="date" value="' + esc(rec.verifiedDate || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="verifiedDate"></div>' +
+      '<div><label>Evidence location</label><input type="text" placeholder="e.g. SharePoint/ISP/2026 or Binder 3, Shelf B" value="' + esc(rec.evidenceLocation || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="evidenceLocation"></div>' +
+      '<div><label>Notes</label><input type="text" value="' + esc(rec.notes || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="notes"></div>' +
+      "</div>" : "") +
+    "</div>";
+}
+function intentBlock(it, open) {
+  return '<button class="intent-toggle" type="button" data-action="toggle-intent" data-ind="' + it.id + '">' +
+    (open ? "Hide" : "Show") + " what the surveyor looks for</button>" +
+    '<div class="intent-body' + (open ? " open" : "") + '">' + esc(it.intentText || "No interpretive guidance recorded.") + "</div>";
+}
+
+/* ============================ CLIENT MODAL ============================ */
+function clientModal(c) {
+  var isNew = !c;
+  c = c || { id: "c-" + Date.now().toString(36), name: "", serviceLine: PROVIDER_CONFIG.serviceLines[0].id,
+             livingArrangement: PROVIDER_CONFIG.livingArrangements[0], flags: {}, priorPCRParticipant: false,
+             sampled: false, activeStatus: true };
+  var flagChecks = PROVIDER_CONFIG.clientFlags.map(function (f) {
+    return '<div class="check-line"><input type="checkbox" id="cf-' + f.key + '"' + (c.flags && c.flags[f.key] ? " checked" : "") + '><label for="cf-' + f.key + '" style="text-transform:none;font-size:13.5px;margin:0">' + esc(f.label) + "</label></div>";
+  }).join("");
+  openModal('<h3>' + (isNew ? "Add person" : "Edit person") + '</h3><div class="form-grid">' +
+    '<div class="full"><label>Name</label><input type="text" id="cm-name" value="' + esc(c.name) + '"></div>' +
+    '<div><label>Service line</label><select id="cm-sl">' + slOptions(c.serviceLine, false) + "</select></div>" +
+    '<div><label>Living arrangement</label><select id="cm-la">' + PROVIDER_CONFIG.livingArrangements.map(function (la) {
+      return '<option' + (la === c.livingArrangement ? " selected" : "") + ">" + esc(la) + "</option>"; }).join("") + "</select></div>" +
+    '<div class="full">' + flagChecks +
+    '<div class="check-line"><input type="checkbox" id="cm-prior"' + (c.priorPCRParticipant ? " checked" : "") + '><label for="cm-prior" style="text-transform:none;font-size:13.5px;margin:0">Prior PCR participant (flag — not excluded from re-sampling)</label></div>' +
+    '<div class="check-line"><input type="checkbox" id="cm-sampled"' + (c.sampled ? " checked" : "") + '><label for="cm-sampled" style="text-transform:none;font-size:13.5px;margin:0">In current sample</label></div>' +
+    '<div class="check-line"><input type="checkbox" id="cm-active"' + (c.activeStatus ? " checked" : "") + '><label for="cm-active" style="text-transform:none;font-size:13.5px;margin:0">Active</label></div>' +
+    "</div></div>" +
+    '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
+    '<button class="btn" type="button" data-action="save-client" data-id="' + c.id + '" data-new="' + isNew + '">Save</button></div>');
+}
+function saveClientFromModal(id, isNew) {
+  var name = document.getElementById("cm-name").value.trim();
+  if (!name) { return; }
+  var c = isNew ? null : clientById(id);
+  var flags = {};
+  PROVIDER_CONFIG.clientFlags.forEach(function (f) { flags[f.key] = document.getElementById("cf-" + f.key).checked; });
+  var data = {
+    id: id, name: name,
+    serviceLine: document.getElementById("cm-sl").value,
+    livingArrangement: document.getElementById("cm-la").value,
+    flags: flags,
+    priorPCRParticipant: document.getElementById("cm-prior").checked,
+    sampled: document.getElementById("cm-sampled").checked,
+    activeStatus: document.getElementById("cm-active").checked
+  };
+  if (c) { Object.assign(c, data); } else { S.clients.push(data); S.records[id] = S.records[id] || {}; }
+  persist(K.clients, S.clients);
+  if (isNew) { S.ui.reviewClient = id; }
+  closeModal(); render();
+}
+
+/* ============================ SAMPLING ============================ */
+function renderSampling() {
+  var html = '<h2 class="view-title">Sampling Exposure Calculator</h2>' +
+    '<p class="view-sub">Edit census per service line; minimum sample size recomputes live from the Qlarant matrix ' +
+    "(services under 10 people also check ceiling(10% + 1)). An oversample is always drawn beyond the minimum. " +
+    "Prior-PCR participants are flagged, never excluded. A person receiving multiple services can be sampled independently for each.</p>";
+  html += '<div class="rule-box"><h4>Exposure = every sampled record must surface in 2 hours</h4><div class="small">' +
+    esc(PROVIDER_CONFIG.productionRules.text) + "</div></div>";
+  html += '<div class="table-wrap"><table><thead><tr><th>Service line</th><th>Census</th><th>Min sample</th><th>Rule applied</th><th>Suggested pull (+1 oversample)</th><th>Marked sampled</th><th>Prior-PCR flags</th></tr></thead><tbody>';
+  PROVIDER_CONFIG.serviceLines.forEach(function (sl) {
+    var census = S.census[sl.id] || "";
+    var samp = Engine.sampleSize(census);
+    var sampled = S.clients.filter(function (c) { return c.activeStatus && c.serviceLine === sl.id && c.sampled; }).length;
+    var prior = S.clients.filter(function (c) { return c.activeStatus && c.serviceLine === sl.id && c.priorPCRParticipant; }).length;
+    html += "<tr><td><strong>" + esc(sl.name) + "</strong></td>" +
+      '<td style="max-width:110px"><input type="number" min="0" value="' + esc(census) + '" data-bind="census" data-sl="' + sl.id + '"></td>' +
+      '<td id="samp-size-' + sl.id + '" class="pct small" style="font-size:18px">' + samp.size + "</td>" +
+      '<td id="samp-rule-' + sl.id + '" class="muted small">' + esc(samp.rule) + "</td>" +
+      '<td id="samp-over-' + sl.id + '">' + (samp.size ? samp.size + 1 : 0) + "</td>" +
+      '<td>' + sampled + (samp.size && sampled < samp.size ? " " + badge("warn", "below min") : "") + "</td>" +
+      "<td>" + (prior ? badge("outline", prior + " flagged") : "0") + "</td></tr>";
+  });
+  html += '</tbody><tfoot><tr><th>Total exposure</th><th id="samp-census-total"></th><th id="samp-total"></th><th></th><th id="samp-over-total"></th><th></th><th></th></tr></tfoot></table></div>';
+  html += '<div class="note-box" style="margin-top:12px">Staff sampling: up to 5 direct-care staff per service (those serving sampled people) plus the QIDP, nurse, and Program Manager are reviewed at every PCR regardless of service line. Track them on the Organization &amp; Staff screen.</div>';
+  return html;
+}
+function updateSamplingTotals() {
+  var totC = 0, totS = 0, totO = 0;
+  PROVIDER_CONFIG.serviceLines.forEach(function (sl) {
+    var census = parseInt(S.census[sl.id], 10) || 0;
+    var samp = Engine.sampleSize(census);
+    totC += census; totS += samp.size; totO += samp.size ? samp.size + 1 : 0;
+    var e1 = document.getElementById("samp-size-" + sl.id);
+    var e2 = document.getElementById("samp-rule-" + sl.id);
+    var e3 = document.getElementById("samp-over-" + sl.id);
+    if (e1) { e1.textContent = samp.size; }
+    if (e2) { e2.textContent = samp.rule; }
+    if (e3) { e3.textContent = samp.size ? samp.size + 1 : 0; }
+  });
+  var t0 = document.getElementById("samp-census-total");
+  var t1 = document.getElementById("samp-total");
+  var t2 = document.getElementById("samp-over-total");
+  if (t0) { t0.textContent = totC; }
+  if (t1) { t1.textContent = totS; }
+  if (t2) { t2.textContent = totO; }
+}
+
+/* ============================ DOCUMENT LOCATOR ============================ */
+function locatorRows() {
+  var rows = [];
+  S.clients.forEach(function (c) {
+    if (!c.activeStatus) { return; }
+    var recs = S.records[c.id] || {};
+    Object.keys(recs).forEach(function (iid) {
+      var rec = recs[iid];
+      if (rec.rating !== "met" && rec.rating !== "not_met") { return; }
+      var it = Engine.itemById(iid);
+      rows.push({ group: "clients", who: c.name + (c.sampled ? " ●" : ""), context: Engine.slName(c.serviceLine),
+        doc: iid + " — " + ((it && it.questionText) || "").slice(0, 90),
+        location: (rec.evidenceLocation || "").trim(), verifiedBy: rec.verifiedBy || "", verifiedDate: rec.verifiedDate || "" });
+    });
+  });
+  S.staff.roster.forEach(function (st) {
+    var recs = S.staff.records[st.id] || {};
+    PROVIDER_CONFIG.staffRequirements.forEach(function (req) {
+      var rec = recs[req.id];
+      if (!rec || rec.status === "na" || !rec.status) { return; }
+      rows.push({ group: "staff", who: st.name, context: st.role,
+        doc: req.label, location: (rec.evidenceLocation || "").trim(),
+        verifiedBy: "", verifiedDate: rec.completed || "" });
+    });
+  });
+  PROVIDER_CONFIG.orgTools.forEach(function (tool) {
+    var recs = S.org[tool.id] || {};
+    tool.items.forEach(function (item) {
+      var rec = recs[item.id];
+      if (!rec || (rec.rating !== "met" && rec.rating !== "not_met")) { return; }
+      rows.push({ group: "org", who: tool.name, context: "Organization",
+        doc: item.id + " — " + item.text.slice(0, 90), location: (rec.evidenceLocation || "").trim(),
+        verifiedBy: "", verifiedDate: "" });
+    });
+  });
+  return rows;
+}
+function locatorBodyHtml() {
+  var q = (S.ui.locatorQuery || "").toLowerCase();
+  var f = S.ui.locatorFilter;
+  var rows = locatorRows().filter(function (r) {
+    if (f === "missing" && r.location) { return false; }
+    if (f !== "all" && f !== "missing" && r.group !== f) { return false; }
+    if (q) {
+      var hay = (r.who + " " + r.context + " " + r.doc + " " + r.location).toLowerCase();
+      if (hay.indexOf(q) === -1) { return false; }
+    }
+    return true;
+  });
+  if (!rows.length) { return '<tr><td colspan="5" class="muted">No records match. Records appear here once rated in Client Review, Organization &amp; Staff.</td></tr>'; }
+  return rows.map(function (r) {
+    return "<tr" + (!r.location ? ' class="flag-row"' : "") + "><td>" + esc(r.who) + "</td><td>" + esc(r.context) + "</td><td>" + esc(r.doc) + "</td>" +
+      "<td>" + (r.location ? esc(r.location) : badge("gap", "NO VERIFIED LOCATION")) + "</td>" +
+      '<td class="small muted">' + esc(r.verifiedBy) + (r.verifiedDate ? " " + esc(r.verifiedDate) : "") + "</td></tr>";
+  }).join("");
+}
+function renderLocator() {
+  var rows = locatorRows();
+  var missing = rows.filter(function (r) { return !r.location; }).length;
+  var html = '<h2 class="view-title">Document Locator</h2>' +
+    '<p class="view-sub">Where is every required document for person X, service Y — answered instantly. ● = in current sample.</p>';
+  html += '<div class="rule-box"><h4>2 hours, then 4:00 PM — or it was never documented</h4><div class="small">' +
+    esc(PROVIDER_CONFIG.productionRules.text) + "</div></div>";
+  html += '<div class="stat-row" style="margin-bottom:12px">' +
+    '<div class="stat"><div class="lbl">Tracked documents</div><div class="pct">' + rows.length + "</div></div>" +
+    '<div class="stat"><div class="lbl">No verified location</div><div class="pct" style="color:' + (missing ? "var(--gap)" : "var(--met)") + '">' + missing + "</div></div></div>";
+  html += '<div class="toolbar"><div class="field" style="max-width:340px"><label>Search</label>' +
+    '<input type="search" placeholder="person, staff, document, location…" value="' + esc(S.ui.locatorQuery) + '" data-bind="locator-q"></div>' +
+    '<div class="field"><label>Show</label><select data-bind="locator-filter">' +
+    [["all", "All records"], ["missing", "No verified location"], ["clients", "Client records"], ["staff", "Staff records"], ["org", "Organizational"]].map(function (o) {
+      return '<option value="' + o[0] + '"' + (S.ui.locatorFilter === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") +
+    "</select></div></div>";
+  html += '<div class="table-wrap"><table><thead><tr><th>Person / Staff / Tool</th><th>Context</th><th>Document</th><th>Verified location</th><th>Verified</th></tr></thead><tbody id="locatorBody">' +
+    locatorBodyHtml() + "</tbody></table></div>";
+  return html;
+}
+
+/* ============================ ORGANIZATION & STAFF ============================ */
+function renderOrgStaff() {
+  var html = '<h2 class="view-title">Organization &amp; Staff</h2>' +
+    '<p class="view-sub">The three organization-level tools reviewed at every PCR, sampled-staff records, and the fire &amp; emergency readiness module.</p>';
+
+  /* Org tools */
+  html += '<h3 class="section-title">Organizational tools</h3><div class="grid grid-2">';
+  PROVIDER_CONFIG.orgTools.forEach(function (tool) {
+    var recs = S.org[tool.id] || {};
+    var excluded = tool.excludedServiceLines && tool.excludedServiceLines.length;
+    html += '<div class="card"><h3>' + esc(tool.name) + "</h3>";
+    if (excluded) {
+      html += '<div class="small muted" style="margin-bottom:8px">Not applicable to: ' +
+        tool.excludedServiceLines.map(function (id) { return esc(Engine.slName(id)); }).join(", ") + " (per config).</div>";
+    }
+    tool.items.forEach(function (item) {
+      var rec = recs[item.id] || {};
+      var btns = ["met", "not_met", "na"].map(function (v) {
+        var lbl = v === "met" ? "Met" : (v === "not_met" ? "Not Met" : "N/A");
+        return '<button type="button" data-action="org-rate" data-tool="' + tool.id + '" data-item="' + item.id + '" data-val="' + v + '" class="' + (rec.rating === v ? "on-" + v : "") + '">' + lbl + "</button>";
+      }).join("");
+      html += '<div style="border-top:1px solid var(--hairline);padding:9px 0">' +
+        '<div class="ind-top"><div style="flex:1"><span class="ind-id">' + esc(item.id) + "</span> " + badge("outline", "w" + item.weight) +
+        '<div class="ind-q" style="font-size:13.5px">' + esc(item.text) + "</div></div>" +
+        '<div class="rate-group">' + btns + "</div></div>" +
+        '<div class="ind-fields" style="margin-top:6px"><div><label>Evidence location</label><input type="text" value="' + esc(rec.evidenceLocation || "") + '" data-bind="org-field" data-tool="' + tool.id + '" data-item="' + item.id + '" data-field="evidenceLocation"></div>' +
+        '<div><label>Open item / notes</label><input type="text" value="' + esc(rec.notes || "") + '" data-bind="org-field" data-tool="' + tool.id + '" data-item="' + item.id + '" data-field="notes"></div></div></div>';
+    });
+    html += "</div>";
+  });
+  html += "</div>";
+
+  /* Staff */
+  html += '<h3 class="section-title">Staff records</h3>' +
+    '<div class="note-box">Reviewed every PCR: up to 5 direct-care staff per service (those serving sampled people) plus QIDP, nurse, and Program Manager. Click a status to update it. Expirations within ' + PROVIDER_CONFIG.expiryWarningDays + " days are flagged.</div>" +
+    '<div class="toolbar"><button class="btn secondary" type="button" data-action="add-staff">+ Add staff</button></div>';
+  if (!S.staff.roster.length) {
+    html += '<div class="empty">No staff entered yet.</div>';
+  } else {
+    html += '<div class="table-wrap"><table><thead><tr><th>Staff</th><th>Role / Service</th>';
+    PROVIDER_CONFIG.staffRequirements.forEach(function (req) { html += "<th>" + esc(req.label) + "</th>"; });
+    html += "<th></th></tr></thead><tbody>";
+    S.staff.roster.forEach(function (st) {
+      html += "<tr><td><strong>" + esc(st.name) + "</strong></td><td class='small'>" + esc(st.role) +
+        (st.serviceLine ? "<br><span class='muted'>" + esc(Engine.slName(st.serviceLine)) + "</span>" : "") + "</td>";
+      PROVIDER_CONFIG.staffRequirements.forEach(function (req) {
+        var status = Engine.staffReqStatus(st.id, req);
+        var cls = { ok: "met", expiring: "warn", expired: "alert", missing: "gap", na: "na" }[status.key];
+        html += '<td><button type="button" style="background:none;border:none;padding:0;cursor:pointer" data-action="edit-streq" data-staff="' + st.id + '" data-req="' + req.id + '">' + badge(cls, status.label) + "</button></td>";
+      });
+      html += '<td><button class="btn secondary small" type="button" data-action="edit-staff" data-id="' + st.id + '">Edit</button></td></tr>';
+    });
+    html += "</tbody></table></div>";
+  }
+
+  /* Fire & emergency */
+  html += '<h3 class="section-title">Fire &amp; emergency readiness</h3>' +
+    '<div class="note-box">Drills are due per site, per shift, every ' + PROVIDER_CONFIG.fire.drillFrequencyDays + " days (quarterly). Recurring safety checks below feed the dashboard readiness measure.</div>";
+  html += '<div class="grid grid-2"><div class="card"><h3>Recurring safety checklist</h3><div class="table-wrap" style="border:none"><table style="min-width:480px">' +
+    "<thead><tr><th>Item</th><th>Every</th><th>Last done</th><th>Status</th><th></th></tr></thead><tbody>";
+  PROVIDER_CONFIG.fire.checklist.forEach(function (item) {
+    var rec = S.fire.checks[item.id] || {};
+    var st = Engine.fireCheckStatus(item);
+    var cls = { ok: "met", soon: "warn", overdue: "alert", missing: "gap" }[st.key];
+    html += "<tr><td>" + esc(item.label) + "</td><td class='small muted'>" + item.frequencyDays + "d</td>" +
+      '<td style="max-width:130px"><input type="date" value="' + esc(rec.lastDone || "") + '" data-bind="fire-date" data-item="' + item.id + '"></td>' +
+      "<td>" + badge(cls, st.label) + "</td>" +
+      '<td><button class="btn secondary small" type="button" data-action="fire-done" data-item="' + item.id + '">Today</button></td></tr>';
+  });
+  html += "</tbody></table></div></div>";
+
+  html += '<div class="card"><div class="card-head"><h3>Drill log</h3><button class="btn secondary small" type="button" data-action="add-drill">+ Log drill</button></div>';
+  if (!S.fire.drills.length) {
+    html += '<div class="muted small">No drills logged.</div>';
+  } else {
+    html += '<div class="table-wrap" style="border:none"><table style="min-width:520px"><thead><tr><th>Date</th><th>Site</th><th>Shift</th><th>Type</th><th>Evac (min)</th><th>Result</th><th></th></tr></thead><tbody>';
+    S.fire.drills.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).forEach(function (d) {
+      html += "<tr><td>" + esc(d.date) + "</td><td>" + esc(d.site) + "</td><td>" + esc(d.shift) + "</td><td>" + esc(d.type) + "</td><td>" + esc(d.evacMinutes || "—") + "</td>" +
+        "<td>" + (d.passed ? badge("met", "Pass") : badge("gap", "Issues")) + (d.issues ? "<div class='small muted'>" + esc(d.issues) + "</div>" : "") + "</td>" +
+        '<td><button class="btn danger small" type="button" data-action="del-drill" data-id="' + d.id + '">✕</button></td></tr>';
+    });
+    html += "</tbody></table></div>";
+  }
+  html += "</div></div>";
+  return html;
+}
+
+function staffModal(st) {
+  var isNew = !st;
+  st = st || { id: "s-" + Date.now().toString(36), name: "", role: PROVIDER_CONFIG.staffRoles[0], serviceLine: "" };
+  openModal('<h3>' + (isNew ? "Add staff" : "Edit staff") + '</h3><div class="form-grid">' +
+    '<div class="full"><label>Name</label><input type="text" id="sm-name" value="' + esc(st.name) + '"></div>' +
+    '<div><label>Role</label><select id="sm-role">' + PROVIDER_CONFIG.staffRoles.map(function (r) {
+      return '<option' + (r === st.role ? " selected" : "") + ">" + esc(r) + "</option>"; }).join("") + "</select></div>" +
+    '<div><label>Service line (direct care)</label><select id="sm-sl"><option value="">— org-wide —</option>' + slOptions(st.serviceLine, false) + "</select></div>" +
+    "</div>" +
+    '<div class="modal-actions">' + (isNew ? "" : '<button class="btn danger" type="button" data-action="del-staff" data-id="' + st.id + '">Remove</button>') +
+    '<button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
+    '<button class="btn" type="button" data-action="save-staff" data-id="' + st.id + '" data-new="' + isNew + '">Save</button></div>');
+}
+function streqModal(staffId, reqId) {
+  var st = S.staff.roster.filter(function (s) { return s.id === staffId; })[0];
+  var req = PROVIDER_CONFIG.staffRequirements.filter(function (r) { return r.id === reqId; })[0];
+  if (!st || !req) { return; }
+  var rec = (S.staff.records[staffId] || {})[reqId] || {};
+  openModal("<h3>" + esc(st.name) + " — " + esc(req.label) + '</h3><div class="form-grid">' +
+    '<div><label>Status</label><select id="sq-status">' +
+    [["", "— not recorded —"], ["current", "Current / on file"], ["missing", "Missing"], ["na", "Not applicable"]].map(function (o) {
+      return '<option value="' + o[0] + '"' + ((rec.status || "") === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></div>" +
+    '<div><label>Completed</label><input type="date" id="sq-completed" value="' + esc(rec.completed || "") + '"></div>' +
+    (req.expires ? '<div><label>Expires</label><input type="date" id="sq-expires" value="' + esc(rec.expires || "") + '"></div>' : "") +
+    '<div class="full"><label>Evidence location</label><input type="text" id="sq-loc" value="' + esc(rec.evidenceLocation || "") + '" placeholder="Personnel file, HR drive path…"></div>' +
+    "</div>" +
+    '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
+    '<button class="btn" type="button" data-action="save-streq" data-staff="' + staffId + '" data-req="' + reqId + '">Save</button></div>');
+}
+function drillModal() {
+  openModal('<h3>Log a drill</h3><div class="form-grid">' +
+    '<div><label>Date</label><input type="date" id="dm-date" value="' + todayStr() + '"></div>' +
+    '<div><label>Site</label><input type="text" id="dm-site" placeholder="Site / address"></div>' +
+    '<div><label>Shift</label><select id="dm-shift">' + PROVIDER_CONFIG.fire.shifts.map(function (s) { return "<option>" + esc(s) + "</option>"; }).join("") + "</select></div>" +
+    '<div><label>Type</label><select id="dm-type">' + PROVIDER_CONFIG.fire.drillTypes.map(function (t) { return "<option>" + esc(t) + "</option>"; }).join("") + "</select></div>" +
+    '<div><label>Evacuation time (minutes)</label><input type="number" id="dm-evac" min="0" step="0.5"></div>' +
+    '<div class="full"><label>Issues found (blank = clean pass)</label><input type="text" id="dm-issues"></div>' +
+    "</div>" +
+    '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
+    '<button class="btn" type="button" data-action="save-drill">Save</button></div>');
+}
+
+/* ============================ RUBRIC MANAGER ============================ */
+function renderRubric() {
+  var html = '<h2 class="view-title">Rubric Manager</h2>' +
+    '<p class="view-sub">The editable master rubric. Criteria change every audit cycle — edit here, or import the official rubric JSON; no rebuild needed. Retired items are kept in history, never deleted.</p>';
+  html += '<div class="note-box">The pre-loaded rubric is a representative starter set. Replace it with the official Qlarant-extracted indicators via <strong>Import JSON</strong> (same schema — see README in the repository).</div>';
+  html += '<div class="toolbar">' +
+    '<div class="field"><label>Service line</label><select data-bind="rubric-sl">' + slOptions(S.ui.rubricFilterSL, true) + "</select></div>" +
+    '<div class="field"><label>Type</label><select data-bind="rubric-type">' +
+    [["all", "All types"], ["QA", "QA"], ["QI", "QI"], ["GATE", "GATE"]].map(function (o) {
+      return '<option value="' + o[0] + '"' + (S.ui.rubricFilterType === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></div>" +
+    '<div class="check-line" style="align-self:center"><input type="checkbox" id="rub-retired" data-bind="rubric-retired"' + (S.ui.rubricShowRetired ? " checked" : "") + '><label for="rub-retired" style="text-transform:none;margin:0">Show retired</label></div>' +
+    '<button class="btn secondary" type="button" data-action="add-rubric">+ Add indicator</button>' +
+    '<button class="btn secondary" type="button" data-action="export-rubric">Export JSON</button>' +
+    '<button class="btn secondary" type="button" data-action="import-rubric">Import JSON</button>' +
+    "</div>";
+  var items = S.rubric.filter(function (r) {
+    if (!S.ui.rubricShowRetired && !r.active) { return false; }
+    if (S.ui.rubricFilterSL !== "all" && r.serviceLine !== S.ui.rubricFilterSL) { return false; }
+    if (S.ui.rubricFilterType !== "all" && r.type !== S.ui.rubricFilterType) { return false; }
+    return true;
+  });
+  html += '<div class="table-wrap"><table><thead><tr><th>ID</th><th>Service line</th><th>Domain</th><th>Type</th><th>Weight</th><th>Flags</th><th>Question</th><th>Effective</th><th></th></tr></thead><tbody>';
+  if (!items.length) { html += '<tr><td colspan="9" class="muted">No indicators match the filter.</td></tr>'; }
+  items.forEach(function (r) {
+    html += "<tr" + (r.active ? "" : ' style="opacity:.55"') + '><td class="ind-id">' + esc(r.id) + "</td><td>" + esc(Engine.slName(r.serviceLine)) + "</td><td>" + esc(r.domain) + "</td>" +
+      "<td>" + esc(r.type) + "</td><td>" + r.weight + "</td>" +
+      "<td>" + (r.alert ? badge("alert", "Alert") : "") + (r.hcbsSettings ? " " + badge("outline", "HCBS") : "") +
+      (r.gateParent ? " " + badge("neutral", "gate:" + r.gateParent) : "") + (!r.active ? " " + badge("na", "Retired") : "") + "</td>" +
+      '<td class="small" style="max-width:340px">' + esc(r.questionText.slice(0, 110)) + (r.questionText.length > 110 ? "…" : "") + "</td>" +
+      '<td class="small muted">' + esc(r.effectiveDate || "") + "</td>" +
+      '<td><button class="btn secondary small" type="button" data-action="edit-rubric" data-id="' + esc(r.id) + '">Edit</button></td></tr>';
+  });
+  html += "</tbody></table></div>";
+  return html;
+}
+function rubricModal(r) {
+  var isNew = !r;
+  r = r || { id: "", serviceLine: PROVIDER_CONFIG.serviceLines[0].id, domain: "", weight: 3, type: "QA",
+             alert: false, gateParent: null, flagKey: null, questionText: "", intentText: "",
+             appliesTo: "all", hcbsSettings: false, effectiveDate: todayStr(), active: true };
+  var appliesVal = r.appliesTo === "all" || !r.appliesTo ? "all" : (Array.isArray(r.appliesTo) ? r.appliesTo.join(", ") : r.appliesTo);
+  openModal("<h3>" + (isNew ? "Add indicator" : "Edit " + esc(r.id)) + '</h3><div class="form-grid">' +
+    '<div><label>Indicator ID</label><input type="text" id="rm-id" value="' + esc(r.id) + '"' + (isNew ? "" : " readonly") + ' placeholder="e.g. CQ.A.2"></div>' +
+    '<div><label>Service line</label><select id="rm-sl">' + slOptions(r.serviceLine, false) + "</select></div>" +
+    '<div><label>Domain</label><input type="text" id="rm-domain" value="' + esc(r.domain) + '"></div>' +
+    '<div><label>Type</label><select id="rm-type">' + ["QA", "QI", "GATE"].map(function (t) {
+      return '<option' + (r.type === t ? " selected" : "") + ">" + t + "</option>"; }).join("") + "</select></div>" +
+    '<div><label>Weight (0 gate/QI, 3, 5 critical, 10)</label><select id="rm-weight">' + [0, 3, 5, 10].map(function (w) {
+      return '<option value="' + w + '"' + (r.weight === w ? " selected" : "") + ">" + w + "</option>"; }).join("") + "</select></div>" +
+    '<div><label>Gate parent (indicator ID or blank)</label><input type="text" id="rm-gate" value="' + esc(r.gateParent || "") + '"></div>' +
+    '<div><label>Client flag driving this gate</label><select id="rm-flag"><option value="">— none —</option>' +
+    PROVIDER_CONFIG.clientFlags.map(function (f) {
+      return '<option value="' + f.key + '"' + (r.flagKey === f.key ? " selected" : "") + ">" + esc(f.label) + "</option>"; }).join("") + "</select></div>" +
+    '<div><label>Effective date</label><input type="date" id="rm-eff" value="' + esc(r.effectiveDate || "") + '"></div>' +
+    '<div class="full"><label>Question text</label><textarea id="rm-q" rows="3">' + esc(r.questionText) + "</textarea></div>" +
+    '<div class="full"><label>Intent / what the surveyor looks for</label><textarea id="rm-intent" rows="3">' + esc(r.intentText) + "</textarea></div>" +
+    '<div class="full"><label>Applies to ("all" or comma-separated living arrangements: ' + esc(PROVIDER_CONFIG.livingArrangements.join(" | ")) + ')</label><input type="text" id="rm-applies" value="' + esc(appliesVal) + '"></div>' +
+    '<div class="full">' +
+    '<div class="check-line"><input type="checkbox" id="rm-alert"' + (r.alert ? " checked" : "") + '><label for="rm-alert" style="text-transform:none;margin:0">Alert indicator (Not Met ⇒ mandatory 30-day Follow-Up PCR)</label></div>' +
+    '<div class="check-line"><input type="checkbox" id="rm-hcbs"' + (r.hcbsSettings ? " checked" : "") + '><label for="rm-hcbs" style="text-transform:none;margin:0">HCBS Settings indicator (100% required for Excellent)</label></div>' +
+    '<div class="check-line"><input type="checkbox" id="rm-active"' + (r.active ? " checked" : "") + '><label for="rm-active" style="text-transform:none;margin:0">Active (uncheck to retire — kept in history)</label></div>' +
+    "</div></div>" +
+    '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
+    '<button class="btn" type="button" data-action="save-rubric-item" data-new="' + isNew + '" data-id="' + esc(r.id) + '">Save</button></div>');
+}
+function saveRubricFromModal(isNew, origId) {
+  var id = document.getElementById("rm-id").value.trim();
+  var q = document.getElementById("rm-q").value.trim();
+  if (!id || !q) { return; }
+  if (isNew && Engine.itemById(id)) { safeAlert("An indicator with ID " + id + " already exists."); return; }
+  var appliesRaw = document.getElementById("rm-applies").value.trim();
+  var applies = (!appliesRaw || appliesRaw.toLowerCase() === "all") ? "all" :
+    appliesRaw.split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+  var data = {
+    id: id,
+    serviceLine: document.getElementById("rm-sl").value,
+    domain: document.getElementById("rm-domain").value.trim() || "General",
+    weight: parseInt(document.getElementById("rm-weight").value, 10),
+    type: document.getElementById("rm-type").value,
+    alert: document.getElementById("rm-alert").checked,
+    gateParent: document.getElementById("rm-gate").value.trim() || null,
+    flagKey: document.getElementById("rm-flag").value || null,
+    questionText: q,
+    intentText: document.getElementById("rm-intent").value.trim(),
+    appliesTo: applies,
+    hcbsSettings: document.getElementById("rm-hcbs").checked,
+    effectiveDate: document.getElementById("rm-eff").value || todayStr(),
+    active: document.getElementById("rm-active").checked
+  };
+  if (isNew) { S.rubric.push(data); }
+  else {
+    var existing = Engine.itemById(origId);
+    if (existing) { Object.assign(existing, data); }
+  }
+  persist(K.rubric, S.rubric);
+  closeModal(); render();
+}
+
+/* ============================ SETTINGS / AI / EXPORT ============================ */
+function settingsModal() {
+  var mode = Store.getMode();
+  var modeLabel = mode === "shared" ? "Shared dataset (window.storage) — all QA staff see the same records" :
+    mode === "local" ? "This browser (localStorage) — use Export to move data between devices" :
+    "In-memory only — data is LOST on close; use Export to back up";
+  openModal('<h3>Settings</h3>' +
+    '<div class="note-box"><strong>Storage:</strong> ' + esc(modeLabel) + "</div>" +
+    '<h4 style="margin:10px 0 6px">AI assist (optional — everything works offline without it)</h4>' +
+    '<div class="small muted" style="margin-bottom:8px">Adds AI-written CAP drafts and readiness briefings via the Anthropic API. Requires network access and an API key from console.anthropic.com. The key is stored in this system\'s storage — use a workspace-scoped key you can revoke.</div>' +
+    '<div class="form-grid">' +
+    '<div class="full"><label>Anthropic API key</label><input type="password" id="set-key" value="' + esc(S.settings.aiKey || "") + '" placeholder="sk-ant-…"></div>' +
+    '<div><label>Model</label><select id="set-model">' +
+    ["claude-opus-5", "claude-sonnet-5", "claude-haiku-4-5"].map(function (m) {
+      return '<option' + ((S.settings.aiModel || "claude-opus-5") === m ? " selected" : "") + ">" + m + "</option>"; }).join("") + "</select></div>" +
+    '<div style="align-self:end"><button class="btn secondary" type="button" data-action="test-ai">Test connection</button></div>' +
+    "</div><div id="+'"ai-test-out"'+" class='small' style='margin-top:6px'></div>" +
+    '<h4 style="margin:16px 0 6px">Data</h4>' +
+    '<div class="toolbar" style="margin:0">' +
+    '<button class="btn secondary" type="button" data-action="export-all">Export full backup (JSON)</button>' +
+    '<button class="btn secondary" type="button" data-action="import-all">Import backup</button>' +
+    '<button class="btn danger" type="button" data-action="clear-all">Clear ALL data</button>' +
+    "</div>" +
+    '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Close</button>' +
+    '<button class="btn" type="button" data-action="save-settings">Save</button></div>');
+}
+function download(filename, text) {
+  var a = document.createElement("a");
+  a.href = "data:application/json;charset=utf-8," + encodeURIComponent(text);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function pickFile(cb) {
+  var inp = document.createElement("input");
+  inp.type = "file"; inp.accept = ".json,application/json";
+  inp.addEventListener("change", function () {
+    var f = inp.files && inp.files[0];
+    if (!f) { return; }
+    var reader = new FileReader();
+    reader.onload = function () { cb(String(reader.result)); };
+    reader.readAsText(f);
+  });
+  inp.click();
+}
+async function exportAll() {
+  var out = { exportedAt: new Date().toISOString(), rubric: S.rubric, clients: S.clients, records: S.records,
+              staff: S.staff, org: S.org, fire: S.fire, census: S.census };
+  var text = JSON.stringify(out, null, 1);
+  download("pcr-backup-" + todayStr() + ".json", text);
+  showTextModal("Full backup", text, "pcr-backup-" + todayStr() + ".json");
+}
+function importAll(text) {
+  var data;
+  try { data = JSON.parse(text); } catch (e) { safeAlert("Not valid JSON."); return; }
+  if (!data || !Array.isArray(data.rubric) || !Array.isArray(data.clients)) { safeAlert("Not a recognized backup file."); return; }
+  if (!safeConfirm("Replace ALL current data with this backup?")) { return; }
+  S.rubric = data.rubric; S.clients = data.clients; S.records = data.records || {};
+  S.staff = data.staff || { roster: [], records: {} }; S.org = data.org || {};
+  S.fire = data.fire || { drills: [], checks: {} }; S.census = data.census || {};
+  persist(K.rubric, S.rubric); persist(K.clients, S.clients); persist(K.staff, S.staff);
+  persist(K.org, S.org); persist(K.fire, S.fire); persist(K.census, S.census);
+  S.clients.forEach(function (c) { persist(K.rec + c.id, S.records[c.id] || {}); });
+  closeModal(); render();
+}
+function importRubric(text) {
+  var data;
+  try { data = JSON.parse(text); } catch (e) { safeAlert("Not valid JSON."); return; }
+  var arr = Array.isArray(data) ? data : (data && Array.isArray(data.rubric) ? data.rubric : null);
+  if (!arr || !arr.length) { safeAlert("Expected a JSON array of rubric items."); return; }
+  var bad = arr.filter(function (r) { return !r.id || !r.serviceLine || !r.questionText || r.weight === undefined || !r.type; });
+  if (bad.length) { safeAlert(bad.length + " item(s) are missing required fields (id, serviceLine, questionText, weight, type)."); return; }
+  if (!safeConfirm("Replace the entire master rubric with " + arr.length + " imported indicators? Existing compliance ratings stay attached by indicator ID.")) { return; }
+  S.rubric = arr.map(function (r) {
+    return Object.assign({ alert: false, gateParent: null, flagKey: null, intentText: "", appliesTo: "all",
+                           hcbsSettings: false, effectiveDate: todayStr(), active: true, domain: "General" }, r);
+  });
+  persist(K.rubric, S.rubric);
+  render();
+}
+function aiModal(title, offlineFn, promptFn) {
+  openModal("<h3>" + esc(title) + "</h3>" +
+    '<div class="toolbar" style="margin-bottom:4px">' +
+    '<button class="btn secondary" type="button" id="ai-offline-btn">Offline draft</button>' +
+    '<button class="btn" type="button" id="ai-online-btn"' + (AI.enabled() ? "" : " disabled") + ">Generate with AI" + (AI.enabled() ? "" : " (add key in Settings)") + "</button>" +
+    '<button class="btn secondary" type="button" id="ai-copy-btn" style="display:none">Copy</button>' +
+    "</div>" +
+    '<div class="ai-out" id="ai-out">Choose a draft mode above. Offline uses built-in logic; AI uses the Anthropic API (' + esc(AI.model()) + ").</div>" +
+    '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Close</button></div>');
+  var out = document.getElementById("ai-out");
+  var copyBtn = document.getElementById("ai-copy-btn");
+  function show(text) {
+    out.textContent = text;
+    copyBtn.style.display = "";
+  }
+  document.getElementById("ai-offline-btn").addEventListener("click", function () { show(offlineFn()); });
+  copyBtn.addEventListener("click", function () {
+    try { navigator.clipboard.writeText(out.textContent); copyBtn.textContent = "Copied"; } catch (e) {}
+  });
+  var onlineBtn = document.getElementById("ai-online-btn");
+  onlineBtn.addEventListener("click", async function () {
+    out.textContent = "Generating via Anthropic API…";
+    onlineBtn.disabled = true;
+    try {
+      var p = promptFn();
+      var text = await AI.call(p.system, p.user);
+      show(text);
+    } catch (e) {
+      show("AI request failed (" + e.message + ").\n\nFalling back to the offline draft:\n\n" + offlineFn());
+    }
+    onlineBtn.disabled = !AI.enabled();
+  });
+}
+function capFindings(slId) {
+  var byItem = {};
+  S.clients.forEach(function (c) {
+    if (!c.activeStatus || c.serviceLine !== slId) { return; }
+    Engine.activeItems(slId).forEach(function (it) {
+      if (it.type !== "QA" || !Engine.applies(it, c)) { return; }
+      if (Engine.effective(it, c).rating === "not_met") {
+        (byItem[it.id] = byItem[it.id] || { item: it, clients: [] }).clients.push(c);
+      }
+    });
+  });
+  return Object.keys(byItem).map(function (k) { return byItem[k]; })
+    .sort(function (a, b) { return (b.item.alert - a.item.alert) || (b.item.weight - a.item.weight); });
+}
+
+/* ============================ NAV / RENDER / EVENTS ============================ */
+var TABS = [
+  ["dashboard", "Dashboard"], ["review", "Client Review"], ["sampling", "Sampling"],
+  ["locator", "Document Locator"], ["orgstaff", "Organization & Staff"], ["rubric", "Rubric Manager"]
+];
+function renderNav() {
+  document.getElementById("navTabs").innerHTML = TABS.map(function (t) {
+    return '<button type="button" data-action="nav" data-tab="' + t[0] + '" class="' + (S.ui.tab === t[0] ? "active" : "") + '">' + t[1] + "</button>";
+  }).join("");
+}
+function render() {
+  renderNav();
+  renderAlertBanner();
+  var v = document.getElementById("view");
+  var fn = { dashboard: renderDashboard, review: renderReview, sampling: renderSampling,
+             locator: renderLocator, orgstaff: renderOrgStaff, rubric: renderRubric }[S.ui.tab] || renderDashboard;
+  v.innerHTML = fn();
+  if (S.ui.tab === "sampling") { updateSamplingTotals(); }
+}
+
+function updRec(clientId, indId, patch) {
+  var recs = S.records[clientId] || (S.records[clientId] = {});
+  var rec = recs[indId] || (recs[indId] = {});
+  Object.assign(rec, patch);
+  persist(K.rec + clientId, recs);
+}
+
+function onClick(e) {
+  var t = e.target.closest ? e.target.closest("[data-action]") : null;
+  if (!t) {
+    if (e.target && e.target.id === "modalBack") { closeModal(); }
+    return;
+  }
+  var a = t.getAttribute("data-action");
+  var d = t.dataset;
+  switch (a) {
+    case "nav": S.ui.tab = d.tab; render(); break;
+    case "close-modal": closeModal(); break;
+    case "open-settings": settingsModal(); break;
+    case "save-settings":
+      S.settings.aiKey = document.getElementById("set-key").value.trim();
+      S.settings.aiModel = document.getElementById("set-model").value;
+      persist(K.settings, S.settings);
+      closeModal(); break;
+    case "test-ai": (function () {
+      var out = document.getElementById("ai-test-out");
+      var key = document.getElementById("set-key").value.trim();
+      if (!key) { out.textContent = "Enter a key first."; return; }
+      out.textContent = "Testing…";
+      var saveModel = document.getElementById("set-model").value;
+      fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-api-key": key,
+          "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        body: JSON.stringify({ model: saveModel, max_tokens: 16, messages: [{ role: "user", content: "Reply with OK" }] })
+      }).then(function (r) {
+        if (r.ok) { out.textContent = "✓ Connected — API key works with " + saveModel + "."; }
+        else { r.json().then(function (j) { out.textContent = "✗ " + ((j.error && j.error.message) || ("HTTP " + r.status)); })
+                 .catch(function () { out.textContent = "✗ HTTP " + r.status; }); }
+      }).catch(function (err) { out.textContent = "✗ Network error (offline?): " + err.message; });
+    })(); break;
+    case "export-all": exportAll(); break;
+    case "import-all": pickFile(importAll); break;
+    case "clear-all":
+      if (safeConfirm("Delete ALL data (rubric resets to the starter set)? Export a backup first.")) {
+        (async function () {
+          for (var i = 0; i < S.clients.length; i++) { await Store.del(K.rec + S.clients[i].id); }
+          await Store.del(K.rubric); await Store.del(K.clients); await Store.del(K.staff);
+          await Store.del(K.org); await Store.del(K.fire); await Store.del(K.census); await Store.del(K.settings);
+          window.location.reload();
+        })();
+      }
+      break;
+    case "ai-briefing": aiModal("Readiness briefing", AI.offlineBriefing, AI.briefingPrompt); break;
+    case "cap-draft": (function () {
+      var slId = d.sl;
+      var findings = capFindings(slId);
+      aiModal("CAP draft — " + Engine.slName(slId),
+        function () { return AI.offlineCap(slId, findings); },
+        function () { return AI.capPrompt(slId, findings); });
+    })(); break;
+    case "add-client": clientModal(null); break;
+    case "edit-client": clientModal(clientById(d.id)); break;
+    case "save-client": saveClientFromModal(d.id, d.new === "true"); break;
+    case "rate": (function () {
+      var rec = (S.records[d.client] || {})[d.ind] || {};
+      var val = rec.rating === d.val ? null : d.val;
+      var patch = { rating: val };
+      if (val && !rec.verifiedDate) { patch.verifiedDate = todayStr(); }
+      updRec(d.client, d.ind, patch);
+      render();
+    })(); break;
+    case "gate": updRec(d.client, d.ind, { gateAnswer: d.val }); render(); break;
+    case "toggle-intent":
+      S.ui.openIntents = S.ui.openIntents || {};
+      S.ui.openIntents[d.ind] = !S.ui.openIntents[d.ind];
+      render(); break;
+    case "org-rate": (function () {
+      var tool = S.org[d.tool] || (S.org[d.tool] = {});
+      var rec = tool[d.item] || (tool[d.item] = {});
+      rec.rating = rec.rating === d.val ? null : d.val;
+      persist(K.org, S.org); render();
+    })(); break;
+    case "add-staff": staffModal(null); break;
+    case "edit-staff": staffModal(S.staff.roster.filter(function (s) { return s.id === d.id; })[0]); break;
+    case "save-staff": (function () {
+      var name = document.getElementById("sm-name").value.trim();
+      if (!name) { return; }
+      var data = { id: d.id, name: name, role: document.getElementById("sm-role").value,
+                   serviceLine: document.getElementById("sm-sl").value };
+      var existing = S.staff.roster.filter(function (s) { return s.id === d.id; })[0];
+      if (existing) { Object.assign(existing, data); } else { S.staff.roster.push(data); }
+      persist(K.staff, S.staff); closeModal(); render();
+    })(); break;
+    case "del-staff":
+      if (safeConfirm("Remove this staff member and their requirement records?")) {
+        S.staff.roster = S.staff.roster.filter(function (s) { return s.id !== d.id; });
+        delete S.staff.records[d.id];
+        persist(K.staff, S.staff); closeModal(); render();
+      }
+      break;
+    case "edit-streq": streqModal(d.staff, d.req); break;
+    case "save-streq": (function () {
+      var recs = S.staff.records[d.staff] || (S.staff.records[d.staff] = {});
+      var expEl = document.getElementById("sq-expires");
+      recs[d.req] = {
+        status: document.getElementById("sq-status").value,
+        completed: document.getElementById("sq-completed").value,
+        expires: expEl ? expEl.value : "",
+        evidenceLocation: document.getElementById("sq-loc").value.trim()
+      };
+      persist(K.staff, S.staff); closeModal(); render();
+    })(); break;
+    case "fire-done":
+      S.fire.checks[d.item] = Object.assign(S.fire.checks[d.item] || {}, { lastDone: todayStr() });
+      persist(K.fire, S.fire); render(); break;
+    case "add-drill": drillModal(); break;
+    case "save-drill": (function () {
+      var date = document.getElementById("dm-date").value;
+      var site = document.getElementById("dm-site").value.trim();
+      if (!date || !site) { return; }
+      var issues = document.getElementById("dm-issues").value.trim();
+      S.fire.drills.push({ id: "d-" + Date.now().toString(36), date: date, site: site,
+        shift: document.getElementById("dm-shift").value, type: document.getElementById("dm-type").value,
+        evacMinutes: document.getElementById("dm-evac").value, issues: issues, passed: !issues });
+      persist(K.fire, S.fire); closeModal(); render();
+    })(); break;
+    case "del-drill":
+      S.fire.drills = S.fire.drills.filter(function (x) { return x.id !== d.id; });
+      persist(K.fire, S.fire); render(); break;
+    case "add-rubric": rubricModal(null); break;
+    case "edit-rubric": rubricModal(Engine.itemById(d.id)); break;
+    case "save-rubric-item": saveRubricFromModal(d.new === "true", d.id); break;
+    case "export-rubric":
+      (function () {
+        var text = JSON.stringify(S.rubric, null, 1);
+        download("pcr-rubric-" + todayStr() + ".json", text);
+        showTextModal("Master rubric export", text, "pcr-rubric-" + todayStr() + ".json");
+      })(); break;
+    case "import-rubric": pickFile(importRubric); break;
+  }
+}
+
+function onChange(e) {
+  var t = e.target;
+  var bind = t.getAttribute && t.getAttribute("data-bind");
+  if (!bind) { return; }
+  var d = t.dataset;
+  switch (bind) {
+    case "review-client": S.ui.reviewClient = t.value || null; render(); break;
+    case "rec-field": (function () {
+      var patch = {};
+      patch[d.field] = t.value;
+      updRec(d.client, d.ind, patch);
+      if (d.field === "evidenceLocation") { render(); }
+    })(); break;
+    case "org-field": (function () {
+      var tool = S.org[d.tool] || (S.org[d.tool] = {});
+      var rec = tool[d.item] || (tool[d.item] = {});
+      rec[d.field] = t.value;
+      persist(K.org, S.org);
+    })(); break;
+    case "fire-date":
+      S.fire.checks[d.item] = Object.assign(S.fire.checks[d.item] || {}, { lastDone: t.value });
+      persist(K.fire, S.fire); render(); break;
+    case "locator-filter": S.ui.locatorFilter = t.value;
+      document.getElementById("locatorBody").innerHTML = locatorBodyHtml(); break;
+    case "rubric-sl": S.ui.rubricFilterSL = t.value; render(); break;
+    case "rubric-type": S.ui.rubricFilterType = t.value; render(); break;
+    case "rubric-retired": S.ui.rubricShowRetired = t.checked; render(); break;
+  }
+}
+var censusTimer = null;
+function onInput(e) {
+  var t = e.target;
+  var bind = t.getAttribute && t.getAttribute("data-bind");
+  if (!bind) { return; }
+  if (bind === "census") {
+    var v = parseInt(t.value, 10);
+    S.census[t.dataset.sl] = isNaN(v) ? 0 : v;
+    updateSamplingTotals();
+    clearTimeout(censusTimer);
+    censusTimer = setTimeout(function () { persist(K.census, S.census); }, 600);
+  } else if (bind === "locator-q") {
+    S.ui.locatorQuery = t.value;
+    document.getElementById("locatorBody").innerHTML = locatorBodyHtml();
+  }
+}
+
+/* ============================ BOOT ============================ */
+function applyTheme() {
+  var root = document.documentElement;
+  Object.keys(PROVIDER_CONFIG.theme).forEach(function (k) {
+    try { root.style.setProperty(k, PROVIDER_CONFIG.theme[k]); } catch (e) {}
+  });
+  document.title = PROVIDER_CONFIG.meta.appTitle;
+  document.getElementById("brandName").textContent = PROVIDER_CONFIG.meta.appTitle;
+  document.getElementById("brandSub").textContent = PROVIDER_CONFIG.meta.subtitle;
+}
+function showStorageNote() {
+  var mode = Store.getMode();
+  var el = document.getElementById("storageNote");
+  if (mode === "memory") {
+    el.classList.add("on");
+    el.querySelector(".inner").textContent =
+      "Persistent storage is unavailable in this viewer — data lives in memory only. Use Settings > Export to save your work.";
+  } else if (mode === "local") {
+    el.classList.add("on");
+    el.querySelector(".inner").textContent =
+      "Saving to this browser only. In the shared claude.ai runtime all QA staff see one dataset; here, use Export/Import to sync devices.";
+  }
+}
+async function boot() {
+  try {
+    Store.init();
+    applyTheme();
+    showStorageNote();
+    await loadAll();
+    document.addEventListener("click", onClick);
+    document.addEventListener("change", onChange);
+    document.addEventListener("input", onInput);
+    render();
+  } catch (err) {
+    document.getElementById("view").innerHTML =
+      '<div class="empty">Startup error: ' + esc(err && err.message) + "</div>";
+  }
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", boot);
+} else {
+  boot();
+}
+})();
+</script>
+</body>
+</html>
