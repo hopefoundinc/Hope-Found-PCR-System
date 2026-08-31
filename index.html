@@ -175,6 +175,26 @@ tr.flag-row td{background:#FBF3F1}
   main{padding:12px 8px 60px}
   .ind-fields{grid-template-columns:1fr 1fr}
 }
+.pack-cover h2{font-size:22px}
+.pack-person{margin-top:14px}
+@media print {
+  .app-header, .nav-tabs, #storageNote, #alertBanner, .no-print, #saveStatus, .modal-back, button { display: none !important; }
+  html, body { background: #fff; font-size: 11.5px; }
+  main { max-width: none; padding: 0; }
+  .card { border: 1px solid #999; box-shadow: none; margin-bottom: 8px; }
+  .pack-person { page-break-before: always; margin-top: 0; }
+  .pack-cover + .pack-person { page-break-before: always; }
+  .table-wrap { border: none; overflow: visible; }
+  table { min-width: 0 !important; font-size: 10.5px; }
+  th { background: #eee !important; color: #000 !important; }
+  tr.flag-row td { background: #fff !important; border-left: 3px solid #000; }
+  .badge { background: #fff !important; color: #000 !important; border: 1px solid #000; }
+  .stat { border: 1px solid #999; }
+  .rule-box { border: 2px solid #000; }
+  .rule-box h4 { color: #000; }
+  .pct { color: #000 !important; }
+}
+
 </style>
 </head>
 <body>
@@ -421,6 +441,7 @@ var S = {
   fire: { drills: [], checks: {} },     /* checks[itemId] = { lastDone, notes } */
   policy: { lastAuditDate: "", updates: [] },
   qadoc: { versions: [] },
+  runs: [],
   census: {}, settings: {},
   ui: { tab: "dashboard", reviewClient: null, locatorQuery: "", locatorFilter: "all",
         rubricFilterSL: "all", rubricFilterType: "all", rubricShowRetired: false, saveFails: 0 }
@@ -428,7 +449,7 @@ var S = {
 
 var K = { rubric: "pcr:rubric", clients: "pcr:clients", staff: "pcr:staff", org: "pcr:org",
           fire: "pcr:fire", census: "pcr:census", settings: "pcr:settings", rec: "pcr:rec:",
-          policy: "pcr:policy", qadoc: "pcr:qadoc" };
+          policy: "pcr:policy", qadoc: "pcr:qadoc", runs: "pcr:runs" };
 
 async function loadAll() {
   S.rubric  = (await Store.get(K.rubric))  || [];
@@ -439,6 +460,7 @@ async function loadAll() {
   S.census  = (await Store.get(K.census))  || {};
   S.policy  = (await Store.get(K.policy))  || { lastAuditDate: "", updates: [] };
   S.qadoc   = (await Store.get(K.qadoc))   || { versions: [] };
+  S.runs    = (await Store.get(K.runs))    || [];
   S.settings= (await Store.get(K.settings))|| {};
   if (!S.rubric.length) { S.rubric = buildSeedRubric(); await Store.set(K.rubric, S.rubric); }
   if (!S.clients.length && !S.settings.seeded) {
@@ -1576,7 +1598,7 @@ function pickFile(cb) {
 }
 async function exportAll() {
   var out = { exportedAt: new Date().toISOString(), rubric: S.rubric, clients: S.clients, records: S.records,
-              staff: S.staff, org: S.org, fire: S.fire, census: S.census, policy: S.policy, qadoc: S.qadoc };
+              staff: S.staff, org: S.org, fire: S.fire, census: S.census, policy: S.policy, qadoc: S.qadoc, runs: S.runs };
   var text = JSON.stringify(out, null, 1);
   download("pcr-backup-" + todayStr() + ".json", text);
   showTextModal("Full backup", text, "pcr-backup-" + todayStr() + ".json");
@@ -1591,9 +1613,10 @@ function importAll(text) {
   S.fire = data.fire || { drills: [], checks: {} }; S.census = data.census || {};
   S.policy = data.policy || { lastAuditDate: "", updates: [] };
   S.qadoc = data.qadoc || { versions: [] };
+  S.runs = data.runs || [];
   persist(K.rubric, S.rubric); persist(K.clients, S.clients); persist(K.staff, S.staff);
   persist(K.org, S.org); persist(K.fire, S.fire); persist(K.census, S.census);
-  persist(K.policy, S.policy); persist(K.qadoc, S.qadoc);
+  persist(K.policy, S.policy); persist(K.qadoc, S.qadoc); persist(K.runs, S.runs);
   S.clients.forEach(function (c) { persist(K.rec + c.id, S.records[c.id] || {}); });
   closeModal(); render();
 }
@@ -2211,10 +2234,256 @@ function qaSuggestPrompt() {
   return { system: system, user: content };
 }
 
+
+/* ============================ AUDIT RUN / PRODUCTION PACK ============================
+   The 2-hour scramble, operationalized. A LIVE run records the sample the PCR
+   reviewers actually selected and stamps the production deadline; a DRILL pulls
+   the same number of people at random (census -> sampling matrix, per service
+   line) so the agency can rehearse producing every file. Both generate the same
+   printable production pack: cover sheet with readiness stats and homes to
+   visit, then one page per person listing every requirement with its rating,
+   verification, and document location - missing locations flagged. */
+
+function runById(id) { return S.runs.filter(function (r) { return r.id === id; })[0] || null; }
+function fmtTime(iso) {
+  try {
+    var dte = new Date(iso);
+    return dte.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  } catch (e) { return ""; }
+}
+function runDueTime(run) {
+  try {
+    var dte = new Date(run.startedAt);
+    dte.setHours(dte.getHours() + (PROVIDER_CONFIG.productionRules.windowHours || 2));
+    return dte.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  } catch (e) { return ""; }
+}
+function shuffled(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+function drillPlan() {
+  return PROVIDER_CONFIG.serviceLines.map(function (sl) {
+    var people = S.clients.filter(function (c) { return c.activeStatus && c.serviceLine === sl.id; });
+    var census = parseInt(S.census[sl.id], 10) || people.length;
+    var samp = Engine.sampleSize(census);
+    return { sl: sl, people: people, census: census, need: samp.size, short: samp.size > people.length };
+  });
+}
+function saveRun(run) {
+  S.runs.push(run);
+  while (S.runs.length > 15) { S.runs.shift(); }
+  persist(K.runs, S.runs);
+  S.ui.runView = run.id;
+  render();
+}
+/* rows for one person's pack section, honoring the filter */
+function packRowsFor(c) {
+  var rows = [];
+  Engine.activeItems(c.serviceLine).forEach(function (it) {
+    if (it.type === "GATE" || !Engine.applies(it, c)) { return; }
+    var eff = Engine.effective(it, c);
+    if (eff.forced) { return; } /* gated off = not applicable, nothing to produce */
+    var rec = (S.records[c.id] || {})[it.id] || {};
+    var row = { it: it, rating: eff.rating, verifiedBy: rec.verifiedBy || "", verifiedDate: rec.verifiedDate || "",
+                loc: (rec.evidenceLocation || "").trim(), notes: rec.notes || "" };
+    var f = S.ui.runFilter || "all";
+    if (f === "rated" && !(row.rating === "met" || row.rating === "not_met")) { return; }
+    if (f === "missing" && (row.loc || row.rating === "na")) { return; }
+    rows.push(row);
+  });
+  return rows;
+}
+function ratingLabel(r) {
+  return r === "met" ? "Met" : r === "not_met" ? "NOT MET" : r === "na" ? "N/A" : "— unrated —";
+}
+
+function renderRuns() {
+  if (S.ui.runView) {
+    var run = runById(S.ui.runView);
+    if (run) { return runPackView(run); }
+    S.ui.runView = null;
+  }
+  var html = '<h2 class="view-title">Audit Run</h2>' +
+    '<p class="view-sub">When the PCR reviewers deliver the sample key, record it here and generate the production pack — every document, its verification, and where it lives, printable for the runners. Or pull a preparation drill: the system randomly selects the same number of people a real PCR would, so you can rehearse the 2-hour scramble before it counts.</p>';
+
+  html += '<div class="rule-box"><h4>The clock this screen exists for</h4><div class="small">' +
+    esc(PROVIDER_CONFIG.productionRules.text) + "</div></div>";
+
+  if (S.ui.runPick === undefined) {
+    S.ui.runPick = {};
+    S.clients.forEach(function (c) { if (c.activeStatus && c.sampled) { S.ui.runPick[c.id] = true; } });
+  }
+  var pickedCount = Object.keys(S.ui.runPick).filter(function (id) {
+    return S.ui.runPick[id] && clientById(id) && clientById(id).activeStatus;
+  }).length;
+
+  html += '<div class="grid grid-2">';
+
+  /* --- live run card --- */
+  html += '<div class="card"><h3>Live PCR sample</h3>' +
+    '<div class="small muted" style="margin-bottom:8px">Check the people the reviewers selected (pre-checked from the "In sample" flag). Generating stamps the start time and the records-due deadline.</div>';
+  PROVIDER_CONFIG.serviceLines.forEach(function (sl) {
+    var people = S.clients.filter(function (c) { return c.activeStatus && c.serviceLine === sl.id; });
+    if (!people.length) { return; }
+    html += '<div class="small" style="font-weight:700;color:var(--teal-dark);margin-top:8px">' + esc(sl.name) + "</div>";
+    people.forEach(function (c) {
+      html += '<div class="check-line"><input type="checkbox" data-bind="run-pick" data-id="' + c.id + '" id="rp-' + c.id + '"' +
+        (S.ui.runPick[c.id] ? " checked" : "") + '><label for="rp-' + c.id + '" style="text-transform:none;font-size:13.5px;margin:0">' +
+        esc(c.name) + ' <span class="muted">' + esc((c.location || "").trim() || c.livingArrangement) + "</span></label></div>";
+    });
+  });
+  html += '<div style="margin-top:10px"><div class="field" style="max-width:280px;margin-bottom:8px"><label>Run label</label>' +
+    '<input type="text" id="run-label" placeholder="e.g. PCR ' + new Date().getFullYear() + ' — Day 1"></div>' +
+    '<button class="btn" type="button" data-action="run-live-generate">Generate production pack (' + pickedCount + " selected)</button></div></div>";
+
+  /* --- drill card --- */
+  var plan = drillPlan();
+  var drillTotal = 0;
+  html += '<div class="card"><h3>Preparation drill (faux test)</h3>' +
+    '<div class="small muted" style="margin-bottom:8px">Random sample, real sample sizes — census through the Qlarant matrix, per service line. Every drill pulls fresh names.</div>' +
+    '<div class="table-wrap" style="border:none"><table style="min-width:420px"><thead><tr><th>Service line</th><th>Census</th><th>Will pull</th><th>People entered</th></tr></thead><tbody>';
+  plan.forEach(function (p) {
+    var pull = Math.min(p.need, p.people.length);
+    drillTotal += pull;
+    html += "<tr><td>" + esc(p.sl.name) + "</td><td>" + p.census + "</td><td><strong>" + pull + "</strong>" +
+      (p.short && p.people.length ? " " + badge("warn", "only " + p.people.length + " entered") : "") + "</td><td>" + p.people.length + "</td></tr>";
+  });
+  html += "</tbody></table></div>" +
+    '<div style="margin-top:10px"><button class="btn" type="button" data-action="run-drill-generate">Pull random drill sample (' + drillTotal + " people)</button></div></div>";
+  html += "</div>";
+
+  /* --- saved runs --- */
+  if (S.runs.length) {
+    html += '<h3 class="section-title">Runs</h3><div class="table-wrap"><table><thead><tr><th>Run</th><th>Type</th><th>Date</th><th>People</th><th></th></tr></thead><tbody>';
+    S.runs.slice().reverse().forEach(function (r) {
+      html += "<tr><td><strong>" + esc(r.label) + "</strong></td>" +
+        "<td>" + (r.type === "live" ? badge("alert", "LIVE AUDIT") : badge("neutral", "DRILL")) + "</td>" +
+        "<td>" + esc(r.date) + " " + fmtTime(r.startedAt) + "</td><td>" + r.participants.length + "</td>" +
+        '<td style="white-space:nowrap"><button class="btn secondary small" type="button" data-action="run-open" data-id="' + r.id + '">Open pack</button> ' +
+        '<button class="btn danger small" type="button" data-action="run-delete" data-id="' + r.id + '">✕</button></td></tr>';
+    });
+    html += "</tbody></table></div>";
+  }
+  return html;
+}
+
+function runPackView(run) {
+  var people = run.participants.map(clientById).filter(Boolean);
+  var missingPeople = run.participants.length - people.length;
+  var includeStaff = S.ui.runStaff !== false;
+  var filter = S.ui.runFilter || "all";
+
+  /* readiness stats across the whole pack (unfiltered basis) */
+  var stat = { rows: 0, located: 0, missing: 0, unrated: 0 };
+  people.forEach(function (c) {
+    Engine.activeItems(c.serviceLine).forEach(function (it) {
+      if (it.type === "GATE" || !Engine.applies(it, c)) { return; }
+      var eff = Engine.effective(it, c);
+      if (eff.forced || eff.rating === "na") { return; }
+      var rec = (S.records[c.id] || {})[it.id] || {};
+      stat.rows++;
+      if ((rec.evidenceLocation || "").trim()) { stat.located++; } else { stat.missing++; }
+      if (!eff.rating) { stat.unrated++; }
+    });
+  });
+
+  var homes = {};
+  people.forEach(function (c) {
+    var loc = (c.location || "").trim() || "(no home recorded — " + c.livingArrangement + ")";
+    (homes[loc] = homes[loc] || []).push(c.name);
+  });
+
+  var html = '<div class="toolbar no-print">' +
+    '<button class="btn secondary" type="button" data-action="run-back">← All runs</button>' +
+    '<div class="field"><label>Show</label><select data-bind="run-filter">' +
+    [["all", "All applicable requirements"], ["rated", "Rated only"], ["missing", "Missing document location only"]].map(function (o) {
+      return '<option value="' + o[0] + '"' + (filter === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></div>" +
+    '<div class="check-line" style="align-self:center"><input type="checkbox" id="run-staff" data-bind="run-include-staff"' + (includeStaff ? " checked" : "") + '><label for="run-staff" style="text-transform:none;margin:0">Include staff records</label></div>' +
+    '<button class="btn" type="button" data-action="run-print">Print</button>' +
+    "</div>";
+
+  /* cover sheet */
+  html += '<div class="card pack-cover"><h2 style="margin-bottom:2px">' + esc(PROVIDER_CONFIG.meta.providerName) + " — Record Production Pack</h2>" +
+    '<div class="ind-meta" style="margin:6px 0">' +
+    (run.type === "live" ? badge("alert", "LIVE PCR AUDIT") : badge("neutral", "PREPARATION DRILL")) +
+    badge("outline", esc(run.label)) + badge("outline", run.date + " · started " + fmtTime(run.startedAt)) +
+    "</div>" +
+    '<div class="rule-box" style="margin:10px 0"><h4>Records due by ' + runDueTime(run) + "</h4>" +
+    '<div class="small">All records for the people, staff training, and personnel files below must be produced within ' +
+    (PROVIDER_CONFIG.productionRules.windowHours || 2) + " hours of the sample key. Records at other locations: due by " +
+    esc(PROVIDER_CONFIG.productionRules.sameDayDeadline) + " today. Later = not delivered, not reviewed.</div></div>" +
+    '<div class="stat-row">' +
+    '<div class="stat"><div class="lbl">People</div><div class="pct">' + people.length + "</div></div>" +
+    '<div class="stat"><div class="lbl">Document rows</div><div class="pct">' + stat.rows + "</div></div>" +
+    '<div class="stat"><div class="lbl">Location on file</div><div class="pct" style="color:var(--met)">' + stat.located + "</div></div>" +
+    '<div class="stat"><div class="lbl">MISSING location</div><div class="pct" style="color:' + (stat.missing ? "var(--gap)" : "var(--met)") + '">' + stat.missing + "</div></div>" +
+    '<div class="stat"><div class="lbl">Unrated</div><div class="pct" style="color:' + (stat.unrated ? "var(--warn)" : "var(--met)") + '">' + stat.unrated + "</div></div>" +
+    "</div>" +
+    (missingPeople ? '<div class="small" style="color:var(--gap);margin-top:8px">' + missingPeople + " sampled person(s) no longer exist in the roster and are omitted.</div>" : "") +
+    '<h3 style="margin-top:14px">Homes to visit</h3><div class="small">' +
+    Object.keys(homes).map(function (loc) { return "<div style='margin:3px 0'><strong>" + esc(loc) + ":</strong> " + homes[loc].map(esc).join(", ") + "</div>"; }).join("") +
+    "</div>" +
+    '<div class="small muted" style="margin-top:8px">Generated ' + new Date().toLocaleString() + " — the pack reflects the system's current records each time it is opened or printed.</div>" +
+    "</div>";
+
+  /* per-person sections */
+  people.forEach(function (c, idx) {
+    var rows = packRowsFor(c);
+    html += '<div class="card pack-person"><h3>' + (idx + 1) + ". " + esc(c.name) + "</h3>" +
+      '<div class="ind-meta" style="margin-bottom:8px">' +
+      badge("neutral", Engine.slName(c.serviceLine)) + badge("outline", c.livingArrangement) +
+      ((c.location || "").trim() ? badge("outline", "⌂ " + c.location.trim()) : "") +
+      (c.priorPCRParticipant ? badge("outline", "Prior PCR participant") : "") +
+      "</div>";
+    if (!rows.length) {
+      html += '<div class="small muted">No rows under the current filter.</div>';
+    } else {
+      html += '<div class="table-wrap" style="border:none"><table><thead><tr><th>Indicator</th><th>Requirement</th><th>Rating</th><th>Verified by</th><th>Date</th><th>Document location</th></tr></thead><tbody>';
+      rows.forEach(function (r) {
+        var missing = !r.loc && r.rating !== "na";
+        html += "<tr" + (missing ? ' class="flag-row"' : "") + '><td class="ind-id">' + esc(r.it.id) +
+          (r.it.alert ? "<br>" + badge("alert", "Alert") : "") + "</td>" +
+          '<td class="small" style="max-width:330px">' + esc((r.it.questionText || "").slice(0, 130)) + "</td>" +
+          "<td>" + esc(ratingLabel(r.rating)) + "</td>" +
+          '<td class="small">' + esc(r.verifiedBy) + "</td><td class='small'>" + esc(r.verifiedDate) + "</td>" +
+          "<td>" + (r.loc ? esc(r.loc) : (r.rating === "na" ? '<span class="small muted">n/a</span>' : badge("gap", "NO VERIFIED LOCATION"))) + "</td></tr>";
+      });
+      html += "</tbody></table></div>";
+    }
+    html += "</div>";
+  });
+
+  /* staff section */
+  if (includeStaff && S.staff.roster.length) {
+    html += '<div class="card pack-person"><h3>Staff records (due in the same window)</h3>' +
+      '<div class="table-wrap" style="border:none"><table><thead><tr><th>Staff</th><th>Requirement</th><th>Status</th><th>Completed</th><th>Expires</th><th>Document location</th></tr></thead><tbody>';
+    S.staff.roster.forEach(function (st) {
+      PROVIDER_CONFIG.staffRequirements.forEach(function (req) {
+        var status = Engine.staffReqStatus(st.id, req);
+        if (status.key === "na") { return; }
+        var rec = (S.staff.records[st.id] || {})[req.id] || {};
+        var bad = status.key === "missing" || status.key === "expired";
+        html += "<tr" + (bad || !(rec.evidenceLocation || "").trim() ? ' class="flag-row"' : "") + "><td><strong>" + esc(st.name) + "</strong><div class='small muted'>" + esc(st.role) + "</div></td>" +
+          '<td class="small">' + esc(req.label) + "</td>" +
+          "<td>" + badge({ ok: "met", expiring: "warn", expired: "alert", missing: "gap" }[status.key], status.label) + "</td>" +
+          "<td class='small'>" + esc(rec.completed || "") + "</td><td class='small'>" + esc(rec.expires || "") + "</td>" +
+          "<td>" + ((rec.evidenceLocation || "").trim() ? esc(rec.evidenceLocation) : badge("gap", "NO VERIFIED LOCATION")) + "</td></tr>";
+      });
+    });
+    html += "</tbody></table></div></div>";
+  }
+  return html;
+}
+
 /* ============================ NAV / RENDER / EVENTS ============================ */
 var TABS = [
   ["dashboard", "Dashboard"], ["review", "Client Review"], ["sampling", "Sampling"],
-  ["locator", "Document Locator"], ["policy", "Policy Updates"],
+  ["locator", "Document Locator"], ["runs", "Audit Run"], ["policy", "Policy Updates"],
   ["orgstaff", "Organization & Staff"], ["rubric", "Rubric Manager"]
 ];
 function renderNav() {
@@ -2232,7 +2501,7 @@ function render() {
   renderAlertBanner();
   var v = document.getElementById("view");
   var fn = { dashboard: renderDashboard, review: renderReview, sampling: renderSampling,
-             locator: renderLocator, policy: renderPolicy, orgstaff: renderOrgStaff, rubric: renderRubric }[S.ui.tab] || renderDashboard;
+             locator: renderLocator, runs: renderRuns, policy: renderPolicy, orgstaff: renderOrgStaff, rubric: renderRubric }[S.ui.tab] || renderDashboard;
   v.innerHTML = fn();
   if (S.ui.tab === "sampling") { updateSamplingTotals(); }
 }
@@ -2253,7 +2522,7 @@ function onClick(e) {
   var a = t.getAttribute("data-action");
   var d = t.dataset;
   switch (a) {
-    case "nav": S.ui.tab = d.tab; render(); break;
+    case "nav": S.ui.tab = d.tab; if (d.tab !== "runs") { S.ui.runView = null; } render(); break;
     case "close-modal": closeModal(); break;
     case "open-settings": settingsModal(); break;
     case "save-settings":
@@ -2286,7 +2555,7 @@ function onClick(e) {
           for (var i = 0; i < S.clients.length; i++) { await Store.del(K.rec + S.clients[i].id); }
           await Store.del(K.rubric); await Store.del(K.clients); await Store.del(K.staff);
           await Store.del(K.org); await Store.del(K.fire); await Store.del(K.census); await Store.del(K.settings);
-          await Store.del(K.policy); await Store.del(K.qadoc);
+          await Store.del(K.policy); await Store.del(K.qadoc); await Store.del(K.runs);
           window.location.reload();
         })();
       }
@@ -2300,6 +2569,36 @@ function onClick(e) {
         function () { return AI.capPrompt(slId, findings); });
     })(); break;
     case "import-roster": rosterImportModal(); break;
+    case "run-live-generate": (function () {
+      var picked = Object.keys(S.ui.runPick || {}).filter(function (id) {
+        return S.ui.runPick[id] && clientById(id) && clientById(id).activeStatus;
+      });
+      if (!picked.length) { safeAlert("Check at least one sampled person first."); return; }
+      var label = document.getElementById("run-label").value.trim() || ("PCR sample " + todayStr());
+      saveRun({ id: "run-" + Date.now().toString(36), type: "live", label: label, date: todayStr(),
+                startedAt: new Date().toISOString(), participants: picked });
+      toast("Production pack generated — records due by " + runDueTime(runById(S.ui.runView)));
+    })(); break;
+    case "run-drill-generate": (function () {
+      var picked = [];
+      drillPlan().forEach(function (p) {
+        shuffled(p.people).slice(0, Math.min(p.need, p.people.length)).forEach(function (c) { picked.push(c.id); });
+      });
+      if (!picked.length) { safeAlert("Add people (and census numbers on the Sampling tab) before running a drill."); return; }
+      saveRun({ id: "run-" + Date.now().toString(36), type: "drill", label: "Preparation drill " + todayStr(),
+                date: todayStr(), startedAt: new Date().toISOString(), participants: picked });
+    })(); break;
+    case "run-open": S.ui.runView = d.id; render(); break;
+    case "run-back": S.ui.runView = null; render(); break;
+    case "run-delete":
+      if (safeConfirm("Delete this saved run? The pack can no longer be reopened.")) {
+        S.runs = S.runs.filter(function (r) { return r.id !== d.id; });
+        if (S.ui.runView === d.id) { S.ui.runView = null; }
+        persist(K.runs, S.runs);
+        render();
+      }
+      break;
+    case "run-print": try { window.print(); } catch (e) { safeAlert("Printing is blocked in this viewer — open the downloaded file in a browser to print."); } break;
     case "add-policy-update": policyUpdateModal(null); break;
     case "edit-policy-update": policyUpdateModal(S.policy.updates.filter(function (x) { return x.id === d.id; })[0]); break;
     case "save-policy-update": (function () {
@@ -2486,6 +2785,12 @@ function onChange(e) {
   switch (bind) {
     case "review-client": S.ui.reviewClient = t.value || null; render(); break;
     case "review-location": S.ui.reviewLocation = t.value || ""; render(); break;
+    case "run-pick":
+      S.ui.runPick = S.ui.runPick || {};
+      S.ui.runPick[t.dataset.id] = t.checked;
+      render(); break;
+    case "run-filter": S.ui.runFilter = t.value; render(); break;
+    case "run-include-staff": S.ui.runStaff = t.checked; render(); break;
     case "policy-lastaudit":
       S.policy.lastAuditDate = t.value || "";
       persist(K.policy, S.policy);

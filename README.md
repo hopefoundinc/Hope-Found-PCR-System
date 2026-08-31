@@ -8,7 +8,7 @@ DC waiver providers by swapping configuration.
 **Everything is one file: [`index.html`](index.html).** No build step, no server, no network
 dependencies for core operation. Open it in any modern browser, or host it as a claude.ai artifact.
 
-## The seven screens
+## The eight screens
 
 1. **Readiness Dashboard** — per-service-line total % and critical % against the 70/80/90 tier
    thresholds, projected tier and its consequence, alert/not-met counts, minimum sample size, plus
@@ -32,7 +32,17 @@ dependencies for core operation. Open it in any modern browser, or host it as a 
 4. **Document Locator** — every rated record across clients, staff, and org tools with its verified
    location, or a flagged **NO VERIFIED LOCATION**; searchable and filterable. Framed around the
    2-hour production rule and the 4:00 PM day-one deadline.
-5. **Policy Updates** — what changed since the last yearly PCR audit, made impossible to miss.
+5. **Audit Run** — the 2-hour scramble, operationalized. When the PCR reviewers deliver the
+   sample key, check off the selected people (pre-checked from the "In sample" flag) and generate a
+   **record production pack**: a cover sheet with the start time, the records-due deadline
+   (start + 2 hours) and the 4:00 PM off-site deadline, readiness stats, and a homes-to-visit list —
+   then one printable page per person listing every applicable requirement with its rating,
+   verification, and document location (missing locations flagged), plus the staff records due in
+   the same window. A **preparation drill** pulls the same number of people a real PCR would
+   (census → sampling matrix, per service line) at random, producing the identical pack for
+   rehearsal. Runs are saved and reprintable; a dedicated print stylesheet strips the chrome and
+   breaks one person per page. Filter the pack to all / rated only / missing-location only.
+6. **Policy Updates** — what changed since the last yearly PCR audit, made impossible to miss.
    Set the last audit date once and every rubric indicator with a newer effective date (plus
    retired items) is listed automatically — each cycle's rubric import feeds it with no extra work.
    DDA policy/requirement updates are logged with source, summary, and affected areas; each must be
@@ -45,11 +55,11 @@ dependencies for core operation. Open it in any modern browser, or host it as a 
    tracked by version + storage location. "Suggest QA document updates" drafts revision guidance —
    offline as a structured worksheet, or via AI mode, which reads the stored QA document itself
    (PDF or text) and proposes section-by-section language.
-6. **Organization & Staff** — the three mandatory org tools (HCBS Org Assessment exclusions are
+7. **Organization & Staff** — the three mandatory org tools (HCBS Org Assessment exclusions are
    config, not code), staff roster with requirement/expiration tracking (expired and ≤60-day
    expirations flagged), and the fire & emergency module (quarterly drill log per site/shift plus a
    recurring safety checklist with due-date logic).
-7. **Rubric Manager** — the editable master rubric. Edit any field, add indicators, retire items
+8. **Rubric Manager** — the editable master rubric. Edit any field, add indicators, retire items
    (soft delete — history is preserved), export/import the whole rubric as JSON so each audit
    cycle's criteria load without a rebuild.
 
