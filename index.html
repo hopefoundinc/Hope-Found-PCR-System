@@ -419,13 +419,16 @@ var S = {
   staff: { roster: [], records: {} },   /* records[staffId] = { reqId: rec } */
   org: {},                              /* org[toolId] = { itemId: rec } */
   fire: { drills: [], checks: {} },     /* checks[itemId] = { lastDone, notes } */
+  policy: { lastAuditDate: "", updates: [] },
+  qadoc: { versions: [] },
   census: {}, settings: {},
   ui: { tab: "dashboard", reviewClient: null, locatorQuery: "", locatorFilter: "all",
         rubricFilterSL: "all", rubricFilterType: "all", rubricShowRetired: false, saveFails: 0 }
 };
 
 var K = { rubric: "pcr:rubric", clients: "pcr:clients", staff: "pcr:staff", org: "pcr:org",
-          fire: "pcr:fire", census: "pcr:census", settings: "pcr:settings", rec: "pcr:rec:" };
+          fire: "pcr:fire", census: "pcr:census", settings: "pcr:settings", rec: "pcr:rec:",
+          policy: "pcr:policy", qadoc: "pcr:qadoc" };
 
 async function loadAll() {
   S.rubric  = (await Store.get(K.rubric))  || [];
@@ -434,6 +437,8 @@ async function loadAll() {
   S.org     = (await Store.get(K.org))     || {};
   S.fire    = (await Store.get(K.fire))    || { drills: [], checks: {} };
   S.census  = (await Store.get(K.census))  || {};
+  S.policy  = (await Store.get(K.policy))  || { lastAuditDate: "", updates: [] };
+  S.qadoc   = (await Store.get(K.qadoc))   || { versions: [] };
   S.settings= (await Store.get(K.settings))|| {};
   if (!S.rubric.length) { S.rubric = buildSeedRubric(); await Store.set(K.rubric, S.rubric); }
   if (!S.clients.length && !S.settings.seeded) {
@@ -894,6 +899,14 @@ function renderDashboard() {
 
   html += '<div class="rule-box"><h4>The 2-hour production rule</h4><div class="small">' +
     esc(PROVIDER_CONFIG.productionRules.text) + "</div></div>";
+
+  var att = polAttention();
+  if (att) {
+    html += '<div class="rule-box" style="border-color:var(--warn);border-left-color:var(--warn)"><h4 style="color:var(--warn)">' +
+      att + ' policy update(s) need attention</h4><div class="small">New DC DDA policies/requirements since the last audit are ' +
+      'unacknowledged or still waiting on a QA document revision. ' +
+      '<button class="btn small" type="button" data-action="nav" data-tab="policy" style="margin-left:6px">Open Policy Updates</button></div></div>';
+  }
 
   html += '<div class="grid grid-cards">';
   PROVIDER_CONFIG.serviceLines.forEach(function (sl) {
@@ -1563,7 +1576,7 @@ function pickFile(cb) {
 }
 async function exportAll() {
   var out = { exportedAt: new Date().toISOString(), rubric: S.rubric, clients: S.clients, records: S.records,
-              staff: S.staff, org: S.org, fire: S.fire, census: S.census };
+              staff: S.staff, org: S.org, fire: S.fire, census: S.census, policy: S.policy, qadoc: S.qadoc };
   var text = JSON.stringify(out, null, 1);
   download("pcr-backup-" + todayStr() + ".json", text);
   showTextModal("Full backup", text, "pcr-backup-" + todayStr() + ".json");
@@ -1576,8 +1589,11 @@ function importAll(text) {
   S.rubric = data.rubric; S.clients = data.clients; S.records = data.records || {};
   S.staff = data.staff || { roster: [], records: {} }; S.org = data.org || {};
   S.fire = data.fire || { drills: [], checks: {} }; S.census = data.census || {};
+  S.policy = data.policy || { lastAuditDate: "", updates: [] };
+  S.qadoc = data.qadoc || { versions: [] };
   persist(K.rubric, S.rubric); persist(K.clients, S.clients); persist(K.staff, S.staff);
   persist(K.org, S.org); persist(K.fire, S.fire); persist(K.census, S.census);
+  persist(K.policy, S.policy); persist(K.qadoc, S.qadoc);
   S.clients.forEach(function (c) { persist(K.rec + c.id, S.records[c.id] || {}); });
   closeModal(); render();
 }
@@ -1903,14 +1919,312 @@ function riConfirm() {
   flashSave(true);
 }
 
+
+/* ============================ POLICY UPDATES & QA DOCUMENT ============================
+   Tracks what changed since the last yearly PCR audit and forces it to be noticed:
+   - Rubric changes computed automatically from effectiveDate vs. the last audit date
+   - A log of DDA policy/requirement updates, each needing a by-name acknowledgment
+   - The agency's QA document as a version registry, updated as policies roll out.
+   Unacknowledged updates surface on the nav tab and the dashboard until cleared. */
+
+function polUnack() { return S.policy.updates.filter(function (u) { return !u.ackBy; }); }
+function polQaPending() { return S.policy.updates.filter(function (u) { return u.requiresQAUpdate && !u.addressedInQAVersion; }); }
+function polAttention() {
+  return S.policy.updates.filter(function (u) {
+    return !u.ackBy || (u.requiresQAUpdate && !u.addressedInQAVersion);
+  }).length;
+}
+function qaVersions() { return S.qadoc.versions || []; }
+function qaCurrent() { var v = qaVersions(); return v.length ? v[v.length - 1] : null; }
+function rubricChangesSince(date) {
+  if (!date) { return { added: [], retired: [] }; }
+  return {
+    added: S.rubric.filter(function (r) { return r.active && r.effectiveDate && r.effectiveDate > date; }),
+    retired: S.rubric.filter(function (r) { return !r.active; })
+  };
+}
+
+function renderPolicy() {
+  var pol = S.policy;
+  var unack = polUnack();
+  var qaPending = polQaPending();
+  var html = '<h2 class="view-title">Policy Updates</h2>' +
+    '<p class="view-sub">What has changed since the last yearly PCR audit — and proof the agency noticed. Rubric changes are computed automatically from each indicator\'s effective date; DDA policy updates are logged below and must be acknowledged by name; the agency QA document is versioned here as those policies roll out.</p>';
+
+  if (unack.length || qaPending.length) {
+    html += '<div class="rule-box"><h4>Action needed</h4><div class="small">' +
+      (unack.length ? "<strong>" + unack.length + " policy update(s) have not been acknowledged.</strong> Review each and acknowledge by name below. " : "") +
+      (qaPending.length ? "<strong>" + qaPending.length + " update(s) require a QA document revision</strong> that has not been uploaded yet." : "") +
+      "</div></div>";
+  }
+
+  html += '<div class="toolbar">' +
+    '<div class="field" style="max-width:190px"><label>Last PCR audit date</label>' +
+    '<input type="date" value="' + esc(pol.lastAuditDate || "") + '" data-bind="policy-lastaudit"></div>' +
+    '<button class="btn secondary" type="button" data-action="add-policy-update">+ Log a DDA policy update</button>' +
+    '<button class="btn" type="button" data-action="ai-qa-suggest">Suggest QA document updates</button>' +
+    "</div>";
+
+  /* --- computed rubric changes --- */
+  html += '<h3 class="section-title">Rubric changes since the last audit</h3>';
+  if (!pol.lastAuditDate) {
+    html += '<div class="note-box">Set the last PCR audit date above. Every indicator whose effective date is newer will be listed here automatically — including everything that arrives with each cycle\'s rubric import.</div>';
+  } else {
+    var ch = rubricChangesSince(pol.lastAuditDate);
+    var bySL = {};
+    ch.added.forEach(function (r) { bySL[r.serviceLine] = (bySL[r.serviceLine] || 0) + 1; });
+    html += '<div class="ind-meta" style="margin-bottom:8px">' +
+      badge(ch.added.length ? "warn" : "met", ch.added.length + " new/updated indicator(s)") +
+      badge(ch.retired.length ? "warn" : "outline", ch.retired.length + " retired") +
+      Object.keys(bySL).map(function (sl) { return badge("outline", Engine.slName(sl) + ": " + bySL[sl]); }).join("") +
+      "</div>";
+    if (!ch.added.length && !ch.retired.length) {
+      html += '<div class="note-box">No rubric changes recorded since ' + esc(pol.lastAuditDate) + ". When the next cycle's rubric is imported, its new effective dates will surface here.</div>";
+    } else {
+      html += '<div class="table-wrap"><table><thead><tr><th>Change</th><th>ID</th><th>Service line</th><th>Domain</th><th>Type / weight</th><th>Effective</th><th>Question</th></tr></thead><tbody>';
+      ch.added.slice(0, 300).forEach(function (r) {
+        html += '<tr class="flag-row"><td>' + badge("warn", "New / updated") + '</td><td class="ind-id">' + esc(r.id) + "</td><td>" + esc(Engine.slName(r.serviceLine)) + "</td><td>" + esc(r.domain) + "</td>" +
+          "<td>" + esc(r.type) + " w" + r.weight + (r.alert ? " " + badge("alert", "Alert") : "") + "</td><td>" + esc(r.effectiveDate || "") + '</td><td class="small" style="max-width:320px">' + esc((r.questionText || "").slice(0, 110)) + "</td></tr>";
+      });
+      ch.retired.slice(0, 100).forEach(function (r) {
+        html += "<tr><td>" + badge("na", "Retired") + '</td><td class="ind-id">' + esc(r.id) + "</td><td>" + esc(Engine.slName(r.serviceLine)) + "</td><td>" + esc(r.domain) + "</td>" +
+          "<td>" + esc(r.type) + " w" + r.weight + "</td><td>" + esc(r.effectiveDate || "") + '</td><td class="small" style="max-width:320px">' + esc((r.questionText || "").slice(0, 110)) + "</td></tr>";
+      });
+      html += "</tbody></table></div>";
+    }
+  }
+
+  /* --- DDA policy update log --- */
+  html += '<h3 class="section-title">DC DDA policy &amp; requirement updates</h3>';
+  if (!pol.updates.length) {
+    html += '<div class="empty">No policy updates logged yet. When DDA issues a transmittal, rule change, or new requirement, log it here so it cannot be missed.</div>';
+  } else {
+    html += '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Update</th><th>Affects</th><th>Status</th><th></th></tr></thead><tbody>';
+    pol.updates.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).forEach(function (u) {
+      var qaVer = u.addressedInQAVersion ? qaVersions().filter(function (v) { return v.id === u.addressedInQAVersion; })[0] : null;
+      html += "<tr" + (!u.ackBy ? ' class="flag-row"' : "") + "><td style='white-space:nowrap'>" + esc(u.date) + "</td>" +
+        "<td><strong>" + esc(u.title) + "</strong>" + (u.source ? '<div class="small muted">' + esc(u.source) + "</div>" : "") +
+        (u.summary ? '<div class="small" style="max-width:420px">' + esc(u.summary) + "</div>" : "") + "</td>" +
+        '<td class="small">' + esc(u.affects || "") + "</td>" +
+        "<td>" +
+        (u.ackBy ? badge("met", "Acknowledged — " + u.ackBy + " " + (u.ackDate || "")) : badge("alert", "NOT ACKNOWLEDGED")) + "<br>" +
+        (u.requiresQAUpdate ? (qaVer ? badge("neutral", "QA doc: " + qaVer.name) : badge("warn", "QA doc update pending")) : badge("outline", "No QA doc change needed")) +
+        "</td>" +
+        "<td style='white-space:nowrap'>" +
+        (!u.ackBy ? '<button class="btn small" type="button" data-action="ack-policy" data-id="' + u.id + '">Acknowledge</button> ' : "") +
+        '<button class="btn secondary small" type="button" data-action="edit-policy-update" data-id="' + u.id + '">Edit</button>' +
+        "</td></tr>";
+    });
+    html += "</tbody></table></div>";
+  }
+
+  /* --- QA document registry --- */
+  html += '<h3 class="section-title">Agency QA document</h3>';
+  var cur = qaCurrent();
+  html += '<div class="card" style="margin-bottom:12px"><div class="card-head"><h3>Current version</h3>' +
+    '<button class="btn" type="button" data-action="qa-upload">Upload new version</button></div>';
+  if (!cur) {
+    html += '<div class="muted small">No QA document on file yet. Upload the agency\'s current Quality Assurance document to start the version history.</div>';
+  } else {
+    html += '<div class="ind-meta" style="margin-bottom:6px">' +
+      badge("neutral", cur.name) + badge("outline", cur.date) +
+      (cur.content ? badge("outline", Math.round((cur.size || 0) / 1024) + " KB stored in-app") : badge("warn", "file kept externally")) +
+      (cur.addresses && cur.addresses.length ? badge("met", "addresses " + cur.addresses.length + " policy update(s)") : "") +
+      "</div>" +
+      (cur.note ? '<div class="small" style="margin-bottom:6px">' + esc(cur.note) + "</div>" : "") +
+      (cur.location ? '<div class="small muted">Location: ' + esc(cur.location) + "</div>" : "") +
+      (cur.content ? '<div style="margin-top:8px"><button class="btn secondary small" type="button" data-action="qa-download" data-id="' + cur.id + '">Download stored copy</button></div>' : "");
+  }
+  html += "</div>";
+  if (qaVersions().length > 1) {
+    html += '<div class="table-wrap"><table><thead><tr><th>Version</th><th>Date</th><th>What changed</th><th>Addresses</th><th>File</th></tr></thead><tbody>';
+    qaVersions().slice().reverse().forEach(function (ver, idx) {
+      html += "<tr><td><strong>" + esc(ver.name) + "</strong>" + (idx === 0 ? " " + badge("met", "current") : "") + "</td><td>" + esc(ver.date) + "</td>" +
+        '<td class="small" style="max-width:340px">' + esc(ver.note || "") + "</td>" +
+        '<td class="small">' + ((ver.addresses || []).length ? (ver.addresses || []).length + " update(s)" : "—") + "</td>" +
+        "<td>" + (ver.content ? '<button class="btn secondary small" type="button" data-action="qa-download" data-id="' + ver.id + '">Download</button>' :
+          '<span class="small muted">' + (ver.contentDropped ? "no longer stored in-app" : (ver.location ? esc(ver.location) : "external")) + "</span>") + "</td></tr>";
+    });
+    html += "</tbody></table></div>";
+  }
+  return html;
+}
+
+function policyUpdateModal(u) {
+  var isNew = !u;
+  u = u || { id: "pu-" + Date.now().toString(36), date: todayStr(), title: "", source: "", summary: "", affects: "", requiresQAUpdate: true };
+  openModal("<h3>" + (isNew ? "Log a DDA policy update" : "Edit policy update") + '</h3><div class="form-grid">' +
+    '<div><label>Date issued / effective</label><input type="date" id="pu-date" value="' + esc(u.date) + '"></div>' +
+    '<div><label>Source (transmittal / rule / notice)</label><input type="text" id="pu-source" value="' + esc(u.source || "") + '" placeholder="e.g. DDA Transmittal 2026-04"></div>' +
+    '<div class="full"><label>Title</label><input type="text" id="pu-title" value="' + esc(u.title) + '" placeholder="e.g. Updated incident reporting timeframes"></div>' +
+    '<div class="full"><label>Summary — what changed</label><textarea id="pu-summary" rows="3">' + esc(u.summary || "") + "</textarea></div>" +
+    '<div class="full"><label>Affects (service lines, policies, forms, trainings)</label><input type="text" id="pu-affects" value="' + esc(u.affects || "") + '"></div>' +
+    '<div class="full"><div class="check-line"><input type="checkbox" id="pu-qa"' + (u.requiresQAUpdate ? " checked" : "") + '><label for="pu-qa" style="text-transform:none;margin:0">Requires a QA document revision</label></div></div>' +
+    "</div>" +
+    '<div class="modal-actions">' +
+    (isNew ? "" : '<button class="btn danger" type="button" data-action="del-policy-update" data-id="' + u.id + '">Delete</button>') +
+    '<button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
+    '<button class="btn" type="button" data-action="save-policy-update" data-id="' + u.id + '" data-new="' + isNew + '">Save</button></div>');
+}
+function ackModal(id) {
+  var u = S.policy.updates.filter(function (x) { return x.id === id; })[0];
+  if (!u) { return; }
+  openModal("<h3>Acknowledge policy update</h3>" +
+    '<div class="note-box"><strong>' + esc(u.title) + "</strong>" + (u.summary ? "<br>" + esc(u.summary) : "") + "</div>" +
+    '<div class="small muted" style="margin-bottom:8px">Acknowledging records, by name and date, that the agency has seen this change and is acting on it. This is your audit trail.</div>' +
+    '<div class="field"><label>Acknowledged by (name / title)</label><input type="text" id="ack-name" placeholder="e.g. Z. Malya, QA Director"></div>' +
+    '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
+    '<button class="btn" type="button" data-action="save-ack" data-id="' + id + '">Acknowledge</button></div>');
+}
+
+var qaDraftFile = null;
+function qaUploadModal() {
+  qaDraftFile = null;
+  var pending = polQaPending();
+  openModal('<h3>Upload QA document version</h3>' +
+    '<div class="small muted" style="margin-bottom:8px">PDF, Word, or text. Files up to ~2 MB are stored inside the system for instant retrieval (the 2-hour rule); larger files are tracked by version with their storage location. Tick the policy updates this revision addresses — that clears their "QA doc update pending" flag.</div>' +
+    '<div class="form-grid">' +
+    '<div class="full"><label>File</label><input type="file" id="qa-file" accept=".pdf,.doc,.docx,.txt,.md" data-bind="qa-file"><div id="qa-file-status" class="small muted" style="margin-top:4px"></div></div>' +
+    '<div><label>Version label</label><input type="text" id="qa-name" placeholder="e.g. QA Plan v4 — 2026"></div>' +
+    '<div><label>Date</label><input type="date" id="qa-date" value="' + todayStr() + '"></div>' +
+    '<div class="full"><label>What changed in this version</label><textarea id="qa-note" rows="3"></textarea></div>' +
+    '<div class="full"><label>Storage location (binder / drive path — required if the file is too large to store here)</label><input type="text" id="qa-loc" placeholder="e.g. SharePoint/QA/2026 or Admin office, Binder 1"></div>' +
+    (pending.length ? '<div class="full"><label>This version addresses:</label>' + pending.map(function (u) {
+      return '<div class="check-line"><input type="checkbox" class="qa-addr" value="' + u.id + '" id="qaadr-' + u.id + '"><label for="qaadr-' + u.id + '" style="text-transform:none;margin:0">' + esc(u.date + " — " + u.title) + "</label></div>";
+    }).join("") + "</div>" : "") +
+    "</div>" +
+    '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
+    '<button class="btn" type="button" data-action="save-qadoc">Save version</button></div>');
+}
+function saveQaDoc() {
+  var name = document.getElementById("qa-name").value.trim() ||
+    (qaDraftFile ? qaDraftFile.name : "QA document " + todayStr());
+  var loc = document.getElementById("qa-loc").value.trim();
+  if (!qaDraftFile && !loc) { safeAlert("Choose a file, or enter the storage location where the document lives."); return; }
+  var addresses = [];
+  var boxes = document.querySelectorAll(".qa-addr");
+  for (var i = 0; i < boxes.length; i++) { if (boxes[i].checked) { addresses.push(boxes[i].value); } }
+  var ver = {
+    id: "qa-" + Date.now().toString(36),
+    name: name,
+    date: document.getElementById("qa-date").value || todayStr(),
+    note: document.getElementById("qa-note").value.trim(),
+    location: loc,
+    addresses: addresses,
+    size: qaDraftFile ? qaDraftFile.size : 0,
+    mime: qaDraftFile ? qaDraftFile.mime : "",
+    content: qaDraftFile ? qaDraftFile.content : null,
+    contentKind: qaDraftFile ? qaDraftFile.kind : null
+  };
+  S.qadoc.versions = S.qadoc.versions || [];
+  S.qadoc.versions.push(ver);
+  /* keep stored file content only for the two newest versions (storage limits) */
+  var withContent = S.qadoc.versions.filter(function (v) { return v.content; });
+  while (withContent.length > 2) {
+    var oldV = withContent.shift();
+    oldV.content = null;
+    oldV.contentDropped = true;
+  }
+  addresses.forEach(function (uid) {
+    var u = S.policy.updates.filter(function (x) { return x.id === uid; })[0];
+    if (u) { u.addressedInQAVersion = ver.id; }
+  });
+  persist(K.qadoc, S.qadoc);
+  persist(K.policy, S.policy);
+  qaDraftFile = null;
+  closeModal();
+  render();
+  toast("QA document version saved");
+}
+function qaDownload(id) {
+  var ver = qaVersions().filter(function (v) { return v.id === id; })[0];
+  if (!ver || !ver.content) { return; }
+  if (ver.contentKind === "text") {
+    download(ver.name.replace(/[^\w.-]+/g, "_") + ".txt", ver.content);
+    showTextModal(ver.name, ver.content, ver.name + ".txt");
+    return;
+  }
+  try {
+    var a = document.createElement("a");
+    a.href = "data:" + (ver.mime || "application/octet-stream") + ";base64," + ver.content;
+    a.download = ver.name.replace(/[^\w.-]+/g, "_") + (ver.mime === "application/pdf" ? ".pdf" : "");
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  } catch (e) { safeAlert("Download failed in this viewer — open the app as a local file to retrieve stored documents."); }
+}
+function qaSuggestOffline() {
+  var pending = polQaPending();
+  var unack = polUnack();
+  var ch = rubricChangesSince(S.policy.lastAuditDate);
+  var lines = [];
+  lines.push("QA DOCUMENT REVISION WORKSHEET (offline draft)");
+  lines.push("Provider: " + PROVIDER_CONFIG.meta.providerName);
+  lines.push("Prepared: " + todayStr());
+  lines.push("");
+  if (!pending.length && !unack.length && !ch.added.length) {
+    lines.push("Nothing outstanding: no unacknowledged policy updates, no pending QA revisions, and no rubric changes since the last audit date.");
+    return lines.join("\n");
+  }
+  if (unack.length) {
+    lines.push("STEP 1 — Acknowledge these updates (by name, in Policy Updates):");
+    unack.forEach(function (u) { lines.push("  - " + u.date + " " + u.title); });
+    lines.push("");
+  }
+  if (pending.length) {
+    lines.push("STEP 2 — Revise the QA document for each pending update:");
+    pending.forEach(function (u, i) {
+      lines.push("  " + (i + 1) + ". " + u.title + (u.source ? " (" + u.source + ")" : ""));
+      if (u.summary) { lines.push("     Change: " + u.summary); }
+      if (u.affects) { lines.push("     Sections likely affected: " + u.affects); }
+      lines.push("     [ ] Update policy language   [ ] Update procedures/forms   [ ] Retrain staff   [ ] Note effective date");
+    });
+    lines.push("");
+  }
+  if (ch.added.length) {
+    lines.push("STEP 3 — Cross-check the QA document against " + ch.added.length + " new/updated rubric indicator(s) since " + S.policy.lastAuditDate + " (see the table on the Policy Updates tab).");
+    lines.push("");
+  }
+  lines.push("STEP 4 — Upload the revised document here as a new version and tick the updates it addresses.");
+  return lines.join("\n");
+}
+function qaSuggestPrompt() {
+  var pending = polQaPending();
+  var unack = polUnack();
+  var ch = rubricChangesSince(S.policy.lastAuditDate);
+  var data = {
+    pendingPolicyUpdates: pending.map(function (u) { return { date: u.date, title: u.title, source: u.source, summary: u.summary, affects: u.affects }; }),
+    unacknowledged: unack.map(function (u) { return u.title; }),
+    newRubricIndicatorsSinceLastAudit: ch.added.slice(0, 60).map(function (r) { return { id: r.id, serviceLine: r.serviceLine, domain: r.domain, weight: r.weight, alert: r.alert, question: r.questionText }; })
+  };
+  var system = "You are a compliance consultant revising a Medicaid HCBS waiver provider's Quality Assurance document to reflect new " +
+    "DC DDA requirements ahead of a " + PROVIDER_CONFIG.meta.reviewName + " (" + PROVIDER_CONFIG.meta.auditor + "). " +
+    "Produce concrete, section-by-section revision guidance: for each change, name the QA document section to edit, draft the replacement or added language, and list any forms or staff trainings to update. Formal, institutional tone.";
+  var content = [];
+  var cur = qaCurrent();
+  if (cur && cur.content && cur.contentKind === "base64" && cur.mime === "application/pdf") {
+    content.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: cur.content } });
+    content.push({ type: "text", text: "The attached PDF is the agency's CURRENT QA document. Changes to incorporate (JSON):\n" + JSON.stringify(data, null, 2) + "\nGive specific revisions referencing the actual sections of the attached document." });
+  } else if (cur && cur.content && cur.contentKind === "text") {
+    content.push({ type: "text", text: "CURRENT QA document text:\n---\n" + cur.content.slice(0, 60000) + "\n---\nChanges to incorporate (JSON):\n" + JSON.stringify(data, null, 2) + "\nGive specific revisions referencing the actual sections above." });
+  } else {
+    content.push({ type: "text", text: "No QA document text is stored in-app. Based on these changes (JSON), draft the revision plan and model language a DC HCBS provider's QA document would need:\n" + JSON.stringify(data, null, 2) });
+  }
+  return { system: system, user: content };
+}
+
 /* ============================ NAV / RENDER / EVENTS ============================ */
 var TABS = [
   ["dashboard", "Dashboard"], ["review", "Client Review"], ["sampling", "Sampling"],
-  ["locator", "Document Locator"], ["orgstaff", "Organization & Staff"], ["rubric", "Rubric Manager"]
+  ["locator", "Document Locator"], ["policy", "Policy Updates"],
+  ["orgstaff", "Organization & Staff"], ["rubric", "Rubric Manager"]
 ];
 function renderNav() {
+  var att = polAttention();
   document.getElementById("navTabs").innerHTML = TABS.map(function (t) {
-    return '<button type="button" data-action="nav" data-tab="' + t[0] + '" class="' + (S.ui.tab === t[0] ? "active" : "") + '">' + t[1] + "</button>";
+    var label = t[1];
+    if (t[0] === "policy" && att) {
+      label += ' <span class="badge alert" style="font-size:10.5px;padding:1px 6px">' + att + "</span>";
+    }
+    return '<button type="button" data-action="nav" data-tab="' + t[0] + '" class="' + (S.ui.tab === t[0] ? "active" : "") + '">' + label + "</button>";
   }).join("");
 }
 function render() {
@@ -1918,7 +2232,7 @@ function render() {
   renderAlertBanner();
   var v = document.getElementById("view");
   var fn = { dashboard: renderDashboard, review: renderReview, sampling: renderSampling,
-             locator: renderLocator, orgstaff: renderOrgStaff, rubric: renderRubric }[S.ui.tab] || renderDashboard;
+             locator: renderLocator, policy: renderPolicy, orgstaff: renderOrgStaff, rubric: renderRubric }[S.ui.tab] || renderDashboard;
   v.innerHTML = fn();
   if (S.ui.tab === "sampling") { updateSamplingTotals(); }
 }
@@ -1972,6 +2286,7 @@ function onClick(e) {
           for (var i = 0; i < S.clients.length; i++) { await Store.del(K.rec + S.clients[i].id); }
           await Store.del(K.rubric); await Store.del(K.clients); await Store.del(K.staff);
           await Store.del(K.org); await Store.del(K.fire); await Store.del(K.census); await Store.del(K.settings);
+          await Store.del(K.policy); await Store.del(K.qadoc);
           window.location.reload();
         })();
       }
@@ -1985,6 +2300,48 @@ function onClick(e) {
         function () { return AI.capPrompt(slId, findings); });
     })(); break;
     case "import-roster": rosterImportModal(); break;
+    case "add-policy-update": policyUpdateModal(null); break;
+    case "edit-policy-update": policyUpdateModal(S.policy.updates.filter(function (x) { return x.id === d.id; })[0]); break;
+    case "save-policy-update": (function () {
+      var title = document.getElementById("pu-title").value.trim();
+      if (!title) { return; }
+      var data = {
+        id: d.id,
+        date: document.getElementById("pu-date").value || todayStr(),
+        source: document.getElementById("pu-source").value.trim(),
+        title: title,
+        summary: document.getElementById("pu-summary").value.trim(),
+        affects: document.getElementById("pu-affects").value.trim(),
+        requiresQAUpdate: document.getElementById("pu-qa").checked
+      };
+      var existing = S.policy.updates.filter(function (x) { return x.id === d.id; })[0];
+      if (existing) { Object.assign(existing, data); } else { S.policy.updates.push(data); }
+      persist(K.policy, S.policy);
+      closeModal(); render();
+    })(); break;
+    case "del-policy-update":
+      if (safeConfirm("Delete this policy update entry? The acknowledgment record is deleted with it.")) {
+        S.policy.updates = S.policy.updates.filter(function (x) { return x.id !== d.id; });
+        persist(K.policy, S.policy);
+        closeModal(); render();
+      }
+      break;
+    case "ack-policy": ackModal(d.id); break;
+    case "save-ack": (function () {
+      var name = document.getElementById("ack-name").value.trim();
+      if (!name) { return; }
+      var u = S.policy.updates.filter(function (x) { return x.id === d.id; })[0];
+      if (!u) { return; }
+      u.ackBy = name;
+      u.ackDate = todayStr();
+      persist(K.policy, S.policy);
+      closeModal(); render();
+      toast("Acknowledged");
+    })(); break;
+    case "qa-upload": qaUploadModal(); break;
+    case "save-qadoc": saveQaDoc(); break;
+    case "qa-download": qaDownload(d.id); break;
+    case "ai-qa-suggest": aiModal("QA document update suggestions", qaSuggestOffline, qaSuggestPrompt); break;
     case "pick-resident": S.ui.reviewClient = d.id; render(); break;
     case "toggle-domain":
       S.ui.openDomains = S.ui.openDomains || {};
@@ -2129,6 +2486,33 @@ function onChange(e) {
   switch (bind) {
     case "review-client": S.ui.reviewClient = t.value || null; render(); break;
     case "review-location": S.ui.reviewLocation = t.value || ""; render(); break;
+    case "policy-lastaudit":
+      S.policy.lastAuditDate = t.value || "";
+      persist(K.policy, S.policy);
+      render(); break;
+    case "qa-file": (function () {
+      var f = t.files && t.files[0];
+      var statusEl = document.getElementById("qa-file-status");
+      if (!f) { qaDraftFile = null; if (statusEl) { statusEl.textContent = ""; } return; }
+      var isText = /\.(txt|md)$/i.test(f.name) || /^text\//.test(f.type);
+      if (f.size > 2 * 1024 * 1024) {
+        qaDraftFile = null;
+        if (statusEl) { statusEl.textContent = f.name + " is " + Math.round(f.size / 1024 / 1024 * 10) / 10 + " MB — too large to store in-app. Enter its storage location below; the version is still tracked."; }
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function () {
+        if (isText) {
+          qaDraftFile = { name: f.name, size: f.size, mime: f.type || "text/plain", content: String(reader.result), kind: "text" };
+        } else {
+          var dataUrl = String(reader.result);
+          qaDraftFile = { name: f.name, size: f.size, mime: f.type || "application/octet-stream",
+                          content: dataUrl.slice(dataUrl.indexOf(",") + 1), kind: "base64" };
+        }
+        if (statusEl) { statusEl.textContent = f.name + " (" + Math.round(f.size / 1024) + " KB) will be stored in-app and downloadable."; }
+      };
+      if (isText) { reader.readAsText(f); } else { reader.readAsDataURL(f); }
+    })(); break;
     case "ri-file": (function () {
       var f = t.files && t.files[0];
       if (!f) { return; }
