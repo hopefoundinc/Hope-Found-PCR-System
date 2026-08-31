@@ -17,7 +17,12 @@ dependencies for core operation. Open it in any modern browser, or host it as a 
 2. **Client Review** — the full rubric per person with Met / Not Met / N/A rating, gate questions
    that default from the person's attribute flags (QA can override), auto-N/A of gated indicator
    families, verification fields, evidence location, inline "what the surveyor looks for" text, and
-   a sticky live score summary. **Import roster** adds people in bulk: a CSV or pasted spreadsheet
+   a sticky live score summary with **Next unanswered / Open all / Collapse all** controls.
+   Categories collapse to an overview showing answered counts, not-met and alert chips, and a
+   progress bar per domain. People carry a **home/location**: pick a home to see resident chips
+   with per-person progress and switch between housemates in one click, and any answered indicator
+   offers **Copy answer to household**, pushing the rating, verification, and evidence location to
+   housemates in the same service line (with confirmation; overwrites that indicator only). **Import roster** adds people in bulk: a CSV or pasted spreadsheet
    rows parse fully offline (header row auto-detected, service lines and living arrangements
    fuzzy-matched, Yes/No columns become flags); a PDF or photo roster extracts via AI mode. Every
    import lands in an editable preview with duplicate-name flagging before anything is saved.

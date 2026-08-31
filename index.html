@@ -139,6 +139,21 @@ tr.flag-row td{background:#FBF3F1}
 .check-line{display:flex;align-items:center;gap:7px;font-size:14px;padding:4px 0}
 .check-line input{width:auto}
 
+/* collapsible domains, residents, household */
+.domain-head{cursor:pointer;-webkit-user-select:none;user-select:none;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.domain-head .dh-left{display:flex;align-items:center;gap:8px}
+.domain-head .caret{font-size:11px;width:12px;display:inline-block;flex-shrink:0}
+.domain-head .dh-right{display:flex;gap:8px;align-items:center;font-family:var(--sans);font-size:12px;font-weight:400;flex-wrap:wrap}
+.dh-prog{width:84px;height:8px;background:rgba(255,255,255,.28);position:relative;flex-shrink:0}
+.dh-prog .fill{position:absolute;left:0;top:0;bottom:0;background:#fff}
+.resident-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.resident-chips button{border:1px solid var(--hairline);background:#fff;color:var(--ink);padding:6px 11px;font-size:13px;text-align:left}
+.resident-chips button .sub{display:block;font-size:11px;color:var(--muted)}
+.resident-chips button.active{background:var(--teal);border-color:var(--teal);color:#fff}
+.resident-chips button.active .sub{color:#CBDBD9}
+.house-btn{background:none;border:none;color:var(--teal);font-size:12px;font-weight:600;text-decoration:underline;padding:0;margin-top:7px;display:inline-block}
+.sticky-actions{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+
 /* misc */
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
 .toolbar .field{min-width:150px;flex:1;max-width:260px}
@@ -316,13 +331,13 @@ function buildSeedRubric() {
 }
 
 var SEED_CLIENTS = [
-  { id: "c-demo1", name: "Jordan M. (Demo)", serviceLine: "hh", livingArrangement: "Host Home",
+  { id: "c-demo1", name: "Jordan M. (Demo)", serviceLine: "hh", livingArrangement: "Host Home", location: "Kenilworth Host Home (Demo)",
     flags: { hasBSP: true, hasRestrictiveComponents: false, takesMedications: true },
     priorPCRParticipant: true, sampled: true, activeStatus: true },
-  { id: "c-demo2", name: "Renee T. (Demo)", serviceLine: "sl", livingArrangement: "Supported Living Residence",
+  { id: "c-demo2", name: "Renee T. (Demo)", serviceLine: "sl", livingArrangement: "Supported Living Residence", location: "Sycamore Residence (Demo)",
     flags: { hasBSP: false, hasRestrictiveComponents: false, takesMedications: true },
     priorPCRParticipant: false, sampled: true, activeStatus: true },
-  { id: "c-demo3", name: "Marcus B. (Demo)", serviceLine: "ids", livingArrangement: "Family/Own Home",
+  { id: "c-demo3", name: "Marcus B. (Demo)", serviceLine: "ids", livingArrangement: "Family/Own Home", location: "",
     flags: { hasBSP: true, hasRestrictiveComponents: true, takesMedications: false },
     priorPCRParticipant: false, sampled: false, activeStatus: true }
 ];
@@ -838,6 +853,14 @@ function closeModal() {
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 function safeConfirm(msg) { try { return window.confirm(msg); } catch (e) { return false; } }
 function safeAlert(msg) { try { window.alert(msg); } catch (e) { console.log(msg); } }
+function toast(msg) {
+  var el = document.getElementById("saveStatus");
+  el.textContent = msg;
+  el.style.background = "var(--teal-dark)";
+  el.classList.add("on");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(function () { el.classList.remove("on"); }, 2200);
+}
 function showTextModal(title, text, filename) {
   openModal("<h3>" + esc(title) + '</h3>' +
     '<div class="small muted" style="margin-bottom:6px">If the download did not start (some viewers block downloads), copy the text below and save it as ' + esc(filename) + '.</div>' +
@@ -910,12 +933,62 @@ function renderDashboard() {
 /* ============================ CLIENT REVIEW ============================ */
 function clientById(id) { return S.clients.filter(function (c) { return c.id === id; })[0] || null; }
 
+var reviewHousematesSL = [];
+
+function locationsList() {
+  var seen = {}, out = [];
+  S.clients.forEach(function (c) {
+    if (!c.activeStatus) { return; }
+    var loc = (c.location || "").trim();
+    if (loc && !seen[loc.toLowerCase()]) { seen[loc.toLowerCase()] = true; out.push(loc); }
+  });
+  return out.sort();
+}
+function housematesOf(client) {
+  var loc = (client.location || "").trim().toLowerCase();
+  if (!loc) { return []; }
+  return S.clients.filter(function (c) {
+    return c.activeStatus && c.id !== client.id && (c.location || "").trim().toLowerCase() === loc;
+  });
+}
+function domainStats(items, c) {
+  var s = { total: 0, rated: 0, notMet: 0, alerts: 0 };
+  items.forEach(function (it) {
+    if (it.type !== "QA") { return; }
+    var eff = Engine.effective(it, c);
+    if (eff.forced) { return; }
+    s.total++;
+    if (eff.rating) {
+      s.rated++;
+      if (eff.rating === "not_met") { s.notMet++; if (it.alert) { s.alerts++; } }
+    }
+  });
+  return s;
+}
 function renderReview() {
   var html = '<h2 class="view-title">Client Review</h2>' +
-    '<p class="view-sub">Work through the full rubric with live scoring. Gate answers default from the person\'s attribute flags; QA can override. Children of a gate answered No are auto-set N/A and excluded from scoring.</p>';
-  html += '<div class="toolbar"><div class="field"><label>Person</label><select data-bind="review-client">' +
+    '<p class="view-sub">Pick a person directly, or pick a home first to work through everyone living there. Categories start collapsed as an overview with progress; open one to answer its questions. Gate answers default from the person\'s attribute flags. "Copy answer to household" pushes a rating to housemates in the same service line.</p>';
+
+  var locs = locationsList();
+  var locSel = (S.ui.reviewLocation || "").trim();
+  var avail = S.clients.filter(function (c) {
+    if (!c.activeStatus) { return false; }
+    if (locSel && (c.location || "").trim().toLowerCase() !== locSel.toLowerCase()) { return false; }
+    return true;
+  });
+  if (locSel && avail.length && !avail.some(function (x) { return x.id === S.ui.reviewClient; })) {
+    S.ui.reviewClient = avail[0].id;
+  }
+
+  html += '<div class="toolbar">' +
+    '<div class="field"><label>Home / location</label><select data-bind="review-location">' +
+    '<option value="">— all people —</option>' +
+    locs.map(function (l) {
+      return '<option value="' + esc(l) + '"' + (locSel.toLowerCase() === l.toLowerCase() ? " selected" : "") + ">" + esc(l) + "</option>";
+    }).join("") + "</select></div>" +
+    '<div class="field"><label>Person</label><select data-bind="review-client">' +
     '<option value="">— select —</option>' +
-    S.clients.filter(function (c) { return c.activeStatus; }).map(function (c) {
+    avail.map(function (c) {
       return '<option value="' + c.id + '"' + (S.ui.reviewClient === c.id ? " selected" : "") + ">" +
         esc(c.name) + " — " + esc(Engine.slName(c.serviceLine)) + "</option>";
     }).join("") + "</select></div>" +
@@ -924,16 +997,28 @@ function renderReview() {
     (S.ui.reviewClient ? '<button class="btn secondary" type="button" data-action="edit-client" data-id="' + S.ui.reviewClient + '">Edit person</button>' : "") +
     "</div>";
 
+  if (locSel && avail.length) {
+    html += '<div class="resident-chips">' + avail.map(function (c) {
+      var rsc = Engine.scoreClient(c);
+      return '<button type="button" data-action="pick-resident" data-id="' + c.id + '" class="' + (S.ui.reviewClient === c.id ? "active" : "") + '">' +
+        esc(c.name) + '<span class="sub">' + esc(Engine.slName(c.serviceLine)) + " · " + rsc.ratedCount + "/" + rsc.applicableQA + " answered</span></button>";
+    }).join("") + "</div>";
+  }
+
   var c = clientById(S.ui.reviewClient);
-  if (!c) { return html + '<div class="empty">Select a person above, or add one to begin a review.</div>'; }
+  if (!c) { return html + '<div class="empty">Select a person or a home above, or add people to begin.</div>'; }
+  reviewHousematesSL = housematesOf(c).filter(function (h) { return h.serviceLine === c.serviceLine; });
 
   var flagBadges = PROVIDER_CONFIG.clientFlags.map(function (f) {
     return badge(c.flags && c.flags[f.key] ? "neutral" : "outline", (f.short || f.label) + ": " + (c.flags && c.flags[f.key] ? "Yes" : "No"));
   }).join(" ");
   html += '<div class="card" style="margin-bottom:12px"><div class="ind-meta">' +
     badge("neutral", Engine.slName(c.serviceLine)) + badge("outline", c.livingArrangement) +
+    ((c.location || "").trim() ? badge("outline", "⌂ " + c.location.trim()) : "") +
     (c.sampled ? badge("warn", "In sample") : "") +
-    (c.priorPCRParticipant ? badge("outline", "Prior PCR participant") : "") + " " + flagBadges + "</div></div>";
+    (c.priorPCRParticipant ? badge("outline", "Prior PCR participant") : "") + " " + flagBadges +
+    (reviewHousematesSL.length ? " " + badge("neutral", reviewHousematesSL.length + " housemate(s) in this service") : "") +
+    "</div></div>";
 
   var sc = Engine.scoreClient(c);
   var totalPct = sc.possible ? Math.round(100 * sc.earned / sc.possible) : null;
@@ -945,19 +1030,34 @@ function renderReview() {
     '<div class="cell"><div class="num">' + fmtPct(totalPct) + '</div><div class="lbl">Total</div></div>' +
     '<div class="cell"><div class="num">' + fmtPct(critPct) + '</div><div class="lbl">Critical</div></div>' +
     '<div class="cell"><div class="num">' + sc.alerts + '</div><div class="lbl">Alerts</div></div>' +
-    '<div class="cell"><div class="num">' + sc.ratedCount + "/" + sc.applicableQA + '</div><div class="lbl">Rated</div></div>' +
-    '<div class="cell" style="flex:1"><div>' + badge(tierBadgeCls(tier.key), tier.label) + '</div><div class="lbl">Projected tier</div></div>' +
-    "</div>";
+    '<div class="cell"><div class="num">' + sc.ratedCount + "/" + sc.applicableQA + '</div><div class="lbl">Answered</div></div>' +
+    '<div class="cell"><div>' + badge(tierBadgeCls(tier.key), tier.label) + '</div><div class="lbl">Projected tier</div></div>' +
+    '<div class="sticky-actions">' +
+    '<button class="btn-ghost" type="button" data-action="jump-next">Next unanswered</button>' +
+    '<button class="btn-ghost" type="button" data-action="expand-domains">Open all</button>' +
+    '<button class="btn-ghost" type="button" data-action="collapse-domains">Collapse all</button>' +
+    "</div></div>";
 
   var items = Engine.activeItems(c.serviceLine).filter(function (it) { return Engine.applies(it, c); });
   var domains = [];
   items.forEach(function (it) { if (domains.indexOf(it.domain) === -1) { domains.push(it.domain); } });
 
   domains.forEach(function (dom) {
-    html += '<div class="domain-block"><div class="domain-head">' + esc(dom) + "</div>";
-    items.filter(function (it) { return it.domain === dom; }).forEach(function (it) {
-      html += indicatorHtml(it, c);
-    });
+    var dItems = items.filter(function (it) { return it.domain === dom; });
+    var st = domainStats(dItems, c);
+    var open = !!(S.ui.openDomains && S.ui.openDomains[dom]);
+    var pct = st.total ? Math.round(100 * st.rated / st.total) : 0;
+    html += '<div class="domain-block"><div class="domain-head" data-action="toggle-domain" data-dom="' + esc(dom) + '">' +
+      '<div class="dh-left"><span class="caret">' + (open ? "▼" : "▶") + "</span>" + esc(dom) + "</div>" +
+      '<div class="dh-right">' +
+      (st.alerts ? badge("alert", st.alerts + " alert") : "") +
+      (st.notMet ? badge("gap", st.notMet + " not met") : "") +
+      "<span>" + st.rated + "/" + st.total + " answered</span>" +
+      '<div class="dh-prog"><div class="fill" style="width:' + pct + '%"></div></div>' +
+      "</div></div>";
+    if (open) {
+      dItems.forEach(function (it) { html += indicatorHtml(it, c); });
+    }
     html += "</div>";
   });
   return html;
@@ -971,11 +1071,13 @@ function indicatorHtml(it, c) {
     (it.hcbsSettings ? badge("outline", "HCBS") : "");
   var intentOpen = S.ui.openIntents && S.ui.openIntents[it.id];
 
+  var hmN = reviewHousematesSL.length;
+  var houseBtn = hmN ? '<div><button class="house-btn" type="button" data-action="copy-house" data-client="' + c.id + '" data-ind="' + it.id + '">Copy answer to household (' + hmN + ')</button></div>' : "";
   if (it.type === "GATE") {
     var ans = Engine.gateAnswer(c, it);
     var flagDefault = it.flagKey ? ((c.flags && c.flags[it.flagKey]) ? "yes" : "no") : "yes";
     var overridden = rec.gateAnswer && rec.gateAnswer !== flagDefault;
-    return '<div class="ind"><div class="ind-top"><div>' +
+    return '<div class="ind" id="ind-' + it.id + '"><div class="ind-top"><div>' +
       '<span class="ind-id">' + esc(it.id) + "</span> " + typeBadges +
       '<div class="ind-q">' + esc(it.questionText) + "</div></div>" +
       '<div class="rate-group">' +
@@ -984,7 +1086,7 @@ function indicatorHtml(it, c) {
       "</div></div>" +
       '<div class="gate-note">Defaults to <strong>' + flagDefault.toUpperCase() + "</strong> from the person's attribute flags" +
       (overridden ? " — overridden by QA" : "") + ". No = the dependent indicators below are auto-N/A.</div>" +
-      intentBlock(it, intentOpen) + "</div>";
+      intentBlock(it, intentOpen) + houseBtn + "</div>";
   }
 
   var eff = Engine.effective(it, c);
@@ -996,7 +1098,7 @@ function indicatorHtml(it, c) {
       (disabled ? " disabled" : "") + ' class="' + (current === v ? "on-" + v : "") + '">' + lbl + "</button>";
   }).join("");
 
-  return '<div class="ind' + (disabled ? " gated-off" : "") + '"><div class="ind-top"><div>' +
+  return '<div class="ind' + (disabled ? " gated-off" : "") + '" id="ind-' + it.id + '"><div class="ind-top"><div>' +
     '<span class="ind-id">' + esc(it.id) + "</span> " + typeBadges +
     '<div class="ind-q">' + esc(it.questionText) + "</div></div>" +
     '<div class="rate-group">' + btns + "</div></div>" +
@@ -1008,6 +1110,7 @@ function indicatorHtml(it, c) {
       '<div><label>Evidence location</label><input type="text" placeholder="e.g. SharePoint/ISP/2026 or Binder 3, Shelf B" value="' + esc(rec.evidenceLocation || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="evidenceLocation"></div>' +
       '<div><label>Notes</label><input type="text" value="' + esc(rec.notes || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="notes"></div>' +
       "</div>" : "") +
+    (!disabled && current ? houseBtn : "") +
     "</div>";
 }
 function intentBlock(it, open) {
@@ -1030,6 +1133,9 @@ function clientModal(c) {
     '<div><label>Service line</label><select id="cm-sl">' + slOptions(c.serviceLine, false) + "</select></div>" +
     '<div><label>Living arrangement</label><select id="cm-la">' + PROVIDER_CONFIG.livingArrangements.map(function (la) {
       return '<option' + (la === c.livingArrangement ? " selected" : "") + ">" + esc(la) + "</option>"; }).join("") + "</select></div>" +
+    '<div class="full"><label>Home / location (people at the same home group together for review)</label>' +
+    '<input type="text" id="cm-loc" list="loc-list" value="' + esc(c.location || "") + '" placeholder="e.g. Kenilworth Host Home">' +
+    '<datalist id="loc-list">' + locationsList().map(function (l) { return "<option>" + esc(l) + "</option>"; }).join("") + "</datalist></div>" +
     '<div class="full">' + flagChecks +
     '<div class="check-line"><input type="checkbox" id="cm-prior"' + (c.priorPCRParticipant ? " checked" : "") + '><label for="cm-prior" style="text-transform:none;font-size:13.5px;margin:0">Prior PCR participant (flag — not excluded from re-sampling)</label></div>' +
     '<div class="check-line"><input type="checkbox" id="cm-sampled"' + (c.sampled ? " checked" : "") + '><label for="cm-sampled" style="text-transform:none;font-size:13.5px;margin:0">In current sample</label></div>' +
@@ -1048,6 +1154,7 @@ function saveClientFromModal(id, isNew) {
     id: id, name: name,
     serviceLine: document.getElementById("cm-sl").value,
     livingArrangement: document.getElementById("cm-la").value,
+    location: document.getElementById("cm-loc").value.trim(),
     flags: flags,
     priorPCRParticipant: document.getElementById("cm-prior").checked,
     sampled: document.getElementById("cm-sampled").checked,
@@ -1607,16 +1714,17 @@ function riExistingNames() {
 /* Rows (arrays) -> draft objects. Header row auto-detected by a "name" cell. */
 function riRowsToDraft(rows) {
   if (!rows.length) { return []; }
-  var map = { name: 0, sl: 1, la: 2, meds: -1, bsp: -1, restrictive: -1, prior: -1, sampled: -1 };
+  var map = { name: 0, sl: 1, la: 2, loc: -1, meds: -1, bsp: -1, restrictive: -1, prior: -1, sampled: -1 };
   var start = 0;
   var head = rows[0].map(function (c) { return String(c).trim().toLowerCase(); });
   if (head.some(function (c) { return c.indexOf("name") !== -1; })) {
     start = 1;
-    map = { name: -1, sl: -1, la: -1, meds: -1, bsp: -1, restrictive: -1, prior: -1, sampled: -1 };
+    map = { name: -1, sl: -1, la: -1, loc: -1, meds: -1, bsp: -1, restrictive: -1, prior: -1, sampled: -1 };
     head.forEach(function (c, i) {
       if (map.name === -1 && c.indexOf("name") !== -1) { map.name = i; }
       else if (map.sl === -1 && (c.indexOf("service") !== -1 || c.indexOf("program") !== -1 || c.indexOf("waiver") !== -1)) { map.sl = i; }
       else if (map.la === -1 && (c.indexOf("living") !== -1 || c.indexOf("residence") !== -1 || c.indexOf("arrangement") !== -1 || c.indexOf("home type") !== -1)) { map.la = i; }
+      else if (map.loc === -1 && (c.indexOf("location") !== -1 || c.indexOf("site") !== -1 || c.indexOf("address") !== -1 || c === "home")) { map.loc = i; }
       else if (map.meds === -1 && (c.indexOf("med") !== -1)) { map.meds = i; }
       else if (map.restrictive === -1 && c.indexOf("restrict") !== -1) { map.restrictive = i; }
       else if (map.bsp === -1 && (c.indexOf("bsp") !== -1 || c.indexOf("behavior") !== -1)) { map.bsp = i; }
@@ -1638,6 +1746,7 @@ function riRowsToDraft(rows) {
       serviceLine: riMatchSL(slRaw) || PROVIDER_CONFIG.serviceLines[0].id,
       slGuessed: !riMatchSL(slRaw),
       livingArrangement: riMatchLA(laRaw) || PROVIDER_CONFIG.livingArrangements[0],
+      location: map.loc >= 0 ? String(row[map.loc] == null ? "" : row[map.loc]).trim() : "",
       hasBSP: map.bsp >= 0 ? riTruthy(row[map.bsp]) : false,
       hasRestrictiveComponents: map.restrictive >= 0 ? riTruthy(row[map.restrictive]) : false,
       takesMedications: map.meds >= 0 ? riTruthy(row[map.meds]) : false,
@@ -1660,6 +1769,7 @@ function riObjectsToDraft(arr) {
       serviceLine: riMatchSL(o.serviceLine) || PROVIDER_CONFIG.serviceLines[0].id,
       slGuessed: !riMatchSL(o.serviceLine),
       livingArrangement: riMatchLA(o.livingArrangement) || PROVIDER_CONFIG.livingArrangements[0],
+      location: String(o.location || "").trim(),
       hasBSP: riTruthy(flags.hasBSP === true ? "y" : flags.hasBSP),
       hasRestrictiveComponents: riTruthy(flags.hasRestrictiveComponents === true ? "y" : flags.hasRestrictiveComponents),
       takesMedications: riTruthy(flags.takesMedications === true ? "y" : flags.takesMedications),
@@ -1692,7 +1802,7 @@ function riRenderPreview() {
   if (!el) { return; }
   if (!rosterDraft.length) { el.innerHTML = ""; document.getElementById("ri-confirm").disabled = true; return; }
   var selCount = rosterDraft.filter(function (d) { return d.include; }).length;
-  var html = '<div class="table-wrap"><table style="min-width:900px"><thead><tr><th></th><th>Name</th><th>Service line</th><th>Living arrangement</th><th>Meds</th><th>BSP</th><th>Restrictive</th><th>Prior PCR</th><th>Sampled</th><th></th></tr></thead><tbody>';
+  var html = '<div class="table-wrap"><table style="min-width:900px"><thead><tr><th></th><th>Name</th><th>Service line</th><th>Living arrangement</th><th>Home / location</th><th>Meds</th><th>BSP</th><th>Restrictive</th><th>Prior PCR</th><th>Sampled</th><th></th></tr></thead><tbody>';
   rosterDraft.forEach(function (d, i) {
     html += "<tr>" +
       '<td><input type="checkbox" data-bind="ri-include" data-idx="' + i + '"' + (d.include ? " checked" : "") + "></td>" +
@@ -1701,6 +1811,7 @@ function riRenderPreview() {
       (d.slGuessed ? '<div class="small" style="color:var(--warn)">check — not matched</div>' : "") + "</td>" +
       '<td><select data-bind="ri-field" data-idx="' + i + '" data-field="livingArrangement">' +
       PROVIDER_CONFIG.livingArrangements.map(function (la) { return "<option" + (la === d.livingArrangement ? " selected" : "") + ">" + esc(la) + "</option>"; }).join("") + "</select></td>" +
+      '<td style="min-width:130px"><input type="text" value="' + esc(d.location || "") + '" data-bind="ri-field" data-idx="' + i + '" data-field="location"></td>' +
       ["takesMedications", "hasBSP", "hasRestrictiveComponents", "priorPCRParticipant", "sampled"].map(function (f) {
         return '<td style="text-align:center"><input type="checkbox" data-bind="ri-field" data-idx="' + i + '" data-field="' + f + '"' + (d[f] ? " checked" : "") + "></td>";
       }).join("") +
@@ -1753,6 +1864,7 @@ async function riHandleDoc(file) {
       { type: "text", text: "Extract every person served from this roster document. Return ONLY a JSON array, no other text, where each element is: " +
         '{"name": string, "serviceLine": one of [' + slList + "] (use the short id; pick the closest match), " +
         '"livingArrangement": one of ' + JSON.stringify(PROVIDER_CONFIG.livingArrangements) + " (closest match), " +
+        '"location": string (the home/site name or address where they live, empty string if not stated), ' +
         '"takesMedications": boolean, "hasBSP": boolean, "hasRestrictiveComponents": boolean, "priorPCRParticipant": boolean}. ' +
         "Use false for anything the document does not state. Do not invent people." }
     ];
@@ -1776,6 +1888,7 @@ function riConfirm() {
     var id = "c-" + stamp + "-" + i;
     S.clients.push({
       id: id, name: d.name.trim(), serviceLine: d.serviceLine, livingArrangement: d.livingArrangement,
+      location: (d.location || "").trim(),
       flags: { hasBSP: d.hasBSP, hasRestrictiveComponents: d.hasRestrictiveComponents, takesMedications: d.takesMedications },
       priorPCRParticipant: d.priorPCRParticipant, sampled: d.sampled, activeStatus: true
     });
@@ -1872,6 +1985,58 @@ function onClick(e) {
         function () { return AI.capPrompt(slId, findings); });
     })(); break;
     case "import-roster": rosterImportModal(); break;
+    case "pick-resident": S.ui.reviewClient = d.id; render(); break;
+    case "toggle-domain":
+      S.ui.openDomains = S.ui.openDomains || {};
+      S.ui.openDomains[d.dom] = !S.ui.openDomains[d.dom];
+      render(); break;
+    case "expand-domains": (function () {
+      var c = clientById(S.ui.reviewClient);
+      if (!c) { return; }
+      S.ui.openDomains = S.ui.openDomains || {};
+      Engine.activeItems(c.serviceLine).forEach(function (it) {
+        if (Engine.applies(it, c)) { S.ui.openDomains[it.domain] = true; }
+      });
+      render();
+    })(); break;
+    case "collapse-domains": S.ui.openDomains = {}; render(); break;
+    case "jump-next": (function () {
+      var c = clientById(S.ui.reviewClient);
+      if (!c) { return; }
+      var target = null;
+      Engine.activeItems(c.serviceLine).forEach(function (it) {
+        if (target || it.type !== "QA" || !Engine.applies(it, c)) { return; }
+        var eff = Engine.effective(it, c);
+        if (!eff.forced && !eff.rating) { target = it; }
+      });
+      if (!target) { toast("All applicable indicators are answered."); return; }
+      S.ui.openDomains = S.ui.openDomains || {};
+      S.ui.openDomains[target.domain] = true;
+      render();
+      var el = document.getElementById("ind-" + target.id);
+      if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    })(); break;
+    case "copy-house": (function () {
+      var c = clientById(d.client);
+      var it = Engine.itemById(d.ind);
+      if (!c || !it) { return; }
+      var hms = housematesOf(c).filter(function (h) { return h.serviceLine === c.serviceLine; });
+      if (!hms.length) { return; }
+      if (!safeConfirm("Copy this answer for " + it.id + " to " + hms.length + " housemate(s) at \"" + (c.location || "").trim() +
+          "\"? It overwrites their current answer for this indicator only.")) { return; }
+      var src = (S.records[c.id] || {})[d.ind] || {};
+      hms.forEach(function (h) {
+        var recs = S.records[h.id] || (S.records[h.id] = {});
+        var dst = recs[d.ind] || (recs[d.ind] = {});
+        ["rating", "gateAnswer", "verifiedBy", "verifiedDate", "evidenceLocation", "notes"].forEach(function (k) {
+          if (src[k] !== undefined) { dst[k] = src[k]; }
+        });
+        persist(K.rec + h.id, recs);
+      });
+      toast("Copied to " + hms.length + " housemate(s)");
+      render();
+    })(); break;
+
     case "ri-parse-paste": riHandleText("pasted.txt", document.getElementById("ri-paste").value); break;
     case "ri-confirm": riConfirm(); break;
     case "add-client": clientModal(null); break;
@@ -1963,6 +2128,7 @@ function onChange(e) {
   var d = t.dataset;
   switch (bind) {
     case "review-client": S.ui.reviewClient = t.value || null; render(); break;
+    case "review-location": S.ui.reviewLocation = t.value || ""; render(); break;
     case "ri-file": (function () {
       var f = t.files && t.files[0];
       if (!f) { return; }
