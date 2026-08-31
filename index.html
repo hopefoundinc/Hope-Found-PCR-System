@@ -687,9 +687,9 @@ var AI = {
       },
       body: JSON.stringify({
         model: AI.model(),
-        max_tokens: 4000,
+        max_tokens: 8000,
         system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }]
+        messages: [{ role: "user", content: userPrompt }] /* string or content-block array */
       })
     });
     if (!resp.ok) {
@@ -831,7 +831,9 @@ function openModal(html) {
 }
 function closeModal() {
   document.getElementById("modalBack").classList.remove("open");
-  document.getElementById("modalBox").innerHTML = "";
+  var box = document.getElementById("modalBox");
+  box.innerHTML = "";
+  box.style.maxWidth = "";
 }
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 function safeConfirm(msg) { try { return window.confirm(msg); } catch (e) { return false; } }
@@ -918,6 +920,7 @@ function renderReview() {
         esc(c.name) + " — " + esc(Engine.slName(c.serviceLine)) + "</option>";
     }).join("") + "</select></div>" +
     '<button class="btn secondary" type="button" data-action="add-client">+ Add person</button>' +
+    '<button class="btn secondary" type="button" data-action="import-roster">Import roster</button>' +
     (S.ui.reviewClient ? '<button class="btn secondary" type="button" data-action="edit-client" data-id="' + S.ui.reviewClient + '">Edit person</button>' : "") +
     "</div>";
 
@@ -1534,6 +1537,259 @@ function capFindings(slId) {
     .sort(function (a, b) { return (b.item.alert - a.item.alert) || (b.item.weight - a.item.weight); });
 }
 
+
+/* ============================ ROSTER IMPORT ============================
+   Bulk intake of people: CSV/TSV file or pasted spreadsheet rows parse
+   offline; PDF and image rosters extract via the Anthropic API (AI mode).
+   Everything lands in an editable preview - nothing saves until confirmed. */
+var rosterDraft = [];
+
+function riDetectDelim(line) {
+  if (line.indexOf("\t") !== -1) { return "\t"; }
+  if (line.split(";").length > line.split(",").length) { return ";"; }
+  return ",";
+}
+function riParseDelimited(text) {
+  var nl = text.indexOf("\n");
+  var delim = riDetectDelim(nl === -1 ? text : text.slice(0, nl));
+  var rows = [], row = [], cur = "", inQ = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (inQ) {
+      if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else { inQ = false; } }
+      else { cur += ch; }
+    } else if (ch === '"') { inQ = true; }
+    else if (ch === delim) { row.push(cur); cur = ""; }
+    else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") { i++; }
+      row.push(cur); cur = "";
+      if (row.length > 1 || (row[0] && row[0].trim())) { rows.push(row); }
+      row = [];
+    } else { cur += ch; }
+  }
+  row.push(cur);
+  if (row.length > 1 || (row[0] && row[0].trim())) { rows.push(row); }
+  return rows;
+}
+function riMatchSL(val) {
+  if (!val) { return null; }
+  var s = String(val).trim().toLowerCase();
+  var hit = null;
+  PROVIDER_CONFIG.serviceLines.forEach(function (sl) {
+    if (hit) { return; }
+    if (s === sl.id || s === sl.name.toLowerCase()) { hit = sl.id; }
+  });
+  if (!hit) {
+    PROVIDER_CONFIG.serviceLines.forEach(function (sl) {
+      if (hit) { return; }
+      if (sl.name.toLowerCase().indexOf(s) === 0 || s.indexOf(sl.name.toLowerCase()) !== -1) { hit = sl.id; }
+    });
+  }
+  return hit;
+}
+function riMatchLA(val) {
+  if (!val) { return null; }
+  var s = String(val).trim().toLowerCase();
+  var hit = null;
+  PROVIDER_CONFIG.livingArrangements.forEach(function (la) {
+    if (hit) { return; }
+    var l = la.toLowerCase();
+    if (s === l || l.indexOf(s) !== -1 || s.indexOf(l) !== -1) { hit = la; }
+  });
+  return hit;
+}
+function riTruthy(v) { return /^\s*(y|yes|true|x|1)/i.test(String(v == null ? "" : v)); }
+function riExistingNames() {
+  var set = {};
+  S.clients.forEach(function (c) { set[c.name.trim().toLowerCase()] = true; });
+  return set;
+}
+/* Rows (arrays) -> draft objects. Header row auto-detected by a "name" cell. */
+function riRowsToDraft(rows) {
+  if (!rows.length) { return []; }
+  var map = { name: 0, sl: 1, la: 2, meds: -1, bsp: -1, restrictive: -1, prior: -1, sampled: -1 };
+  var start = 0;
+  var head = rows[0].map(function (c) { return String(c).trim().toLowerCase(); });
+  if (head.some(function (c) { return c.indexOf("name") !== -1; })) {
+    start = 1;
+    map = { name: -1, sl: -1, la: -1, meds: -1, bsp: -1, restrictive: -1, prior: -1, sampled: -1 };
+    head.forEach(function (c, i) {
+      if (map.name === -1 && c.indexOf("name") !== -1) { map.name = i; }
+      else if (map.sl === -1 && (c.indexOf("service") !== -1 || c.indexOf("program") !== -1 || c.indexOf("waiver") !== -1)) { map.sl = i; }
+      else if (map.la === -1 && (c.indexOf("living") !== -1 || c.indexOf("residence") !== -1 || c.indexOf("arrangement") !== -1 || c.indexOf("home type") !== -1)) { map.la = i; }
+      else if (map.meds === -1 && (c.indexOf("med") !== -1)) { map.meds = i; }
+      else if (map.restrictive === -1 && c.indexOf("restrict") !== -1) { map.restrictive = i; }
+      else if (map.bsp === -1 && (c.indexOf("bsp") !== -1 || c.indexOf("behavior") !== -1)) { map.bsp = i; }
+      else if (map.prior === -1 && (c.indexOf("prior") !== -1 || c.indexOf("previous") !== -1)) { map.prior = i; }
+      else if (map.sampled === -1 && c.indexOf("sample") !== -1) { map.sampled = i; }
+    });
+    if (map.name === -1) { map.name = 0; }
+  }
+  var existing = riExistingNames();
+  var out = [];
+  for (var r = start; r < rows.length; r++) {
+    var row = rows[r];
+    var name = String(row[map.name] == null ? "" : row[map.name]).trim();
+    if (!name) { continue; }
+    var slRaw = map.sl >= 0 ? row[map.sl] : null;
+    var laRaw = map.la >= 0 ? row[map.la] : null;
+    out.push({
+      name: name,
+      serviceLine: riMatchSL(slRaw) || PROVIDER_CONFIG.serviceLines[0].id,
+      slGuessed: !riMatchSL(slRaw),
+      livingArrangement: riMatchLA(laRaw) || PROVIDER_CONFIG.livingArrangements[0],
+      hasBSP: map.bsp >= 0 ? riTruthy(row[map.bsp]) : false,
+      hasRestrictiveComponents: map.restrictive >= 0 ? riTruthy(row[map.restrictive]) : false,
+      takesMedications: map.meds >= 0 ? riTruthy(row[map.meds]) : false,
+      priorPCRParticipant: map.prior >= 0 ? riTruthy(row[map.prior]) : false,
+      sampled: map.sampled >= 0 ? riTruthy(row[map.sampled]) : false,
+      dupe: !!existing[name.toLowerCase()],
+      include: !existing[name.toLowerCase()]
+    });
+  }
+  return out;
+}
+/* Objects (from JSON upload or AI extraction) -> draft objects. */
+function riObjectsToDraft(arr) {
+  var existing = riExistingNames();
+  return arr.filter(function (o) { return o && o.name && String(o.name).trim(); }).map(function (o) {
+    var name = String(o.name).trim();
+    var flags = o.flags || o;
+    return {
+      name: name,
+      serviceLine: riMatchSL(o.serviceLine) || PROVIDER_CONFIG.serviceLines[0].id,
+      slGuessed: !riMatchSL(o.serviceLine),
+      livingArrangement: riMatchLA(o.livingArrangement) || PROVIDER_CONFIG.livingArrangements[0],
+      hasBSP: riTruthy(flags.hasBSP === true ? "y" : flags.hasBSP),
+      hasRestrictiveComponents: riTruthy(flags.hasRestrictiveComponents === true ? "y" : flags.hasRestrictiveComponents),
+      takesMedications: riTruthy(flags.takesMedications === true ? "y" : flags.takesMedications),
+      priorPCRParticipant: riTruthy(o.priorPCRParticipant === true ? "y" : o.priorPCRParticipant),
+      sampled: riTruthy(o.sampled === true ? "y" : o.sampled),
+      dupe: !!existing[name.toLowerCase()],
+      include: !existing[name.toLowerCase()]
+    };
+  });
+}
+function rosterImportModal() {
+  rosterDraft = [];
+  openModal('<h3>Import roster</h3>' +
+    '<div class="small muted" style="margin-bottom:8px">Add many people at once. CSV or pasted spreadsheet rows work fully offline; PDF and photo rosters need AI mode (Settings). Columns: Name, Service Line, Living Arrangement, then optional Yes/No columns for Meds, BSP, Restrictive, Prior PCR, Sampled — a header row is detected automatically. Everything lands in the preview below for review before saving.</div>' +
+    '<div class="form-grid">' +
+    '<div><label>Upload file (.csv .txt .json' + (AI.enabled() ? " .pdf .png .jpg" : " — add an AI key for .pdf/.png/.jpg") + ')</label>' +
+    '<input type="file" id="ri-file" accept=".csv,.txt,.tsv,.json,.pdf,.png,.jpg,.jpeg" data-bind="ri-file"></div>' +
+    '<div class="full"><label>Or paste rows copied from a spreadsheet</label>' +
+    '<textarea id="ri-paste" rows="4" placeholder="Jordan Malik\tHost Home\tHost Home\tYes\tYes\tNo\tYes\tYes"></textarea>' +
+    '<div style="margin-top:6px"><button class="btn secondary small" type="button" data-action="ri-parse-paste">Parse pasted rows</button></div></div>' +
+    "</div>" +
+    '<div id="ri-status" class="small" style="margin-top:8px"></div>' +
+    '<div id="ri-preview" style="margin-top:8px"></div>' +
+    '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
+    '<button class="btn" type="button" id="ri-confirm" data-action="ri-confirm" disabled>Add selected people</button></div>');
+  document.getElementById("modalBox").style.maxWidth = "980px";
+}
+function riRenderPreview() {
+  var el = document.getElementById("ri-preview");
+  if (!el) { return; }
+  if (!rosterDraft.length) { el.innerHTML = ""; document.getElementById("ri-confirm").disabled = true; return; }
+  var selCount = rosterDraft.filter(function (d) { return d.include; }).length;
+  var html = '<div class="table-wrap"><table style="min-width:900px"><thead><tr><th></th><th>Name</th><th>Service line</th><th>Living arrangement</th><th>Meds</th><th>BSP</th><th>Restrictive</th><th>Prior PCR</th><th>Sampled</th><th></th></tr></thead><tbody>';
+  rosterDraft.forEach(function (d, i) {
+    html += "<tr>" +
+      '<td><input type="checkbox" data-bind="ri-include" data-idx="' + i + '"' + (d.include ? " checked" : "") + "></td>" +
+      '<td style="min-width:150px"><input type="text" value="' + esc(d.name) + '" data-bind="ri-field" data-idx="' + i + '" data-field="name"></td>' +
+      '<td><select data-bind="ri-field" data-idx="' + i + '" data-field="serviceLine">' + slOptions(d.serviceLine, false) + "</select>" +
+      (d.slGuessed ? '<div class="small" style="color:var(--warn)">check — not matched</div>' : "") + "</td>" +
+      '<td><select data-bind="ri-field" data-idx="' + i + '" data-field="livingArrangement">' +
+      PROVIDER_CONFIG.livingArrangements.map(function (la) { return "<option" + (la === d.livingArrangement ? " selected" : "") + ">" + esc(la) + "</option>"; }).join("") + "</select></td>" +
+      ["takesMedications", "hasBSP", "hasRestrictiveComponents", "priorPCRParticipant", "sampled"].map(function (f) {
+        return '<td style="text-align:center"><input type="checkbox" data-bind="ri-field" data-idx="' + i + '" data-field="' + f + '"' + (d[f] ? " checked" : "") + "></td>";
+      }).join("") +
+      "<td>" + (d.dupe ? badge("warn", "duplicate name") : "") + "</td></tr>";
+  });
+  html += "</tbody></table></div>" +
+    '<div class="small muted" style="margin-top:6px">' + rosterDraft.length + " row(s) parsed, " + selCount + " selected. Duplicates of existing people are unchecked by default.</div>";
+  el.innerHTML = html;
+  document.getElementById("ri-confirm").disabled = selCount === 0;
+  document.getElementById("ri-confirm").textContent = "Add " + selCount + " selected " + (selCount === 1 ? "person" : "people");
+}
+function riSetStatus(msg, isErr) {
+  var el = document.getElementById("ri-status");
+  if (el) { el.textContent = msg; el.style.color = isErr ? "var(--gap)" : "var(--muted)"; }
+}
+function riHandleText(name, text) {
+  try {
+    if (/\.json$/i.test(name)) {
+      var data = JSON.parse(text);
+      var arr = Array.isArray(data) ? data : (data && Array.isArray(data.clients) ? data.clients : null);
+      if (!arr) { riSetStatus("JSON must be an array of people (or an object with a clients array).", true); return; }
+      rosterDraft = riObjectsToDraft(arr);
+    } else {
+      rosterDraft = riRowsToDraft(riParseDelimited(text));
+    }
+    riSetStatus(rosterDraft.length ? "" : "No rows with a name found — check the format.", !rosterDraft.length);
+    riRenderPreview();
+  } catch (err) { riSetStatus("Could not parse the file: " + err.message, true); }
+}
+async function riHandleDoc(file) {
+  if (!AI.enabled()) {
+    riSetStatus("PDF and image rosters need AI mode — add an Anthropic API key in Settings, or export the roster as CSV instead.", true);
+    return;
+  }
+  riSetStatus("Reading the document with AI (" + AI.model() + ")…");
+  try {
+    var dataUrl = await new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(String(reader.result)); };
+      reader.onerror = function () { reject(new Error("could not read file")); };
+      reader.readAsDataURL(file);
+    });
+    var b64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+    var isPdf = /pdf/i.test(file.type) || /\.pdf$/i.test(file.name);
+    var mediaType = isPdf ? "application/pdf" : (file.type || "image/png");
+    var slList = PROVIDER_CONFIG.serviceLines.map(function (s) { return s.id + " = " + s.name; }).join("; ");
+    var content = [
+      isPdf ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } }
+            : { type: "image", source: { type: "base64", media_type: mediaType, data: b64 } },
+      { type: "text", text: "Extract every person served from this roster document. Return ONLY a JSON array, no other text, where each element is: " +
+        '{"name": string, "serviceLine": one of [' + slList + "] (use the short id; pick the closest match), " +
+        '"livingArrangement": one of ' + JSON.stringify(PROVIDER_CONFIG.livingArrangements) + " (closest match), " +
+        '"takesMedications": boolean, "hasBSP": boolean, "hasRestrictiveComponents": boolean, "priorPCRParticipant": boolean}. ' +
+        "Use false for anything the document does not state. Do not invent people." }
+    ];
+    var text = await AI.call("You extract structured rosters from documents for a disability-services compliance system. Output strictly valid JSON.", content);
+    var cleaned = text.trim().replace(/^```(json)?/i, "").replace(/```$/, "").trim();
+    var start = cleaned.indexOf("["), end = cleaned.lastIndexOf("]");
+    if (start === -1 || end === -1) { throw new Error("no JSON array in the response"); }
+    var arr = JSON.parse(cleaned.slice(start, end + 1));
+    rosterDraft = riObjectsToDraft(arr);
+    riSetStatus(rosterDraft.length ? "Extracted " + rosterDraft.length + " people — review below before adding." : "The AI found no people in this document.", !rosterDraft.length);
+    riRenderPreview();
+  } catch (err) {
+    riSetStatus("AI extraction failed (" + err.message + "). Export the roster as CSV and upload that instead.", true);
+  }
+}
+function riConfirm() {
+  var added = 0;
+  var stamp = Date.now().toString(36);
+  rosterDraft.forEach(function (d, i) {
+    if (!d.include || !d.name.trim()) { return; }
+    var id = "c-" + stamp + "-" + i;
+    S.clients.push({
+      id: id, name: d.name.trim(), serviceLine: d.serviceLine, livingArrangement: d.livingArrangement,
+      flags: { hasBSP: d.hasBSP, hasRestrictiveComponents: d.hasRestrictiveComponents, takesMedications: d.takesMedications },
+      priorPCRParticipant: d.priorPCRParticipant, sampled: d.sampled, activeStatus: true
+    });
+    S.records[id] = {};
+    added++;
+  });
+  if (!added) { return; }
+  persist(K.clients, S.clients);
+  rosterDraft = [];
+  closeModal();
+  render();
+  flashSave(true);
+}
+
 /* ============================ NAV / RENDER / EVENTS ============================ */
 var TABS = [
   ["dashboard", "Dashboard"], ["review", "Client Review"], ["sampling", "Sampling"],
@@ -1615,6 +1871,9 @@ function onClick(e) {
         function () { return AI.offlineCap(slId, findings); },
         function () { return AI.capPrompt(slId, findings); });
     })(); break;
+    case "import-roster": rosterImportModal(); break;
+    case "ri-parse-paste": riHandleText("pasted.txt", document.getElementById("ri-paste").value); break;
+    case "ri-confirm": riConfirm(); break;
     case "add-client": clientModal(null); break;
     case "edit-client": clientModal(clientById(d.id)); break;
     case "save-client": saveClientFromModal(d.id, d.new === "true"); break;
@@ -1704,6 +1963,24 @@ function onChange(e) {
   var d = t.dataset;
   switch (bind) {
     case "review-client": S.ui.reviewClient = t.value || null; render(); break;
+    case "ri-file": (function () {
+      var f = t.files && t.files[0];
+      if (!f) { return; }
+      if (/\.(pdf|png|jpe?g)$/i.test(f.name) || /pdf|image/i.test(f.type)) { riHandleDoc(f); return; }
+      var reader = new FileReader();
+      reader.onload = function () { riHandleText(f.name, String(reader.result)); };
+      reader.readAsText(f);
+    })(); break;
+    case "ri-include": (function () {
+      if (rosterDraft[t.dataset.idx]) { rosterDraft[t.dataset.idx].include = t.checked; riRenderPreview(); }
+    })(); break;
+    case "ri-field": (function () {
+      var d = rosterDraft[t.dataset.idx];
+      if (!d) { return; }
+      var f = t.dataset.field;
+      d[f] = (t.type === "checkbox") ? t.checked : t.value;
+      if (f === "serviceLine") { d.slGuessed = false; riRenderPreview(); }
+    })(); break;
     case "rec-field": (function () {
       var patch = {};
       patch[d.field] = t.value;
