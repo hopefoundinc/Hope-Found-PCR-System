@@ -73,7 +73,12 @@ full JSON backup export/import.
 The app ships **pre-loaded with the official Qlarant-extracted rubric**
 ([`hopefound_pcr_rubric.json`](hopefound_pcr_rubric.json), 465 indicators, effective 2022-11-07
 across all five service lines — Companion included; no version dates are hardcoded anywhere, the
-`effectiveDate` field on each item is the only source). When criteria change next audit cycle:
+`effectiveDate` field on each item is the only source). 30 indicators mapping directly to HCBS
+Settings Rule provisions (lease/eviction protections, lockable space, roommate and visitor choice,
+privacy, food access, own schedule, community activities of choice, day-activity autonomy) carry
+`hcbsSettings: true` and gate the Excellent tier — Host Home, Supported Living, and IDS only,
+mirroring the HCBS Org Assessment's exclusion of In-Home Supports and Companion; each flag is a
+checkbox in the Rubric Manager. When criteria change next audit cycle:
 **Rubric Manager → Import JSON** with the new set — no rebuild. The formal contract is
 [`rubric.schema.json`](rubric.schema.json) (JSON Schema draft 2020-12) — validate your file with
 `npx ajv-cli validate --spec=draft2020 -s rubric.schema.json -d your-rubric.json` before importing.
