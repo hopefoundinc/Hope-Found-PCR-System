@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DM Autoresponder</title>
+<style>
+  :root {
+    --bg:#141210; --panel:#1e1b18; --panel2:#26221e; --line:#3a342d;
+    --text:#f0eee9; --muted:#a39b8f; --accent:#c15f3c; --green:#a6a64e; --red:#d06552;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif; }
+  .wrap { max-width:880px; margin:0 auto; padding:24px 16px 80px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  h2 { font-size:15px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:32px 0 12px; }
+  .sub { color:var(--muted); margin:0 0 24px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:12px; }
+  label { display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; }
+  input[type=text], input[type=password], input[type=number], textarea, select {
+    width:100%; background:var(--panel2); color:var(--text); border:1px solid var(--line);
+    border-radius:8px; padding:9px 10px; font:inherit;
+  }
+  textarea { resize:vertical; min-height:70px; }
+  button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:9px 16px; font:inherit; font-weight:600; cursor:pointer; }
+  button.secondary { background:var(--panel2); color:var(--text); border:1px solid var(--line); }
+  button.danger { background:transparent; color:var(--red); border:1px solid var(--red); }
+  button:disabled { opacity:.5; cursor:default; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .row > * { flex:1; min-width:140px; }
+  .row > .shrink { flex:0 0 auto; min-width:0; }
+  .pill { display:inline-block; padding:2px 10px; border-radius:99px; font-size:12px; font-weight:600; }
+  .pill.on  { background:rgba(166,166,78,.18); color:var(--green); }
+  .pill.off { background:rgba(163,155,143,.15); color:var(--muted); }
+  .pill.trig { background:rgba(193,95,60,.16); color:var(--accent); }
+  .rule-head { display:flex; justify-content:space-between; align-items:center; gap:10px; cursor:pointer; }
+  .rule-name { font-weight:600; }
+  .rule-body { display:none; margin-top:12px; border-top:1px solid var(--line); padding-top:8px; }
+  .rule-body.open { display:block; }
+  .muted { color:var(--muted); font-size:13px; }
+  .logline { padding:6px 0; border-bottom:1px solid var(--line); font-size:13px; display:flex; gap:10px; }
+  .logline:last-child { border-bottom:0; }
+  .logtype { flex:0 0 52px; font-weight:600; }
+  .t-reply { color:var(--green); } .t-error { color:var(--red); } .t-skip,.t-admin,.t-token { color:var(--muted); }
+  .toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:var(--panel2);
+    border:1px solid var(--line); border-radius:8px; padding:10px 18px; display:none; }
+  #login { max-width:380px; margin:12vh auto 0; }
+  .check { display:flex; align-items:center; gap:8px; font-size:14px; margin-top:10px; }
+  .check input { width:auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="login" class="card" hidden>
+    <h1>DM Autoresponder</h1>
+    <p class="sub">Enter the admin password to manage your automations.</p>
+    <input type="password" id="pw" placeholder="Admin password" autocomplete="current-password">
+    <div style="margin-top:12px"><button onclick="doLogin()">Sign in</button></div>
+    <p class="muted" id="loginErr"></p>
+  </div>
+
+  <div id="app" hidden>
+    <h1>DM Autoresponder</h1>
+    <p class="sub" id="acct">Loading…</p>
+
+    <h2>Rules</h2>
+    <div id="rules"></div>
+    <div class="row" style="margin-top:8px">
+      <button class="shrink" onclick="addRule()">+ New rule</button>
+      <button class="shrink secondary" onclick="saveRules()" id="saveBtn">Save all rules</button>
+    </div>
+
+    <h2>Settings</h2>
+    <div class="card">
+      <label>Fallback DM reply — sent when a DM matches no rule (leave empty for none)</label>
+      <textarea id="fallback"></textarea>
+      <label>Cooldown hours — how long before the same rule fires again for the same person</label>
+      <input type="number" id="cooldown" min="0" max="8760">
+      <div style="margin-top:12px"><button class="secondary" onclick="saveSettings()">Save settings</button></div>
+    </div>
+
+    <h2>Access token</h2>
+    <div class="card">
+      <p class="muted" id="tokenInfo"></p>
+      <label>Paste a new long-lived Instagram access token (only needed if the current one dies)</label>
+      <input type="text" id="newToken" placeholder="IGQW…">
+      <div style="margin-top:12px"><button class="secondary" onclick="saveToken()">Replace token</button></div>
+    </div>
+
+    <h2>Recent activity</h2>
+    <div class="card" id="log"></div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var KEY = null;
+var state = null;
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ var d=document.createElement('div'); d.textContent=String(s==null?'':s); return d.innerHTML; }
+function toast(msg){ var t=$('toast'); t.textContent=msg; t.style.display='block';
+  clearTimeout(t._h); t._h=setTimeout(function(){ t.style.display='none'; }, 2500); }
+
+function api(method, path, body){
+  return fetch(path, {
+    method: method,
+    headers: { 'x-admin-key': KEY, 'content-type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  }).then(function(r){
+    if (r.status === 401) { showLogin('Wrong password.'); throw new Error('unauthorized'); }
+    return r.json();
+  });
+}
+
+function showLogin(err){
+  $('login').hidden = false; $('app').hidden = true;
+  $('loginErr').textContent = err || '';
+}
+
+function doLogin(){
+  KEY = $('pw').value;
+  try { localStorage.setItem('admKey', KEY); } catch(e){}
+  boot();
+}
+$('pw') && $('pw').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+
+function boot(){
+  api('GET', '/api/state').then(function(s){
+    state = s;
+    $('login').hidden = true; $('app').hidden = false;
+    render();
+  }).catch(function(){});
+}
+
+function fmtDate(ts){ return ts ? new Date(ts).toLocaleString() : '—'; }
+
+function render(){
+  var a = state.account || {};
+  $('acct').textContent = a.username
+    ? 'Connected to @' + a.username
+    : 'Not connected yet — check your access token and webhook setup.';
+
+  var t = state.token || {};
+  $('tokenInfo').textContent = t.present
+    ? 'Token active. Last auto-refresh: ' + fmtDate(t.refreshedAt) +
+      (t.expiresAt ? ' · expires ' + fmtDate(t.expiresAt) + ' (auto-renewed weekly)' : '')
+    : 'No token stored. Paste one below.';
+
+  $('fallback').value = state.settings.fallbackDmReply || '';
+  $('cooldown').value = state.settings.cooldownHours;
+
+  renderRules();
+  renderLog();
+}
+
+var TRIG_LABEL = { dm:'DM keyword', comment:'Comment', story_reply:'Story reply' };
+
+function renderRules(){
+  var host = $('rules'); host.innerHTML = '';
+  if (!state.rules.length) {
+    host.innerHTML = '<div class="card muted">No rules yet. Add one below.</div>';
+    return;
+  }
+  state.rules.forEach(function(r, i){
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML =
+      '<div class="rule-head" data-i="'+i+'">' +
+        '<span class="rule-name">'+esc(r.name)+'</span>' +
+        '<span>' +
+          '<span class="pill trig">'+TRIG_LABEL[r.trigger]+'</span> ' +
+          '<span class="pill '+(r.enabled?'on':'off')+'">'+(r.enabled?'ON':'OFF')+'</span>' +
+        '</span>' +
+      '</div>' +
+      '<div class="rule-body" id="rb'+i+'">' +
+        '<label>Rule name</label><input type="text" data-f="name" data-i="'+i+'" value="'+esc(r.name)+'">' +
+        '<div class="row">' +
+          '<div><label>Trigger</label><select data-f="trigger" data-i="'+i+'">' +
+            '<option value="comment"'+(r.trigger==='comment'?' selected':'')+'>Comment on my posts/reels</option>' +
+            '<option value="dm"'+(r.trigger==='dm'?' selected':'')+'>DM received</option>' +
+            '<option value="story_reply"'+(r.trigger==='story_reply'?' selected':'')+'>Reply to my story</option>' +
+          '</select></div>' +
+          '<div><label>Keyword match</label><select data-f="match" data-i="'+i+'">' +
+            '<option value="contains"'+(r.match==='contains'?' selected':'')+'>Contains keyword</option>' +
+            '<option value="exact"'+(r.match==='exact'?' selected':'')+'>Exact keyword only</option>' +
+            '<option value="any"'+(r.match==='any'?' selected':'')+'>Any message (no keyword)</option>' +
+          '</select></div>' +
+        '</div>' +
+        '<label>Keywords (comma-separated, not case-sensitive)</label>' +
+        '<input type="text" data-f="keywords" data-i="'+i+'" value="'+esc((r.keywords||[]).join(', '))+'">' +
+        '<label>Reply DM (put your link right in the text)</label>' +
+        '<textarea data-f="reply" data-i="'+i+'">'+esc(r.reply)+'</textarea>' +
+        '<label>Public comment reply (comment trigger only, optional — e.g. "Sent! Check your DMs 📩")</label>' +
+        '<input type="text" data-f="publicReply" data-i="'+i+'" value="'+esc(r.publicReply||'')+'">' +
+        '<div class="check"><input type="checkbox" id="en'+i+'" data-f="enabled" data-i="'+i+'"'+(r.enabled?' checked':'')+'><label for="en'+i+'" style="margin:0">Enabled</label></div>' +
+        '<div class="check"><input type="checkbox" id="op'+i+'" data-f="oncePerUser" data-i="'+i+'"'+(r.oncePerUser?' checked':'')+'><label for="op'+i+'" style="margin:0">Only ever send once per person</label></div>' +
+        '<div style="margin-top:12px"><button class="danger" data-del="'+i+'">Delete rule</button></div>' +
+      '</div>';
+    host.appendChild(card);
+  });
+
+  host.querySelectorAll('.rule-head').forEach(function(h){
+    h.addEventListener('click', function(){
+      var b = $('rb'+h.getAttribute('data-i'));
+      b.classList.toggle('open');
+    });
+  });
+  host.querySelectorAll('[data-f]').forEach(function(el){
+    el.addEventListener('input', function(){
+      var r = state.rules[+el.getAttribute('data-i')];
+      var f = el.getAttribute('data-f');
+      if (f === 'keywords') r.keywords = el.value.split(',').map(function(s){return s.trim();}).filter(Boolean);
+      else if (el.type === 'checkbox') r[f] = el.checked;
+      else r[f] = el.value;
+    });
+  });
+  host.querySelectorAll('[data-del]').forEach(function(el){
+    el.addEventListener('click', function(){
+      if (!confirm('Delete this rule?')) return;
+      state.rules.splice(+el.getAttribute('data-del'), 1);
+      renderRules();
+    });
+  });
+}
+
+function addRule(){
+  state.rules.push({
+    id: 'rule-' + Date.now(),
+    enabled: false,
+    name: 'New rule',
+    trigger: 'comment',
+    match: 'contains',
+    keywords: [],
+    reply: '',
+    publicReply: '',
+    oncePerUser: false
+  });
+  renderRules();
+  var last = state.rules.length - 1;
+  $('rb'+last).classList.add('open');
+}
+
+function saveRules(){
+  $('saveBtn').disabled = true;
+  api('PUT', '/api/rules', { rules: state.rules }).then(function(r){
+    state.rules = r.rules || state.rules;
+    renderRules();
+    toast('Rules saved ✓');
+  }).catch(function(){ toast('Save failed'); })
+    .then(function(){ $('saveBtn').disabled = false; });
+}
+
+function saveSettings(){
+  api('PUT', '/api/settings', {
+    fallbackDmReply: $('fallback').value,
+    cooldownHours: $('cooldown').value
+  }).then(function(){ toast('Settings saved ✓'); })
+    .catch(function(){ toast('Save failed'); });
+}
+
+function saveToken(){
+  var t = $('newToken').value.trim();
+  if (!t) { toast('Paste a token first'); return; }
+  api('PUT', '/api/token', { token: t }).then(function(r){
+    $('newToken').value = '';
+    toast(r.username ? 'Token works — connected to @' + r.username : 'Token saved');
+    boot();
+  }).catch(function(){ toast('Token update failed'); });
+}
+
+function renderLog(){
+  var host = $('log');
+  if (!state.log || !state.log.length) { host.innerHTML = '<span class="muted">Nothing yet. Activity shows up here once messages start coming in.</span>'; return; }
+  host.innerHTML = state.log.map(function(l){
+    return '<div class="logline"><span class="logtype t-'+esc(l.type)+'">'+esc(l.type)+'</span>' +
+      '<span class="muted" style="flex:0 0 150px">'+esc(new Date(l.ts).toLocaleString())+'</span>' +
+      '<span>'+esc(l.detail)+'</span></div>';
+  }).join('');
+}
+
+try { KEY = localStorage.getItem('admKey'); } catch(e){}
+if (KEY) boot(); else showLogin();
+setInterval(function(){ if (KEY && !$('app').hidden) {
+  api('GET','/api/state').then(function(s){ state.log = s.log; state.account = s.account; state.token = s.token;
+    renderLog();
+  }).catch(function(){});
+} }, 30000);
+</script>
+</body>
+</html>
