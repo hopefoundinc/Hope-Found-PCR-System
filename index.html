@@ -606,8 +606,22 @@ var Store = (function () {
       return true;
     } catch (e) { return false; }
   }
-  function init() {
-    if (hasWindowStorage()) { mode = "shared"; }
+  /* Presence is not proof: window.storage can exist and still reject every
+     call (an artifact runtime that was never granted shared storage). Prove
+     it round-trips before trusting the whole dataset to it, the same way
+     localStorage is proven with a test key. */
+  async function windowStorageWorks() {
+    if (!hasWindowStorage()) { return false; }
+    var k = "__pcr_probe__";
+    try {
+      await window.storage.set(k, "1", { shared: true });
+      var v = unwrap(await window.storage.get(k, { shared: true }));
+      try { await window.storage.delete(k, { shared: true }); } catch (e) {}
+      return v === "1" || v === 1;
+    } catch (e) { return false; }
+  }
+  async function init() {
+    if (await windowStorageWorks()) { mode = "shared"; }
     else if (hasLocalStorage()) { mode = "local"; }
     else { mode = "memory"; }
     return mode;
@@ -4519,7 +4533,7 @@ function onKeydown(e) {
 }
 async function boot() {
   try {
-    Store.init();
+    await Store.init();
     applyTheme();
     showStorageNote();
     document.addEventListener("click", onClick);
