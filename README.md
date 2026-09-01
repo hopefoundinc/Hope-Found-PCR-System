@@ -26,17 +26,15 @@ dependencies for core operation. Open it in any modern browser, or host it as a 
    rows parse fully offline (header row auto-detected, service lines and living arrangements
    fuzzy-matched, Yes/No columns become flags); a PDF or photo roster extracts via AI mode. Every
    import lands in an editable preview with duplicate-name flagging before anything is saved.
-3. **QIDP Monthly Reviews** — the monthly progress review generator (org indicator: QIDP
-   oversight current for every person served). A per-month tracking grid shows every active person
-   as Not started / Draft / Signed; the editor gives structured sections (ISP outcome progress with
-   a progress rating, health/medical, BSP data review — shown only for people with a BSP, service
-   delivery, incidents, community integration, concerns, follow-up actions), with last month's
-   follow-ups carried forward automatically and the QIDP name pre-filled from the prior review.
-   Signing by name locks the review and marks the month current (reopenable); printing renders a
-   clean document — single review or the whole month's signed batch. Section labels are provider
-   config. "Draft / polish narrative" assembles the formatted review offline, or in AI mode turns
-   shorthand notes into professional person-centered narrative without inventing facts. The
-   Dashboard shows signed-this-month as a standing measure.
+3. **QIDP & ISP Tracking** — quarterly progress reports are authored in Therap by the QIDP, drawn
+   from direct-care staff's daily notes also entered there; this system does **not** write or store
+   that review. It tracks two dates per person — **QIDP (case manager)** and **ISP date** (the
+   annual Medicaid-services planning meeting), both set on Edit person — and computes each
+   quarterly report's due date (ISP + 3/6/9 months) plus the next annual ISP renewal (ISP + 12
+   months), flagging Overdue / Due soon / On track. Click a due-date badge to mark it confirmed
+   filed in Therap (date + note) — a manual receipt check for now, and the intended hook for a
+   future admin dashboard to update automatically once connected (see **Cross-system sync** below).
+   Overdue items badge the nav tab and appear on the Dashboard, same pattern as Policy Updates.
 4. **Sampling Exposure Calculator** — editable census per service line; minimum sample recomputes
    live (Qlarant matrix, plus ceiling(10% + 1) for services under 10); oversample suggestion;
    prior-PCR participants flagged, never excluded.
@@ -97,7 +95,6 @@ offline path:
 - **Roster extraction** from PDF or photo rosters (Import roster)
 - **QA document update suggestions** — reads the stored QA document (PDF/text) plus open policy
   changes and proposes section-by-section revisions
-- **QIDP review narrative** — turns the QIDP's shorthand notes into a professional review draft
 
 Calls go directly from the browser to the Anthropic Messages API (default model `claude-opus-5`).
 If the network or key fails, the app falls back to the offline draft and keeps working.
@@ -113,6 +110,18 @@ The app adapts to its runtime, in order of preference:
 
 Data is keyed compactly (one key per client bundling all their compliance records). Settings has a
 full JSON backup export/import.
+
+## Cross-system sync (interim, until a second Hope Found build exists)
+
+Person records (name, service line, living arrangement, home/location, flags, QIDP name, ISP date)
+are meant to be the single source of truth for a person across every Hope Found tool — this PCR
+system today, and an admin dashboard planned for later that will read and write the same fields
+(e.g. QIDP quarterly/ISP status, updated from Therap). No live connection exists yet — nothing here
+calls out to another app. Until it does, **Settings → Export/Import full backup** is the interim
+sync path: it's plain JSON keyed by the same client `id`s used throughout the app (`clients`,
+`records`, `qtr` for QIDP/ISP status, etc.), so the second build can read this export or produce a
+compatible one without a data-model change on either side. When that connection is built, swap the
+manual export/import for it — the person-record shape shouldn't need to change.
 
 ## The rubric
 

@@ -319,25 +319,15 @@ var PROVIDER_CONFIG = {
     { id: "isp",    label: "Person-Specific ISP/BSP Training",       expires: false }
   ],
   expiryWarningDays: 60,
-  /* QIDP monthly progress review structure (section labels are content, not code) */
+  /* QIDP & ISP tracking: quarterly reports are authored in Therap, not here.
+     This only computes due dates from the ISP date and tracks receipt. */
   qidp: {
-    sections: [
-      { key: "outcomes",  label: "Progress toward ISP outcomes",
-        hint: "For each outcome/goal: activity this month, data summary, and progress or barriers." },
-      { key: "health",    label: "Health & medical",
-        hint: "Appointments held and upcoming, follow-up recommendations, medication changes, concerns." },
-      { key: "behavior",  label: "Behavior support / BSP data review", flagKey: "hasBSP",
-        hint: "Behavior data trends this month, plan effectiveness, any changes recommended." },
-      { key: "services",  label: "Service delivery",
-        hint: "Were services delivered per the ISP schedule? Note gaps, causes, and make-up plans." },
-      { key: "incidents", label: "Incidents & reports",
-        hint: "Incidents this month, reports filed and timeframes, outcomes and prevention steps." },
-      { key: "community", label: "Community integration & satisfaction",
-        hint: "Community activities, choices made, the person\'s own feedback this month." },
-      { key: "concerns",  label: "Concerns identified",
-        hint: "New concerns and the plan for each." },
-      { key: "followUp",  label: "Follow-up actions for next month",
-        hint: "Action, owner, and due date for each item — these carry into next month\'s review." }
+    dueSoonDays: 21,
+    periods: [
+      { key: "q1", months: 3,  label: "Quarterly Report 1", kind: "quarterly" },
+      { key: "q2", months: 6,  label: "Quarterly Report 2", kind: "quarterly" },
+      { key: "q3", months: 9,  label: "Quarterly Report 3", kind: "quarterly" },
+      { key: "renewal", months: 12, label: "Annual ISP Renewal", kind: "annual" }
     ]
   },
   /* Fire & emergency readiness module */
@@ -375,12 +365,15 @@ function buildSeedRubric() {
 
 var SEED_CLIENTS = [
   { id: "c-demo1", name: "Jordan M. (Demo)", serviceLine: "hh", livingArrangement: "Host Home", location: "Kenilworth Host Home (Demo)",
+    qidpName: "A. Rivera, QIDP", ispDate: "2026-02-10",
     flags: { hasBSP: true, hasRestrictiveComponents: false, takesMedications: true },
     priorPCRParticipant: true, sampled: true, activeStatus: true },
   { id: "c-demo2", name: "Renee T. (Demo)", serviceLine: "sl", livingArrangement: "Supported Living Residence", location: "Sycamore Residence (Demo)",
+    qidpName: "A. Rivera, QIDP", ispDate: "2025-06-01",
     flags: { hasBSP: false, hasRestrictiveComponents: false, takesMedications: true },
     priorPCRParticipant: false, sampled: true, activeStatus: true },
   { id: "c-demo3", name: "Marcus B. (Demo)", serviceLine: "ids", livingArrangement: "Family/Own Home", location: "",
+    qidpName: "T. Okonkwo, QIDP", ispDate: "",
     flags: { hasBSP: true, hasRestrictiveComponents: true, takesMedications: false },
     priorPCRParticipant: false, sampled: false, activeStatus: true }
 ];
@@ -465,7 +458,7 @@ var S = {
   policy: { lastAuditDate: "", updates: [] },
   qadoc: { versions: [] },
   runs: [],
-  qidp: {},                             /* qidp["clientId|YYYY-MM"] = review entry */
+  qtr: {},                               /* qtr["clientId|ispDate|periodKey"] = { done, doneDate, notes } */
   census: {}, settings: {},
   ui: { tab: "dashboard", reviewClient: null, locatorQuery: "", locatorFilter: "all",
         rubricFilterSL: "all", rubricFilterType: "all", rubricShowRetired: false, saveFails: 0 }
@@ -473,7 +466,7 @@ var S = {
 
 var K = { rubric: "pcr:rubric", clients: "pcr:clients", staff: "pcr:staff", org: "pcr:org",
           fire: "pcr:fire", census: "pcr:census", settings: "pcr:settings", rec: "pcr:rec:",
-          policy: "pcr:policy", qadoc: "pcr:qadoc", runs: "pcr:runs", qidp: "pcr:qidp" };
+          policy: "pcr:policy", qadoc: "pcr:qadoc", runs: "pcr:runs", qtr: "pcr:qtr" };
 
 async function loadAll() {
   S.rubric  = (await Store.get(K.rubric))  || [];
@@ -485,7 +478,7 @@ async function loadAll() {
   S.policy  = (await Store.get(K.policy))  || { lastAuditDate: "", updates: [] };
   S.qadoc   = (await Store.get(K.qadoc))   || { versions: [] };
   S.runs    = (await Store.get(K.runs))    || [];
-  S.qidp    = (await Store.get(K.qidp))    || {};
+  S.qtr     = (await Store.get(K.qtr))     || {};
   S.settings= (await Store.get(K.settings))|| {};
   if (!S.rubric.length) { S.rubric = buildSeedRubric(); await Store.set(K.rubric, S.rubric); }
   if (!S.clients.length && !S.settings.seeded) {
@@ -983,8 +976,8 @@ function renderDashboard() {
   html += '<div class="stat"><div class="lbl">Organizational tools</div><div class="pct">' + fmtPct(org.pct) + '</div><div class="small muted">' + org.openItems + " open item(s) across the 3 mandatory tools</div></div>";
   html += '<div class="stat"><div class="lbl">Staff records compliance</div><div class="pct">' + fmtPct(stf.pct) + '</div><div class="small muted">' + stf.ok + "/" + stf.total + " requirements current</div></div>";
   html += '<div class="stat"><div class="lbl">Fire &amp; emergency</div><div class="pct">' + fmtPct(fire.pct) + '</div><div class="small muted">' + fire.recentDrillCells + " site/shift cell(s) drilled this quarter</div></div>";
-  var qStats = qidpMonthStats(new Date().toISOString().slice(0, 7));
-  html += '<div class="stat"><div class="lbl">QIDP reviews — this month</div><div class="pct" style="color:' + (qStats.total && qStats.signed === qStats.total ? "var(--met)" : "var(--warn)") + '">' + qStats.signed + "/" + qStats.total + '</div><div class="small muted">signed monthly progress reviews</div></div>';
+  var qCounts = qtrCounts();
+  html += '<div class="stat"><div class="lbl">QIDP quarterly / ISP</div><div class="pct" style="color:' + (qCounts.overdue ? "var(--gap)" : (qCounts.soon ? "var(--warn)" : "var(--met)")) + '">' + qCounts.overdue + '</div><div class="small muted">overdue' + (qCounts.soon ? ", " + qCounts.soon + " due soon" : "") + '</div></div>';
   html += "</div>";
 
   html += '<div style="margin-top:16px"><button class="btn" type="button" data-action="ai-briefing">Readiness briefing</button></div>';
@@ -1198,6 +1191,8 @@ function clientModal(c) {
     '<div class="full"><label>Home / location (people at the same home group together for review)</label>' +
     '<input type="text" id="cm-loc" list="loc-list" value="' + esc(c.location || "") + '" placeholder="e.g. Kenilworth Host Home">' +
     '<datalist id="loc-list">' + locationsList().map(function (l) { return "<option>" + esc(l) + "</option>"; }).join("") + "</datalist></div>" +
+    '<div><label>QIDP (case manager)</label><input type="text" id="cm-qidp" value="' + esc(c.qidpName || "") + '" placeholder="e.g. A. Rivera, QIDP"></div>' +
+    '<div><label>ISP date (annual)</label><input type="date" id="cm-isp" value="' + esc(c.ispDate || "") + '"></div>' +
     '<div class="full">' + flagChecks +
     '<div class="check-line"><input type="checkbox" id="cm-prior"' + (c.priorPCRParticipant ? " checked" : "") + '><label for="cm-prior" style="text-transform:none;font-size:13.5px;margin:0">Prior PCR participant (flag — not excluded from re-sampling)</label></div>' +
     '<div class="check-line"><input type="checkbox" id="cm-sampled"' + (c.sampled ? " checked" : "") + '><label for="cm-sampled" style="text-transform:none;font-size:13.5px;margin:0">In current sample</label></div>' +
@@ -1217,6 +1212,8 @@ function saveClientFromModal(id, isNew) {
     serviceLine: document.getElementById("cm-sl").value,
     livingArrangement: document.getElementById("cm-la").value,
     location: document.getElementById("cm-loc").value.trim(),
+    qidpName: document.getElementById("cm-qidp").value.trim(),
+    ispDate: document.getElementById("cm-isp").value,
     flags: flags,
     priorPCRParticipant: document.getElementById("cm-prior").checked,
     sampled: document.getElementById("cm-sampled").checked,
@@ -1625,7 +1622,7 @@ function pickFile(cb) {
 }
 async function exportAll() {
   var out = { exportedAt: new Date().toISOString(), rubric: S.rubric, clients: S.clients, records: S.records,
-              staff: S.staff, org: S.org, fire: S.fire, census: S.census, policy: S.policy, qadoc: S.qadoc, runs: S.runs, qidp: S.qidp };
+              staff: S.staff, org: S.org, fire: S.fire, census: S.census, policy: S.policy, qadoc: S.qadoc, runs: S.runs, qtr: S.qtr };
   var text = JSON.stringify(out, null, 1);
   download("pcr-backup-" + todayStr() + ".json", text);
   showTextModal("Full backup", text, "pcr-backup-" + todayStr() + ".json");
@@ -1641,10 +1638,10 @@ function importAll(text) {
   S.policy = data.policy || { lastAuditDate: "", updates: [] };
   S.qadoc = data.qadoc || { versions: [] };
   S.runs = data.runs || [];
-  S.qidp = data.qidp || {};
+  S.qtr = data.qtr || {};
   persist(K.rubric, S.rubric); persist(K.clients, S.clients); persist(K.staff, S.staff);
   persist(K.org, S.org); persist(K.fire, S.fire); persist(K.census, S.census);
-  persist(K.policy, S.policy); persist(K.qadoc, S.qadoc); persist(K.runs, S.runs); persist(K.qidp, S.qidp);
+  persist(K.policy, S.policy); persist(K.qadoc, S.qadoc); persist(K.runs, S.runs); persist(K.qtr, S.qtr);
   S.clients.forEach(function (c) { persist(K.rec + c.id, S.records[c.id] || {}); });
   closeModal(); render();
 }
@@ -1781,17 +1778,19 @@ function riExistingNames() {
 /* Rows (arrays) -> draft objects. Header row auto-detected by a "name" cell. */
 function riRowsToDraft(rows) {
   if (!rows.length) { return []; }
-  var map = { name: 0, sl: 1, la: 2, loc: -1, meds: -1, bsp: -1, restrictive: -1, prior: -1, sampled: -1 };
+  var map = { name: 0, sl: 1, la: 2, loc: -1, qidp: -1, isp: -1, meds: -1, bsp: -1, restrictive: -1, prior: -1, sampled: -1 };
   var start = 0;
   var head = rows[0].map(function (c) { return String(c).trim().toLowerCase(); });
   if (head.some(function (c) { return c.indexOf("name") !== -1; })) {
     start = 1;
-    map = { name: -1, sl: -1, la: -1, loc: -1, meds: -1, bsp: -1, restrictive: -1, prior: -1, sampled: -1 };
+    map = { name: -1, sl: -1, la: -1, loc: -1, qidp: -1, isp: -1, meds: -1, bsp: -1, restrictive: -1, prior: -1, sampled: -1 };
     head.forEach(function (c, i) {
       if (map.name === -1 && c.indexOf("name") !== -1) { map.name = i; }
       else if (map.sl === -1 && (c.indexOf("service") !== -1 || c.indexOf("program") !== -1 || c.indexOf("waiver") !== -1)) { map.sl = i; }
       else if (map.la === -1 && (c.indexOf("living") !== -1 || c.indexOf("residence") !== -1 || c.indexOf("arrangement") !== -1 || c.indexOf("home type") !== -1)) { map.la = i; }
       else if (map.loc === -1 && (c.indexOf("location") !== -1 || c.indexOf("site") !== -1 || c.indexOf("address") !== -1 || c === "home")) { map.loc = i; }
+      else if (map.qidp === -1 && (c.indexOf("qidp") !== -1 || c.indexOf("case manager") !== -1)) { map.qidp = i; }
+      else if (map.isp === -1 && c.indexOf("isp") !== -1) { map.isp = i; }
       else if (map.meds === -1 && (c.indexOf("med") !== -1)) { map.meds = i; }
       else if (map.restrictive === -1 && c.indexOf("restrict") !== -1) { map.restrictive = i; }
       else if (map.bsp === -1 && (c.indexOf("bsp") !== -1 || c.indexOf("behavior") !== -1)) { map.bsp = i; }
@@ -1814,6 +1813,8 @@ function riRowsToDraft(rows) {
       slGuessed: !riMatchSL(slRaw),
       livingArrangement: riMatchLA(laRaw) || PROVIDER_CONFIG.livingArrangements[0],
       location: map.loc >= 0 ? String(row[map.loc] == null ? "" : row[map.loc]).trim() : "",
+      qidpName: map.qidp >= 0 ? String(row[map.qidp] == null ? "" : row[map.qidp]).trim() : "",
+      ispDate: map.isp >= 0 ? String(row[map.isp] == null ? "" : row[map.isp]).trim() : "",
       hasBSP: map.bsp >= 0 ? riTruthy(row[map.bsp]) : false,
       hasRestrictiveComponents: map.restrictive >= 0 ? riTruthy(row[map.restrictive]) : false,
       takesMedications: map.meds >= 0 ? riTruthy(row[map.meds]) : false,
@@ -1837,6 +1838,8 @@ function riObjectsToDraft(arr) {
       slGuessed: !riMatchSL(o.serviceLine),
       livingArrangement: riMatchLA(o.livingArrangement) || PROVIDER_CONFIG.livingArrangements[0],
       location: String(o.location || "").trim(),
+      qidpName: String(o.qidpName || "").trim(),
+      ispDate: String(o.ispDate || "").trim(),
       hasBSP: riTruthy(flags.hasBSP === true ? "y" : flags.hasBSP),
       hasRestrictiveComponents: riTruthy(flags.hasRestrictiveComponents === true ? "y" : flags.hasRestrictiveComponents),
       takesMedications: riTruthy(flags.takesMedications === true ? "y" : flags.takesMedications),
@@ -1869,7 +1872,7 @@ function riRenderPreview() {
   if (!el) { return; }
   if (!rosterDraft.length) { el.innerHTML = ""; document.getElementById("ri-confirm").disabled = true; return; }
   var selCount = rosterDraft.filter(function (d) { return d.include; }).length;
-  var html = '<div class="table-wrap"><table style="min-width:900px"><thead><tr><th></th><th>Name</th><th>Service line</th><th>Living arrangement</th><th>Home / location</th><th>Meds</th><th>BSP</th><th>Restrictive</th><th>Prior PCR</th><th>Sampled</th><th></th></tr></thead><tbody>';
+  var html = '<div class="table-wrap"><table style="min-width:900px"><thead><tr><th></th><th>Name</th><th>Service line</th><th>Living arrangement</th><th>Home / location</th><th>QIDP</th><th>ISP date</th><th>Meds</th><th>BSP</th><th>Restrictive</th><th>Prior PCR</th><th>Sampled</th><th></th></tr></thead><tbody>';
   rosterDraft.forEach(function (d, i) {
     html += "<tr>" +
       '<td><input type="checkbox" data-bind="ri-include" data-idx="' + i + '"' + (d.include ? " checked" : "") + "></td>" +
@@ -1879,6 +1882,8 @@ function riRenderPreview() {
       '<td><select data-bind="ri-field" data-idx="' + i + '" data-field="livingArrangement">' +
       PROVIDER_CONFIG.livingArrangements.map(function (la) { return "<option" + (la === d.livingArrangement ? " selected" : "") + ">" + esc(la) + "</option>"; }).join("") + "</select></td>" +
       '<td style="min-width:130px"><input type="text" value="' + esc(d.location || "") + '" data-bind="ri-field" data-idx="' + i + '" data-field="location"></td>' +
+      '<td style="min-width:120px"><input type="text" value="' + esc(d.qidpName || "") + '" data-bind="ri-field" data-idx="' + i + '" data-field="qidpName" placeholder="QIDP"></td>' +
+      '<td style="min-width:110px"><input type="date" value="' + esc(d.ispDate || "") + '" data-bind="ri-field" data-idx="' + i + '" data-field="ispDate"></td>' +
       ["takesMedications", "hasBSP", "hasRestrictiveComponents", "priorPCRParticipant", "sampled"].map(function (f) {
         return '<td style="text-align:center"><input type="checkbox" data-bind="ri-field" data-idx="' + i + '" data-field="' + f + '"' + (d[f] ? " checked" : "") + "></td>";
       }).join("") +
@@ -1932,6 +1937,8 @@ async function riHandleDoc(file) {
         '{"name": string, "serviceLine": one of [' + slList + "] (use the short id; pick the closest match), " +
         '"livingArrangement": one of ' + JSON.stringify(PROVIDER_CONFIG.livingArrangements) + " (closest match), " +
         '"location": string (the home/site name or address where they live, empty string if not stated), ' +
+        '"qidpName": string (their assigned QIDP / case manager, empty if not stated), ' +
+        '"ispDate": string YYYY-MM-DD (the date of their most recent annual ISP meeting, empty if not stated), ' +
         '"takesMedications": boolean, "hasBSP": boolean, "hasRestrictiveComponents": boolean, "priorPCRParticipant": boolean}. ' +
         "Use false for anything the document does not state. Do not invent people." }
     ];
@@ -1956,6 +1963,7 @@ function riConfirm() {
     S.clients.push({
       id: id, name: d.name.trim(), serviceLine: d.serviceLine, livingArrangement: d.livingArrangement,
       location: (d.location || "").trim(),
+      qidpName: (d.qidpName || "").trim(), ispDate: (d.ispDate || "").trim(),
       flags: { hasBSP: d.hasBSP, hasRestrictiveComponents: d.hasRestrictiveComponents, takesMedications: d.takesMedications },
       priorPCRParticipant: d.priorPCRParticipant, sampled: d.sampled, activeStatus: true
     });
@@ -2509,233 +2517,149 @@ function runPackView(run) {
 }
 
 
-/* ============================ QIDP MONTHLY PROGRESS REVIEWS ============================
-   The monthly QIDP oversight documentation Qlarant checks at every PCR
-   (org indicator: monthly reviews current for every person served).
-   A tracking grid per month, a structured editor per person with
-   carry-forward of last month's follow-ups, by-name sign-off, printable
-   document views (single or whole-month batch), and dual-mode drafting. */
+/* ============================ QIDP & ISP TRACKING ============================
+   Quarterly progress reports are authored in Therap by the QIDP, drawn from
+   direct-care staff's daily notes - also entered in Therap. This system does
+   NOT write or store that narrative. It tracks two dates per person (QIDP /
+   case manager name, and the annual ISP date) and computes when each
+   quarterly report and the next annual ISP renewal fall due, so a gap never
+   goes unnoticed before a PCR. Marking a period "filed" here is a manual
+   receipt-confirmation for now; it is the integration point a future admin
+   dashboard (reading/writing the same person records) will update directly -
+   see the "Cross-system sync" note in the README. */
 
-function qidpKey(clientId, month) { return clientId + "|" + month; }
-function qidpEntry(clientId, month) { return S.qidp[qidpKey(clientId, month)] || null; }
-function qidpMonth() {
-  if (!S.ui.qidpMonth) { S.ui.qidpMonth = new Date().toISOString().slice(0, 7); }
-  return S.ui.qidpMonth;
+function qtrPeriods() { return PROVIDER_CONFIG.qidp.periods; }
+function addMonths(dateStr, months) {
+  var p = dateStr.split("-").map(Number);
+  if (p.length !== 3 || !p[0]) { return null; }
+  var base = new Date(p[0], p[1] - 1, p[2]);
+  var target = new Date(base.getFullYear(), base.getMonth() + months, 1);
+  var lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(p[2], lastDay));
+  var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+  return target.getFullYear() + "-" + pad(target.getMonth() + 1) + "-" + pad(target.getDate());
 }
-function prevMonthOf(month) {
-  var p = month.split("-");
-  var y = parseInt(p[0], 10), m = parseInt(p[1], 10) - 1;
-  if (m < 1) { m = 12; y--; }
-  return y + "-" + (m < 10 ? "0" : "") + m;
+function qtrDaysUntil(dateStr) {
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+  var d = new Date(dateStr + "T00:00:00");
+  if (isNaN(d.getTime())) { return null; }
+  return Math.round((d - today) / 86400000);
 }
-function monthLabel(month) {
-  try {
-    var p = month.split("-");
-    return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, 1)
-      .toLocaleDateString([], { month: "long", year: "numeric" });
-  } catch (e) { return month; }
-}
-function qidpSectionsFor(c) {
-  return PROVIDER_CONFIG.qidp.sections.filter(function (s) {
-    return !s.flagKey || (c.flags && c.flags[s.flagKey]);
-  });
-}
-function qidpStatus(c, month) {
-  var en = qidpEntry(c.id, month);
-  if (!en) { return { key: "none", label: "Not started" }; }
-  if (en.signedDate) { return { key: "signed", label: "Signed " + en.signedDate }; }
-  return { key: "draft", label: "Draft" };
-}
-function qidpMonthStats(month) {
-  var active = S.clients.filter(function (c) { return c.activeStatus; });
-  var signed = 0, draft = 0;
-  active.forEach(function (c) {
-    var st = qidpStatus(c, month);
-    if (st.key === "signed") { signed++; } else if (st.key === "draft") { draft++; }
-  });
-  return { total: active.length, signed: signed, draft: draft };
-}
-function qidpEnsureEntry(clientId, month) {
-  var k = qidpKey(clientId, month);
-  if (!S.qidp[k]) {
-    var prev = qidpEntry(clientId, prevMonthOf(month));
-    S.qidp[k] = { clientId: clientId, month: month, progress: "", fields: {},
-                  carried: prev && prev.fields && prev.fields.followUp ? prev.fields.followUp : "",
-                  qidpName: prev ? (prev.qidpName || "") : "", signedDate: "" };
+function qtrKey(clientId, ispDate, periodKey) { return clientId + "|" + ispDate + "|" + periodKey; }
+function qtrEntry(clientId, ispDate, periodKey) { return S.qtr[qtrKey(clientId, ispDate, periodKey)] || null; }
+function qtrStatusFor(c, period) {
+  if (!(c.ispDate || "").trim()) { return { key: "no-isp", label: "No ISP date on file", dueDate: null }; }
+  var due = addMonths(c.ispDate, period.months);
+  if (!due) { return { key: "no-isp", label: "Invalid ISP date", dueDate: null }; }
+  var entry = qtrEntry(c.id, c.ispDate, period.key);
+  if (entry && entry.done) {
+    return { key: "done", label: "Filed" + (entry.doneDate ? " " + entry.doneDate : ""), dueDate: due, entry: entry };
   }
-  return S.qidp[k];
+  var days = qtrDaysUntil(due);
+  if (days < 0) { return { key: "overdue", label: "OVERDUE — due " + due, dueDate: due, entry: entry }; }
+  if (days <= PROVIDER_CONFIG.qidp.dueSoonDays) { return { key: "soon", label: "Due " + due + " (" + days + "d)", dueDate: due, entry: entry }; }
+  return { key: "upcoming", label: "Due " + due, dueDate: due, entry: entry };
 }
+function qtrCounts() {
+  var c = { overdue: 0, soon: 0, upcoming: 0, done: 0, noIsp: 0 };
+  S.clients.forEach(function (cl) {
+    if (!cl.activeStatus) { return; }
+    qtrPeriods().forEach(function (p) {
+      var st = qtrStatusFor(cl, p);
+      if (st.key === "no-isp") { c.noIsp++; return; }
+      c[st.key === "overdue" ? "overdue" : st.key === "soon" ? "soon" : st.key === "done" ? "done" : "upcoming"]++;
+    });
+  });
+  return c;
+}
+function qtrAttention() { return qtrCounts().overdue; }
+
+var QTR_BADGE = { done: "met", overdue: "alert", soon: "warn", upcoming: "outline", "no-isp": "outline" };
 
 function renderQidp() {
-  var month = qidpMonth();
-  if (S.ui.qidpBatch) { return qidpBatchView(month); }
-  if (S.ui.qidpClient) {
-    var cSel = clientById(S.ui.qidpClient);
-    if (cSel && cSel.activeStatus) { return qidpEditor(cSel, month); }
-    S.ui.qidpClient = null;
-  }
-  var stats = qidpMonthStats(month);
-  var html = '<h2 class="view-title">QIDP Monthly Reviews</h2>' +
-    '<p class="view-sub">The QIDP\'s monthly progress review for every person served — the oversight documentation surveyors check for currency at every PCR. Open a person to write the month\'s review; last month\'s follow-up actions carry forward automatically; sign by name to mark it current; print single reviews or the whole month.</p>';
+  var counts = qtrCounts();
+  var html = '<h2 class="view-title">QIDP &amp; ISP Tracking</h2>' +
+    '<p class="view-sub">Quarterly progress reports are written in Therap by the QIDP from direct-care staff\'s daily notes — this system does not author or store that review. It only tracks whether each person\'s quarterly report and annual ISP renewal are coming due, computed from the ISP date, so nothing lapses unnoticed before a PCR. Set each person\'s QIDP (case manager) and ISP date via Edit person; quarterly dates recompute automatically.</p>';
 
-  html += '<div class="toolbar">' +
-    '<div class="field" style="max-width:170px"><label>Review month</label><input type="month" value="' + esc(month) + '" data-bind="qidp-month"></div>' +
-    '<button class="btn secondary" type="button" data-action="qidp-batch">Print all signed (' + stats.signed + ")</button>" +
-    "</div>";
+  html += '<div class="note-box">Set once per person, on Edit person: <strong>QIDP name</strong> (case manager) and <strong>ISP date</strong> (the annual Medicaid-services planning meeting). Quarterly reports are expected 3, 6, and 9 months after that date; the next ISP renewal is expected at 12 months. Marking a period "filed" here records that it was confirmed in Therap — it will later sync automatically once the admin dashboard is connected.</div>';
+
+  html += '<div class="toolbar no-print"><button class="btn secondary" type="button" data-action="run-print">Print due-dates list</button></div>';
 
   html += '<div class="stat-row" style="margin-bottom:12px">' +
-    '<div class="stat"><div class="lbl">' + esc(monthLabel(month)) + ' — signed</div><div class="pct" style="color:' + (stats.signed === stats.total && stats.total ? "var(--met)" : "var(--warn)") + '">' + stats.signed + "/" + stats.total + "</div><div class='small muted'>every active person needs a signed review each month</div></div>" +
-    '<div class="stat"><div class="lbl">In draft</div><div class="pct">' + stats.draft + "</div></div>" +
-    '<div class="stat"><div class="lbl">Not started</div><div class="pct" style="color:' + (stats.total - stats.signed - stats.draft ? "var(--gap)" : "var(--met)") + '">' + (stats.total - stats.signed - stats.draft) + "</div></div>" +
+    '<div class="stat"><div class="lbl">Overdue</div><div class="pct" style="color:' + (counts.overdue ? "var(--gap)" : "var(--met)") + '">' + counts.overdue + "</div></div>" +
+    '<div class="stat"><div class="lbl">Due soon (≤' + PROVIDER_CONFIG.qidp.dueSoonDays + "d)</div><div class=\"pct\" style=\"color:" + (counts.soon ? "var(--warn)" : "var(--met)") + '">' + counts.soon + "</div></div>" +
+    '<div class="stat"><div class="lbl">On track</div><div class="pct">' + (counts.upcoming + counts.done) + "</div></div>" +
+    '<div class="stat"><div class="lbl">No ISP date on file</div><div class="pct" style="color:' + (counts.noIsp ? "var(--warn)" : "var(--met)") + '">' + counts.noIsp + "</div></div>" +
     "</div>";
 
-  if (!S.clients.filter(function (c) { return c.activeStatus; }).length) {
-    return html + '<div class="empty">Add people on the Client Review tab first.</div>';
-  }
-  html += '<div class="table-wrap"><table><thead><tr><th>Person</th><th>Service line</th><th>Home</th><th>Status</th><th>Progress</th><th>Signed by</th><th></th></tr></thead><tbody>';
-  S.clients.filter(function (c) { return c.activeStatus; }).forEach(function (c) {
-    var st = qidpStatus(c, month);
-    var en = qidpEntry(c.id, month);
-    var cls = { signed: "met", draft: "warn", none: "gap" }[st.key];
-    html += "<tr" + (st.key === "none" ? ' class="flag-row"' : "") + "><td><strong>" + esc(c.name) + "</strong></td>" +
-      "<td>" + esc(Engine.slName(c.serviceLine)) + '</td><td class="small">' + esc((c.location || "").trim()) + "</td>" +
-      "<td>" + badge(cls, st.label) + "</td>" +
-      '<td class="small">' + esc(en && en.progress ? en.progress : "") + "</td>" +
-      '<td class="small">' + esc(en ? (en.qidpName || "") : "") + "</td>" +
-      '<td><button class="btn secondary small" type="button" data-action="qidp-open" data-id="' + c.id + '">' + (st.key === "none" ? "Start review" : "Open") + "</button></td></tr>";
+  var active = S.clients.filter(function (c) { return c.activeStatus; });
+  if (!active.length) { return html + '<div class="empty">Add people on the Client Review tab first.</div>'; }
+
+  html += '<div class="table-wrap"><table><thead><tr><th>Person</th><th>Service line</th><th>QIDP (case manager)</th><th>ISP date</th>' +
+    qtrPeriods().map(function (p) { return "<th>" + esc(p.label) + "</th>"; }).join("") + "<th></th></tr></thead><tbody>";
+  active.forEach(function (c) {
+    var noIsp = !(c.ispDate || "").trim();
+    html += "<tr" + (noIsp ? ' class="flag-row"' : "") + "><td><strong>" + esc(c.name) + "</strong></td>" +
+      "<td>" + esc(Engine.slName(c.serviceLine)) + "</td>" +
+      '<td class="small">' + esc(c.qidpName || "") + "</td>" +
+      '<td class="small">' + esc(c.ispDate || "") + "</td>";
+    if (noIsp) {
+      html += '<td colspan="' + qtrPeriods().length + '" class="small muted">Add an ISP date to compute quarterly dates.</td>';
+    } else {
+      qtrPeriods().forEach(function (p) {
+        var st = qtrStatusFor(c, p);
+        html += "<td><button type=\"button\" style=\"background:none;border:none;padding:0;cursor:pointer\" data-action=\"qtr-mark\" data-client=\"" +
+          c.id + "\" data-period=\"" + p.key + "\">" + badge(QTR_BADGE[st.key], st.label) + "</button></td>";
+      });
+    }
+    html += '<td><button class="btn secondary small" type="button" data-action="edit-client" data-id="' + c.id + '">Edit</button></td></tr>';
   });
   html += "</tbody></table></div>";
   return html;
 }
 
-function qidpEditor(c, month) {
-  var en = qidpEnsureEntry(c.id, month);
-  var signed = !!en.signedDate;
-  var html = '<div class="toolbar no-print">' +
-    '<button class="btn secondary" type="button" data-action="qidp-back">← All people</button>' +
-    '<button class="btn secondary" type="button" data-action="qidp-ai">Draft / polish narrative</button>' +
-    '<button class="btn secondary" type="button" data-action="run-print">Print review</button>' +
-    (signed ? '<button class="btn danger" type="button" data-action="qidp-unsign">Reopen (remove signature)</button>' : "") +
-    "</div>";
-
-  html += '<div class="card pack-cover no-print"><h2 style="margin-bottom:2px">QIDP Monthly Progress Review — ' + esc(monthLabel(month)) + "</h2>" +
-    '<div class="ind-meta" style="margin:6px 0">' +
-    badge("neutral", esc(c.name)) + badge("outline", Engine.slName(c.serviceLine)) + badge("outline", c.livingArrangement) +
-    ((c.location || "").trim() ? badge("outline", "⌂ " + c.location.trim()) : "") +
-    (signed ? badge("met", "SIGNED — " + en.qidpName + " " + en.signedDate) : badge("warn", "DRAFT — not yet signed")) +
+function qtrModal(clientId, periodKey) {
+  var c = clientById(clientId);
+  var period = qtrPeriods().filter(function (p) { return p.key === periodKey; })[0];
+  if (!c || !period || !(c.ispDate || "").trim()) { return; }
+  var due = addMonths(c.ispDate, period.months);
+  var entry = qtrEntry(c.id, c.ispDate, periodKey) || {};
+  openModal("<h3>" + esc(period.label) + " — " + esc(c.name) + '</h3>' +
+    '<div class="note-box">Due ' + esc(due) + '. Authored and filed in Therap — this only records that it was confirmed done.</div>' +
+    '<div class="form-grid">' +
+    '<div class="full"><div class="check-line"><input type="checkbox" id="qm-done"' + (entry.done ? " checked" : "") + '><label for="qm-done" style="text-transform:none;margin:0">Confirmed filed in Therap</label></div></div>' +
+    '<div><label>Date filed</label><input type="date" id="qm-date" value="' + esc(entry.doneDate || "") + '"></div>' +
+    '<div class="full"><label>Notes</label><input type="text" id="qm-notes" value="' + esc(entry.notes || "") + '" placeholder="optional"></div>' +
     "</div>" +
-    '<div class="small muted no-print">Fields save as you leave them. Sign below when the review is complete for the month.</div></div>';
-
-  if (en.carried) {
-    html += '<div class="note-box no-print"><strong>Carried forward from ' + esc(monthLabel(prevMonthOf(month))) + ":</strong><br>" +
-      esc(en.carried).replace(/\n/g, "<br>") + "</div>";
-  }
-
-  html += '<div class="card no-print"><div class="field" style="max-width:320px;margin-bottom:10px"><label>Overall progress this month</label>' +
-    '<select data-bind="qidp-progress"' + (signed ? " disabled" : "") + '><option value="">— select —</option>' +
-    ["Progressing", "Maintaining", "Mixed", "Regressing", "Not addressed this month"].map(function (o) {
-      return "<option" + (en.progress === o ? " selected" : "") + ">" + o + "</option>"; }).join("") + "</select></div>";
-
-  qidpSectionsFor(c).forEach(function (s) {
-    html += '<div style="margin-bottom:12px"><label>' + esc(s.label) + "</label>" +
-      '<div class="small muted" style="margin-bottom:3px">' + esc(s.hint) + "</div>" +
-      '<textarea rows="3" data-bind="qidp-field" data-key="' + s.key + '"' + (signed ? " disabled" : "") + ">" +
-      esc(en.fields[s.key] || "") + "</textarea></div>";
-  });
-
-  html += '<div class="form-grid" style="margin-top:6px">' +
-    '<div><label>QIDP name / credentials</label><input type="text" data-bind="qidp-name" value="' + esc(en.qidpName || "") + '"' + (signed ? " disabled" : "") + ' placeholder="e.g. J. Doe, QIDP"></div>' +
-    '<div style="align-self:end">' + (signed ? '<span class="badge met">Signed ' + esc(en.signedDate) + "</span>" :
-      '<button class="btn" type="button" data-action="qidp-sign">Sign &amp; mark current</button>') + "</div>" +
-    "</div></div>";
-
-  /* printable document rendition (shown on screen too, prints alone nicely via pack styles) */
-  html += qidpDocHtml(c, en, true);
-  return html;
+    '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
+    '<button class="btn" type="button" data-action="save-qtr" data-client="' + c.id + '" data-period="' + periodKey + '">Save</button></div>');
 }
-
-function qidpDocHtml(c, en, screenHidden) {
-  var html = '<div class="card pack-person' + (screenHidden ? " print-only" : "") + '">' +
-    "<h3>QIDP Monthly Progress Review — " + esc(monthLabel(en.month)) + "</h3>" +
-    '<div class="small" style="margin-bottom:8px"><strong>' + esc(PROVIDER_CONFIG.meta.providerName) + "</strong><br>" +
-    "Person: <strong>" + esc(c.name) + "</strong> · " + esc(Engine.slName(c.serviceLine)) + " · " + esc(c.livingArrangement) +
-    ((c.location || "").trim() ? " · " + esc(c.location.trim()) : "") + "</div>" +
-    (en.progress ? '<div class="small" style="margin-bottom:8px"><strong>Overall progress:</strong> ' + esc(en.progress) + "</div>" : "");
-  if (en.carried) {
-    html += '<div class="small" style="margin-bottom:8px"><strong>Carried forward from prior month:</strong><br>' + esc(en.carried).replace(/\n/g, "<br>") + "</div>";
-  }
-  qidpSectionsFor(c).forEach(function (s) {
-    html += '<div class="small" style="margin-bottom:8px"><strong>' + esc(s.label) + ":</strong><br>" +
-      (en.fields[s.key] ? esc(en.fields[s.key]).replace(/\n/g, "<br>") : "<em>— no entry —</em>") + "</div>";
-  });
-  html += '<div class="small" style="margin-top:14px;border-top:1px solid var(--hairline);padding-top:8px">' +
-    "QIDP: <strong>" + esc(en.qidpName || "____________________") + "</strong> &nbsp;&nbsp; " +
-    "Signature date: <strong>" + esc(en.signedDate || "____________") + "</strong></div>" +
-    "</div>";
-  return html;
-}
-
-function qidpBatchView(month) {
-  var entries = S.clients.filter(function (c) { return c.activeStatus; }).map(function (c) {
-    return { c: c, en: qidpEntry(c.id, month) };
-  }).filter(function (x) { return x.en && x.en.signedDate; });
-  var html = '<div class="toolbar no-print">' +
-    '<button class="btn secondary" type="button" data-action="qidp-batch-back">← Back</button>' +
-    '<button class="btn" type="button" data-action="run-print">Print ' + entries.length + " review(s)</button></div>";
-  html += '<div class="card pack-cover"><h2>QIDP Monthly Progress Reviews — ' + esc(monthLabel(month)) + "</h2>" +
-    '<div class="small muted">' + esc(PROVIDER_CONFIG.meta.providerName) + " · " + entries.length + " signed review(s) · generated " + new Date().toLocaleString() + "</div></div>";
-  if (!entries.length) {
-    html += '<div class="empty">No signed reviews for ' + esc(monthLabel(month)) + " yet.</div>";
-  }
-  entries.forEach(function (x) { html += qidpDocHtml(x.c, x.en, false); });
-  return html;
-}
-
-function qidpAiOffline(c, en) {
-  var lines = [];
-  lines.push("QIDP MONTHLY PROGRESS REVIEW — " + monthLabel(en.month));
-  lines.push(PROVIDER_CONFIG.meta.providerName);
-  lines.push("Person: " + c.name + " | " + Engine.slName(c.serviceLine) + " | " + c.livingArrangement +
-    ((c.location || "").trim() ? " | " + c.location.trim() : ""));
-  lines.push("");
-  if (en.progress) { lines.push("Overall progress: " + en.progress); lines.push(""); }
-  if (en.carried) { lines.push("Carried forward from prior month:"); lines.push(en.carried); lines.push(""); }
-  qidpSectionsFor(c).forEach(function (s) {
-    lines.push(s.label.toUpperCase());
-    lines.push(en.fields[s.key] ? en.fields[s.key] : "[no entry — " + s.hint + "]");
-    lines.push("");
-  });
-  lines.push("QIDP: " + (en.qidpName || "________________") + "    Date: " + (en.signedDate || "____________"));
-  return lines.join("\n");
-}
-function qidpAiPrompt(c, en) {
-  var payload = { person: { name: c.name, serviceLine: Engine.slName(c.serviceLine), livingArrangement: c.livingArrangement,
-                            hasBSP: !!(c.flags && c.flags.hasBSP), takesMedications: !!(c.flags && c.flags.takesMedications) },
-                  month: monthLabel(en.month), overallProgress: en.progress || null,
-                  carriedForwardFromPriorMonth: en.carried || null,
-                  sections: qidpSectionsFor(c).map(function (s) {
-                    return { section: s.label, notes: en.fields[s.key] || "" }; }) };
-  var system = "You are a QIDP (Qualified Intellectual Disabilities Professional) writing a monthly progress review for a person " +
-    "receiving Medicaid HCBS waiver services, to be kept in the record and checked at the annual " + PROVIDER_CONFIG.meta.reviewName +
-    ". Rewrite the QIDP's shorthand notes into a professional, person-centered narrative, section by section, keeping every stated fact " +
-    "and inventing nothing. Where a section has no notes, write '[QIDP to complete: ...]' with a one-line prompt of what belongs there. " +
-    "Close with any follow-up actions as a numbered list with owner placeholders.";
-  return { system: system, user: "Draft the review from these notes (JSON):\n" + JSON.stringify(payload, null, 2) };
+function saveQtrFromModal(clientId, periodKey) {
+  var c = clientById(clientId);
+  if (!c || !(c.ispDate || "").trim()) { return; }
+  var done = document.getElementById("qm-done").checked;
+  var dateVal = document.getElementById("qm-date").value || (done ? todayStr() : "");
+  S.qtr[qtrKey(clientId, c.ispDate, periodKey)] = {
+    done: done, doneDate: dateVal, notes: document.getElementById("qm-notes").value.trim()
+  };
+  persist(K.qtr, S.qtr);
+  closeModal(); render();
+  toast(done ? "Marked filed" : "Updated");
 }
 
 /* ============================ NAV / RENDER / EVENTS ============================ */
 var TABS = [
-  ["dashboard", "Dashboard"], ["review", "Client Review"], ["qidp", "QIDP Reviews"], ["sampling", "Sampling"],
+  ["dashboard", "Dashboard"], ["review", "Client Review"], ["qidp", "QIDP & ISP"], ["sampling", "Sampling"],
   ["locator", "Document Locator"], ["runs", "Audit Run"], ["policy", "Policy Updates"],
   ["orgstaff", "Organization & Staff"], ["rubric", "Rubric Manager"]
 ];
 function renderNav() {
   var att = polAttention();
+  var qAtt = qtrAttention();
   document.getElementById("navTabs").innerHTML = TABS.map(function (t) {
     var label = t[1];
-    if (t[0] === "policy" && att) {
-      label += ' <span class="badge alert" style="font-size:10.5px;padding:1px 6px">' + att + "</span>";
-    }
+    var n = t[0] === "policy" ? att : t[0] === "qidp" ? qAtt : 0;
+    if (n) { label += ' <span class="badge alert" style="font-size:10.5px;padding:1px 6px">' + n + "</span>"; }
     return '<button type="button" data-action="nav" data-tab="' + t[0] + '" class="' + (S.ui.tab === t[0] ? "active" : "") + '">' + label + "</button>";
   }).join("");
 }
@@ -2766,7 +2690,7 @@ function onClick(e) {
   var a = t.getAttribute("data-action");
   var d = t.dataset;
   switch (a) {
-    case "nav": S.ui.tab = d.tab; if (d.tab !== "runs") { S.ui.runView = null; } if (d.tab !== "qidp") { S.ui.qidpClient = null; S.ui.qidpBatch = false; } render(); break;
+    case "nav": S.ui.tab = d.tab; if (d.tab !== "runs") { S.ui.runView = null; } render(); break;
     case "close-modal": closeModal(); break;
     case "open-settings": settingsModal(); break;
     case "save-settings":
@@ -2799,7 +2723,7 @@ function onClick(e) {
           for (var i = 0; i < S.clients.length; i++) { await Store.del(K.rec + S.clients[i].id); }
           await Store.del(K.rubric); await Store.del(K.clients); await Store.del(K.staff);
           await Store.del(K.org); await Store.del(K.fire); await Store.del(K.census); await Store.del(K.settings);
-          await Store.del(K.policy); await Store.del(K.qadoc); await Store.del(K.runs); await Store.del(K.qidp);
+          await Store.del(K.policy); await Store.del(K.qadoc); await Store.del(K.runs); await Store.del(K.qtr);
           window.location.reload();
         })();
       }
@@ -2813,35 +2737,8 @@ function onClick(e) {
         function () { return AI.capPrompt(slId, findings); });
     })(); break;
     case "import-roster": rosterImportModal(); break;
-    case "qidp-open": S.ui.qidpClient = d.id; render(); break;
-    case "qidp-back": S.ui.qidpClient = null; render(); break;
-    case "qidp-batch": S.ui.qidpBatch = true; render(); break;
-    case "qidp-batch-back": S.ui.qidpBatch = false; render(); break;
-    case "qidp-sign": (function () {
-      var en = qidpEnsureEntry(S.ui.qidpClient, qidpMonth());
-      if (!en.qidpName || !en.qidpName.trim()) { safeAlert("Enter the QIDP name before signing."); return; }
-      if (!safeConfirm("Sign this review as " + en.qidpName + "? Fields lock until it is reopened.")) { return; }
-      en.signedDate = todayStr();
-      persist(K.qidp, S.qidp);
-      render();
-      toast("Review signed — " + monthLabel(en.month) + " is current for this person");
-    })(); break;
-    case "qidp-unsign": (function () {
-      var en = qidpEntry(S.ui.qidpClient, qidpMonth());
-      if (!en) { return; }
-      if (!safeConfirm("Reopen this review? The signature is removed until it is signed again.")) { return; }
-      en.signedDate = "";
-      persist(K.qidp, S.qidp);
-      render();
-    })(); break;
-    case "qidp-ai": (function () {
-      var c = clientById(S.ui.qidpClient);
-      if (!c) { return; }
-      var en = qidpEnsureEntry(c.id, qidpMonth());
-      aiModal("QIDP review draft — " + c.name,
-        function () { return qidpAiOffline(c, en); },
-        function () { return qidpAiPrompt(c, en); });
-    })(); break;
+    case "qtr-mark": qtrModal(d.client, d.period); break;
+    case "save-qtr": saveQtrFromModal(d.client, d.period); break;
     case "run-live-generate": (function () {
       var picked = Object.keys(S.ui.runPick || {}).filter(function (id) {
         return S.ui.runPick[id] && clientById(id) && clientById(id).activeStatus;
@@ -3058,22 +2955,6 @@ function onChange(e) {
   switch (bind) {
     case "review-client": S.ui.reviewClient = t.value || null; render(); break;
     case "review-location": S.ui.reviewLocation = t.value || ""; render(); break;
-    case "qidp-month": S.ui.qidpMonth = t.value || new Date().toISOString().slice(0, 7); render(); break;
-    case "qidp-progress": (function () {
-      var en = qidpEnsureEntry(S.ui.qidpClient, qidpMonth());
-      en.progress = t.value;
-      persist(K.qidp, S.qidp);
-    })(); break;
-    case "qidp-field": (function () {
-      var en = qidpEnsureEntry(S.ui.qidpClient, qidpMonth());
-      en.fields[t.dataset.key] = t.value;
-      persist(K.qidp, S.qidp);
-    })(); break;
-    case "qidp-name": (function () {
-      var en = qidpEnsureEntry(S.ui.qidpClient, qidpMonth());
-      en.qidpName = t.value.trim();
-      persist(K.qidp, S.qidp);
-    })(); break;
     case "run-pick":
       S.ui.runPick = S.ui.runPick || {};
       S.ui.runPick[t.dataset.id] = t.checked;
