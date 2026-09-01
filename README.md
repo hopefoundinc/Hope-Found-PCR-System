@@ -31,10 +31,25 @@ dependencies for core operation. Open it in any modern browser, or host it as a 
    that review. It tracks two dates per person — **QIDP (case manager)** and **ISP date** (the
    annual Medicaid-services planning meeting), both set on Edit person — and computes each
    quarterly report's due date (ISP + 3/6/9 months) plus the next annual ISP renewal (ISP + 12
-   months), flagging Overdue / Due soon / On track. Click a due-date badge to mark it confirmed
-   filed in Therap (date + note) — a manual receipt check for now, and the intended hook for a
-   future admin dashboard to update automatically once connected (see **Cross-system sync** below).
-   Overdue items badge the nav tab and appear on the Dashboard, same pattern as Policy Updates.
+   months), flagging Overdue / Due soon / On track. Two working lists sit at the top, each with its
+   own print button that prints that list *alone* (with an agency header, the window, and who
+   generated it):
+   - **ISP meetings due in the next 30 days** — everyone whose annual renewal falls inside the
+     window or is already past due, with the one thing the QIDP actually needs to know: **Scheduled
+     &lt;date&gt;** or **NOT YET SCHEDULED**. Set the meeting date inline in the table. People with
+     no ISP date on file follow in their own flagged block — their renewal cannot be computed at
+     all, which is its own thing to chase before a PCR.
+   - **Quarterly report checklist — next 15 days** — every quarterly progress report falling due
+     inside the window, plus anything past due and unfiled, as a tickable checklist. Ticking one
+     records who confirmed it and when. A report filed before its due date drops off.
+
+   The two windows are deliberately different (both in `PROVIDER_CONFIG.qidp`): an ISP meeting has
+   to be booked with the team and the person, so it needs a month's notice; a quarterly report is
+   written from notes already in Therap. Below the lists, the full grid still shows every person and
+   every due date. Marking a period done records that it was confirmed in Therap — a manual receipt
+   check for now, and the intended hook for a future admin dashboard to update automatically once
+   connected (see **Cross-system sync** below). Overdue items badge the nav tab and appear on the
+   Dashboard, same pattern as Policy Updates.
 4. **Sampling Exposure Calculator** — editable census per service line; minimum sample recomputes
    live (Qlarant matrix, plus ceiling(10% + 1) for services under 10); oversample suggestion;
    prior-PCR participants flagged, never excluded.
@@ -151,7 +166,8 @@ backup export/import.
 
 ## Cross-system sync (interim, until a second Hope Found build exists)
 
-Person records (name, service line, living arrangement, home/location, flags, QIDP name, ISP date)
+Person records (name, service line, living arrangement, home/location, flags, QIDP name, ISP date,
+plus each period's scheduled/confirmed state in `qtr`)
 are meant to be the single source of truth for a person across every Hope Found tool — this PCR
 system today, and an admin dashboard planned for later that will read and write the same fields
 (e.g. QIDP quarterly/ISP status, updated from Therap). No live connection exists yet — nothing here

@@ -49,6 +49,13 @@ Every feature works fully offline with deterministic logic. AI mode is optional 
 - `pcr:fire` — fire/emergency module: drill log entries + recurring checklist item completions.
 - `pcr:census` — per-service-line census numbers for the sampling calculator.
 - `pcr:settings` — AI key/model/mode, misc preferences.
+- `pcr:qtr` — `qtr["<clientId>|<ispDate>|<periodKey>"] = { done, doneDate, notes, scheduledDate,
+  scheduledBy, scheduledAt, confirmedBy, confirmedById, confirmedAt }`. `scheduledDate` is the annual
+  ISP *meeting* booking (only the `kind: "annual"` period uses it); `done` is the filed/held receipt.
+  Two look-ahead windows in `PROVIDER_CONFIG.qidp`: `ispWindowDays` (30) drives the ISP meeting list
+  and the annual "due soon" badge, `quarterlyWindowDays` (15) drives the quarterly checklist and the
+  quarterly badges. Each list prints alone via a `body.print-only-isp` / `body.print-only-quarterly`
+  class that the print stylesheet uses to hide the other `.qidp-block`s.
 - `pcr:users` — accounts: `id, name, username, role (admin|staff), active, cred {salt, hash, algo},
   pwVersion, mustChange, createdAt, lastSignIn`. Shared, so credentials work on every device.
   `cred.algo` is `pbkdf2` (PBKDF2-HMAC-SHA256, 150k iterations, Web Crypto) or `sha256x` (iterated
