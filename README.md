@@ -34,18 +34,23 @@ dependencies for core operation. Open it in any modern browser, or host it as a 
    months), flagging Overdue / Due soon / On track. Two working lists sit at the top, each with its
    own print button that prints that list *alone* (with an agency header, the window, and who
    generated it):
-   - **ISP meetings due in the next 30 days** — everyone whose annual renewal falls inside the
-     window or is already past due, with the one thing the QIDP actually needs to know: **Scheduled
-     &lt;date&gt;** or **NOT YET SCHEDULED**. Set the meeting date inline in the table. People with
-     no ISP date on file follow in their own flagged block — their renewal cannot be computed at
-     all, which is its own thing to chase before a PCR.
+   - **ISP dates in the next 30 days** — the ISP date is the annual date a person's plan concludes.
+     The meeting that renews it has to be booked **45–30 days beforehand**, so every row carries a
+     **book-by** date (ISP date − 30) alongside **Scheduled &lt;date&gt;** or **NOT SCHEDULED**;
+     anything still unscheduled in this list is already past its booking deadline and is flagged as
+     such. Behind it, **Booking window open — ISP dates 30–45 days out** is the preventive list:
+     the people to schedule *right now*, each showing the days left before their book-by date. Set
+     the meeting date inline in either table. People with no ISP date on file follow in their own
+     flagged block — nothing can be computed for them at all, which is its own thing to chase
+     before a PCR. Both blocks print together on one sheet.
    - **Quarterly report checklist — next 15 days** — every quarterly progress report falling due
      inside the window, plus anything past due and unfiled, as a tickable checklist. Ticking one
      records who confirmed it and when. A report filed before its due date drops off.
 
-   The two windows are deliberately different (both in `PROVIDER_CONFIG.qidp`): an ISP meeting has
-   to be booked with the team and the person, so it needs a month's notice; a quarterly report is
-   written from notes already in Therap. Below the lists, the full grid still shows every person and
+   The windows are deliberately different (all in `PROVIDER_CONFIG.qidp`: `ispWindowDays` 30,
+   `ispBookingOpensDays` 45, `ispBookingDeadlineDays` 30, `quarterlyWindowDays` 15). An ISP meeting
+   has to be booked with the team and the person, so it gets a booking window rather than a single
+   deadline; a quarterly report is written from notes already in Therap and needs no booking. Below the lists, the full grid still shows every person and
    every due date. Marking a period done records that it was confirmed in Therap — a manual receipt
    check for now, and the intended hook for a future admin dashboard to update automatically once
    connected (see **Cross-system sync** below). Overdue items badge the nav tab and appear on the

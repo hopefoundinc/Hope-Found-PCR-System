@@ -52,9 +52,11 @@ Every feature works fully offline with deterministic logic. AI mode is optional 
 - `pcr:qtr` — `qtr["<clientId>|<ispDate>|<periodKey>"] = { done, doneDate, notes, scheduledDate,
   scheduledBy, scheduledAt, confirmedBy, confirmedById, confirmedAt }`. `scheduledDate` is the annual
   ISP *meeting* booking (only the `kind: "annual"` period uses it); `done` is the filed/held receipt.
-  Two look-ahead windows in `PROVIDER_CONFIG.qidp`: `ispWindowDays` (30) drives the ISP meeting list
-  and the annual "due soon" badge, `quarterlyWindowDays` (15) drives the quarterly checklist and the
-  quarterly badges. Each list prints alone via a `body.print-only-isp` / `body.print-only-quarterly`
+  Look-ahead windows in `PROVIDER_CONFIG.qidp`: `ispWindowDays` (30) drives the "ISP dates in the next
+  30 days" list; `ispBookingOpensDays` (45) and `ispBookingDeadlineDays` (30) express the rule that the
+  renewal meeting is booked 45–30 days before the ISP date — the first also drives the annual "due soon"
+  badge, since that is the point staff can act, and the second gives each person a computed **book-by**
+  date (ISP date − 30). `quarterlyWindowDays` (15) drives the quarterly checklist and its badges. Each list prints alone via a `body.print-only-isp` / `body.print-only-quarterly`
   class that the print stylesheet uses to hide the other `.qidp-block`s.
 - `pcr:users` — accounts: `id, name, username, role (admin|staff), active, cred {salt, hash, algo},
   pwVersion, mustChange, createdAt, lastSignIn`. Shared, so credentials work on every device.

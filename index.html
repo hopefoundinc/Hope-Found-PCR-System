@@ -220,7 +220,6 @@ body.locked .header-actions,body.locked .nav-tabs,body.locked main,body.locked #
   body.print-only-quarterly .qidp-block:not(.qidp-quarterly) { display: none !important; }
   body.print-only-isp .view-title, body.print-only-isp .view-sub, body.print-only-isp .note-box,
   body.print-only-quarterly .view-title, body.print-only-quarterly .view-sub, body.print-only-quarterly .note-box { display: none !important; }
-  body.print-only-isp .section-title, body.print-only-quarterly .section-title { display: none !important; }
   input[type="checkbox"] { -webkit-appearance: checkbox; appearance: checkbox;
     -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
@@ -353,16 +352,21 @@ var PROVIDER_CONFIG = {
   /* QIDP & ISP tracking: quarterly reports are authored in Therap, not here.
      This only computes due dates from the ISP date and tracks receipt. */
   qidp: {
-    /* two action windows, deliberately different: an ISP meeting has to be
-       booked with the team and the person, so it needs a month's notice;
-       a quarterly report is written from notes already in Therap. */
+    /* The ISP date is the annual date the current plan concludes. The
+       meeting that renews it has to be on the calendar well before then:
+       staff start booking at ispBookingOpensDays out and it must be
+       scheduled by ispBookingDeadlineDays out. A quarterly report needs no
+       booking — it is written from notes already in Therap — so it gets a
+       single, shorter window. */
     ispWindowDays: 30,
+    ispBookingOpensDays: 45,
+    ispBookingDeadlineDays: 30,
     quarterlyWindowDays: 15,
     periods: [
       { key: "q1", months: 3,  label: "Quarterly Report 1", kind: "quarterly" },
       { key: "q2", months: 6,  label: "Quarterly Report 2", kind: "quarterly" },
       { key: "q3", months: 9,  label: "Quarterly Report 3", kind: "quarterly" },
-      { key: "renewal", months: 12, label: "Annual ISP Renewal", kind: "annual" }
+      { key: "renewal", months: 12, label: "Annual ISP Date", kind: "annual" }
     ]
   },
   /* Fire & emergency readiness module */
@@ -2899,9 +2903,38 @@ function qtrDaysUntil(dateStr) {
 function qtrKey(clientId, ispDate, periodKey) { return clientId + "|" + ispDate + "|" + periodKey; }
 function qtrEntry(clientId, ispDate, periodKey) { return S.qtr[qtrKey(clientId, ispDate, periodKey)] || null; }
 function qidpWindow(period) {
+  /* an ISP date counts as "due soon" from the moment its booking window
+     opens, which is the point staff can actually act on it */
   return (period && period.kind === "annual")
-    ? PROVIDER_CONFIG.qidp.ispWindowDays
+    ? PROVIDER_CONFIG.qidp.ispBookingOpensDays
     : PROVIDER_CONFIG.qidp.quarterlyWindowDays;
+}
+function ispBookBy(ispDateStr) {
+  var p = String(ispDateStr || "").split("-").map(Number);
+  if (p.length !== 3 || !p[0]) { return ""; }
+  var d = new Date(p[0], p[1] - 1, p[2]);
+  d.setDate(d.getDate() - PROVIDER_CONFIG.qidp.ispBookingDeadlineDays);
+  var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+}
+/* Where a person stands against the "book it 45-30 days out" rule. */
+function ispBookingStatus(row) {
+  var deadline = PROVIDER_CONFIG.qidp.ispBookingDeadlineDays;
+  if (row.held) {
+    return { cls: "met", label: "Held / confirmed" + (row.entry.doneDate ? " " + row.entry.doneDate : ""), note: "" };
+  }
+  if (row.scheduled) {
+    return { cls: "met", label: "Scheduled " + row.scheduled, note: "" };
+  }
+  if (row.days < 0) {
+    return { cls: "alert", label: "NOT SCHEDULED", note: "ISP date has passed" };
+  }
+  if (row.days < deadline) {
+    return { cls: "alert", label: "NOT SCHEDULED",
+             note: "past the booking deadline of " + row.bookBy };
+  }
+  return { cls: "warn", label: "NOT YET SCHEDULED",
+           note: "book by " + row.bookBy + " (" + (row.days - deadline) + "d left)" };
 }
 function annualPeriod() {
   return qtrPeriods().filter(function (p) { return p.kind === "annual"; })[0] || null;
@@ -2938,9 +2971,11 @@ function qtrAttention() { return qtrCounts().overdue; }
    People with no ISP date come back separately: their renewal cannot be
    computed at all, which is its own thing to chase before a PCR. */
 function ispDueList() {
-  var win = PROVIDER_CONFIG.qidp.ispWindowDays;
+  var cfg = PROVIDER_CONFIG.qidp;
+  var win = cfg.ispWindowDays;
+  var opens = cfg.ispBookingOpensDays;
   var period = annualPeriod();
-  var rows = [], missing = [];
+  var rows = [], booking = [], missing = [];
   S.clients.forEach(function (c) {
     if (!c.activeStatus) { return; }
     if (!(c.ispDate || "").trim()) { missing.push(c); return; }
@@ -2948,15 +2983,21 @@ function ispDueList() {
     var st = qtrStatusFor(c, period);
     if (!st.dueDate) { missing.push(c); return; }
     var days = qtrDaysUntil(st.dueDate);
-    if (days === null || days > win) { return; }
+    if (days === null || days > opens) { return; }
     var entry = st.entry || {};
-    rows.push({ client: c, due: st.dueDate, days: days, entry: entry,
-                scheduled: String(entry.scheduledDate || "").trim(), held: !!entry.done });
+    var row = { client: c, due: st.dueDate, days: days, entry: entry,
+                bookBy: ispBookBy(st.dueDate),
+                scheduled: String(entry.scheduledDate || "").trim(), held: !!entry.done };
+    (days <= win ? rows : booking).push(row);
   });
-  rows.sort(function (a, b) { return a.due < b.due ? -1 : (a.due > b.due ? 1 : 0); });
+  var byDate = function (a, b) { return a.due < b.due ? -1 : (a.due > b.due ? 1 : 0); };
+  rows.sort(byDate);
+  booking.sort(byDate);
   missing.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
-  return { rows: rows, missing: missing, window: win, period: period,
-           unscheduled: rows.filter(function (r) { return !r.scheduled && !r.held; }).length };
+  var open = function (r) { return !r.scheduled && !r.held; };
+  return { rows: rows, booking: booking, missing: missing, period: period,
+           window: win, opensDays: opens, deadlineDays: cfg.ispBookingDeadlineDays,
+           unscheduled: rows.filter(open).length, toBook: booking.filter(open).length };
 }
 
 /* Quarterly reports coming due inside the shorter window. An item already
@@ -3000,17 +3041,19 @@ var QTR_BADGE = { done: "met", overdue: "alert", soon: "warn", upcoming: "outlin
 function renderQidp() {
   var counts = qtrCounts();
   var html = '<h2 class="view-title">QIDP &amp; ISP Tracking</h2>' +
-    '<p class="view-sub">Quarterly progress reports are written in Therap by the QIDP from direct-care staff\'s daily notes — this system does not author or store that review. It only tracks whether each person\'s quarterly report and annual ISP renewal are coming due, computed from the ISP date, so nothing lapses unnoticed before a PCR. Set each person\'s QIDP (case manager) and ISP date via Edit person; quarterly dates recompute automatically. Two working lists sit at the top and each prints on its own: <strong>ISP meetings due in the next ' + PROVIDER_CONFIG.qidp.ispWindowDays + ' days</strong> (with whether the meeting is actually booked) and the <strong>quarterly report checklist for the next ' + PROVIDER_CONFIG.qidp.quarterlyWindowDays + ' days</strong>.</p>';
+    '<p class="view-sub">Quarterly progress reports are written in Therap by the QIDP from direct-care staff\'s daily notes — this system does not author or store that review. It only tracks whether each person\'s quarterly report and annual ISP renewal are coming due, computed from the ISP date, so nothing lapses unnoticed before a PCR. Set each person\'s QIDP (case manager) and ISP date via Edit person; quarterly dates recompute automatically. Two working lists sit at the top and each prints on its own: <strong>ISP dates in the next ' + PROVIDER_CONFIG.qidp.ispWindowDays + ' days</strong> — plus the booking window behind it, because the renewal meeting has to be scheduled ' + PROVIDER_CONFIG.qidp.ispBookingOpensDays + '–' + PROVIDER_CONFIG.qidp.ispBookingDeadlineDays + ' days before that date — and the <strong>quarterly report checklist for the next ' + PROVIDER_CONFIG.qidp.quarterlyWindowDays + ' days</strong>.</p>';
 
-  html += '<div class="note-box no-print">Set once per person, on Edit person: <strong>QIDP name</strong> (case manager) and <strong>ISP date</strong> (the annual Medicaid-services planning meeting). Quarterly reports are expected 3, 6, and 9 months after that date; the next ISP renewal is expected at 12 months. An ISP meeting needs booking with the team, so it gets a ' + PROVIDER_CONFIG.qidp.ispWindowDays + '-day window; a quarterly report is written from notes already in Therap, so it gets ' + PROVIDER_CONFIG.qidp.quarterlyWindowDays + ' days. Marking a period done here records that it was confirmed in Therap — it will later sync automatically once the admin dashboard is connected.</div>';
+  html += '<div class="note-box no-print">Set once per person, on Edit person: <strong>QIDP name</strong> (case manager) and <strong>ISP date</strong> (the annual Medicaid-services planning meeting). Quarterly reports are expected 3, 6, and 9 months after that date; the next ISP renewal is expected at 12 months. The ISP date is the annual date the plan concludes; the meeting that renews it must be scheduled ' + PROVIDER_CONFIG.qidp.ispBookingOpensDays + '–' + PROVIDER_CONFIG.qidp.ispBookingDeadlineDays + ' days before it, so each person carries a <strong>book-by</strong> date. A quarterly report needs no booking — it is written from notes already in Therap — so it gets a single ' + PROVIDER_CONFIG.qidp.quarterlyWindowDays + '-day window. Marking a period done here records that it was confirmed in Therap — it will later sync automatically once the admin dashboard is connected.</div>';
 
   var isp = ispDueList();
   var qtrDue = quarterlyDueList();
 
   html += '<div class="stat-row no-print" style="margin-bottom:12px">' +
     '<div class="stat"><div class="lbl">Overdue</div><div class="pct" style="color:' + (counts.overdue ? "var(--gap)" : "var(--met)") + '">' + counts.overdue + "</div></div>" +
-    '<div class="stat"><div class="lbl">ISP meetings ≤' + isp.window + 'd</div><div class="pct" style="color:' + (isp.rows.length ? "var(--warn)" : "var(--met)") + '">' + isp.rows.length + "</div>" +
-    '<div class="small muted">' + (isp.unscheduled ? isp.unscheduled + " not yet scheduled" : "all scheduled or held") + "</div></div>" +
+    '<div class="stat"><div class="lbl">ISP dates ≤' + isp.window + 'd</div><div class="pct" style="color:' + (isp.unscheduled ? "var(--gap)" : "var(--met)") + '">' + isp.rows.length + "</div>" +
+    '<div class="small muted">' + (isp.unscheduled ? isp.unscheduled + " past the booking deadline" : "all scheduled or held") + "</div></div>" +
+    '<div class="stat"><div class="lbl">Booking window ' + isp.window + "–" + isp.opensDays + 'd</div><div class="pct" style="color:' + (isp.toBook ? "var(--warn)" : "var(--met)") + '">' + isp.booking.length + "</div>" +
+    '<div class="small muted">' + (isp.toBook ? isp.toBook + " still to book" : "all booked") + "</div></div>" +
     '<div class="stat"><div class="lbl">Quarterly reports ≤' + qtrDue.window + 'd</div><div class="pct" style="color:' + (qtrDue.outstanding ? "var(--warn)" : "var(--met)") + '">' + qtrDue.rows.length + "</div>" +
     '<div class="small muted">' + (qtrDue.outstanding ? qtrDue.outstanding + " still to file" : "all filed") + "</div></div>" +
     '<div class="stat"><div class="lbl">No ISP date on file</div><div class="pct" style="color:' + (counts.noIsp ? "var(--warn)" : "var(--met)") + '">' + isp.missing.length + "</div></div>" +
@@ -3047,47 +3090,61 @@ function renderQidp() {
   return html;
 }
 
-/* ---- ISP meetings inside the 30-day window, printable on its own ---- */
+/* ---- ISP dates and their booking status, printable on their own ---- */
+function ispRowHtml(r, periodKey) {
+  var bs = ispBookingStatus(r);
+  return "<tr" + (bs.cls === "alert" ? ' class="flag-row"' : "") + ">" +
+    "<td><strong>" + esc(r.client.name) + "</strong></td>" +
+    "<td class='small'>" + esc(Engine.slName(r.client.serviceLine)) + "</td>" +
+    "<td class='small'>" + esc(r.client.qidpName || "\u2014") + "</td>" +
+    "<td class='small' style='white-space:nowrap'>" + esc(r.due) + " " +
+    badge(r.days < 0 ? "alert" : "warn", dueDaysLabel(r.days)) + "</td>" +
+    "<td class='small' style='white-space:nowrap'>" + esc(r.bookBy) + "</td>" +
+    "<td>" + badge(bs.cls, bs.label) +
+    (bs.note ? '<div class="stamp">' + esc(bs.note) + "</div>" : "") +
+    '<div class="no-print" style="margin-top:5px;max-width:150px"><input type="date" value="' + esc(r.scheduled) +
+    '" data-bind="isp-sched" data-client="' + r.client.id + '"></div></td>' +
+    '<td class="no-print"><button class="btn secondary small" type="button" data-action="qtr-mark" data-client="' +
+    r.client.id + '" data-period="' + esc(periodKey) + '">Open</button></td></tr>';
+}
+function ispTableHtml(rows, periodKey) {
+  return '<div class="table-wrap"><table><thead><tr><th>Person</th><th>Service line</th><th>QIDP (case manager)</th>' +
+    "<th>ISP date</th><th>Book by</th><th>Meeting scheduled?</th><th class='no-print'></th></tr></thead><tbody>" +
+    rows.map(function (r) { return ispRowHtml(r, periodKey); }).join("") +
+    "</tbody></table></div>";
+}
 function ispListHtml(isp) {
+  var pk = isp.period ? isp.period.key : "renewal";
   var html = '<div class="qidp-block qidp-isp">' +
-    qidpPrintHead("ISP meetings due in the next " + isp.window + " days",
-      "Every person whose annual ISP meeting falls due within " + isp.window + " days, or is already past due, and whether the meeting is on the calendar") +
-    '<h3 class="section-title">ISP meetings due in the next ' + isp.window + " days</h3>" +
-    '<div class="note-box no-print">Everyone whose annual ISP renewal falls due within ' + isp.window +
-    ' days — or is already past due — with whether that meeting is actually booked. Set the scheduled date right in the table; print the list to take into a QIDP meeting.</div>' +
-    '<div class="toolbar no-print"><button class="btn" type="button" data-action="qidp-print" data-which="isp">Print ISP meeting list (' + isp.window + ' days)</button></div>';
+    qidpPrintHead("ISP dates and meeting booking status",
+      "The annual date each person's ISP concludes, and whether the meeting that renews it is on the calendar. " +
+      "It has to be scheduled between " + isp.opensDays + " and " + isp.deadlineDays + " days before that date.") +
+    '<h3 class="section-title">ISP dates in the next ' + isp.window + " days</h3>" +
+    '<div class="note-box no-print">The ISP date is the annual date a person\'s plan concludes. The meeting that renews it has to be booked <strong>' +
+    isp.opensDays + "\u2013" + isp.deadlineDays + ' days beforehand</strong>, so anything still unscheduled in this list is already past its booking deadline. Set the meeting date right in the table; print to take the list into a QIDP meeting.</div>' +
+    '<div class="toolbar no-print"><button class="btn" type="button" data-action="qidp-print" data-which="isp">Print ISP date list</button></div>';
 
   if (!isp.rows.length) {
-    html += '<div class="empty">No ISP meetings fall due in the next ' + isp.window + " days.</div>";
+    html += '<div class="empty">No ISP dates fall in the next ' + isp.window + " days.</div>";
   } else {
-    html += '<div class="table-wrap"><table><thead><tr><th>Person</th><th>Service line</th><th>QIDP (case manager)</th>' +
-      "<th>Current ISP</th><th>Renewal due</th><th>Meeting scheduled?</th><th class='no-print'></th></tr></thead><tbody>";
-    isp.rows.forEach(function (r) {
-      var late = r.days < 0;
-      var status = r.held ? badge("met", "Held / confirmed" + (r.entry.doneDate ? " " + r.entry.doneDate : "")) :
-        (r.scheduled ? badge("met", "Scheduled " + r.scheduled) : badge("alert", "NOT YET SCHEDULED"));
-      html += "<tr" + (!r.held && !r.scheduled ? ' class="flag-row"' : "") + ">" +
-        "<td><strong>" + esc(r.client.name) + "</strong></td>" +
-        "<td class='small'>" + esc(Engine.slName(r.client.serviceLine)) + "</td>" +
-        "<td class='small'>" + esc(r.client.qidpName || "—") + "</td>" +
-        "<td class='small'>" + esc(r.client.ispDate) + "</td>" +
-        "<td class='small' style='white-space:nowrap'>" + esc(r.due) + " " +
-        badge(late ? "alert" : "warn", dueDaysLabel(r.days)) + "</td>" +
-        "<td>" + status +
-        '<div class="no-print" style="margin-top:5px;max-width:150px"><input type="date" value="' + esc(r.scheduled) +
-        '" data-bind="isp-sched" data-client="' + r.client.id + '"></div></td>' +
-        '<td class="no-print"><button class="btn secondary small" type="button" data-action="qtr-mark" data-client="' +
-        r.client.id + '" data-period="' + esc(isp.period.key) + '">Open</button></td></tr>';
-    });
-    html += "</tbody></table></div>";
+    html += ispTableHtml(isp.rows, pk);
   }
+
+  html += '<h3 class="section-title">Booking window open \u2014 ISP dates ' + isp.window + "\u2013" + isp.opensDays + " days out</h3>" +
+    '<div class="note-box no-print">These are the ones to schedule <em>now</em>: their ISP date is close enough that the meeting can be booked, and each must be on the calendar by its <strong>book-by</strong> date.</div>';
+  if (!isp.booking.length) {
+    html += '<div class="empty">No ISP dates fall inside the booking window right now.</div>';
+  } else {
+    html += ispTableHtml(isp.booking, pk);
+  }
+
   if (isp.missing.length) {
-    html += '<h4 style="margin:14px 0 6px">No ISP date on file — renewal cannot be computed (' + isp.missing.length + ")</h4>" +
+    html += '<h4 style="margin:16px 0 6px">No ISP date on file \u2014 nothing can be computed (' + isp.missing.length + ")</h4>" +
       '<div class="table-wrap"><table><thead><tr><th>Person</th><th>Service line</th><th>QIDP (case manager)</th><th>Status</th><th class="no-print"></th></tr></thead><tbody>';
     isp.missing.forEach(function (c) {
       html += '<tr class="flag-row"><td><strong>' + esc(c.name) + "</strong></td>" +
         "<td class='small'>" + esc(Engine.slName(c.serviceLine)) + "</td>" +
-        "<td class='small'>" + esc(c.qidpName || "—") + "</td>" +
+        "<td class='small'>" + esc(c.qidpName || "\u2014") + "</td>" +
         "<td>" + badge("alert", "NO ISP DATE ON FILE") + "</td>" +
         '<td class="no-print"><button class="btn secondary small" type="button" data-action="edit-client" data-id="' + c.id + '">Add date</button></td></tr>';
     });
@@ -3137,7 +3194,7 @@ function ispSchedNote(period, st) {
   var sched = String(entry.scheduledDate || "").trim();
   if (sched) { return '<div class="stamp">meeting scheduled ' + esc(sched) + "</div>"; }
   if (st.key !== "overdue" && st.key !== "soon") { return ""; }
-  return '<div class="stamp">meeting not yet scheduled</div>';
+  return '<div class="stamp">not scheduled \u2014 book by ' + esc(ispBookBy(st.dueDate)) + "</div>";
 }
 
 function qtrModal(clientId, periodKey) {
