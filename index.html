@@ -76,7 +76,12 @@ main{max-width:1180px;margin:0 auto;padding:18px 14px 60px}
 .rate-group button.on-met{background:var(--met);border-color:var(--met);color:#fff}
 .rate-group button.on-not_met{background:var(--gap);border-color:var(--gap);color:#fff}
 .rate-group button.on-na{background:var(--na);border-color:var(--na);color:#fff}
+.rate-group button.unscored{margin-left:10px;border-left-width:1px;border-style:dashed}
+.rate-group button.on-none{background:var(--teal-tint);border-color:var(--muted);color:var(--teal-dark);border-style:dashed}
 .rate-group button:disabled{opacity:.4;cursor:not-allowed}
+.cov-note{font-size:12px;color:var(--muted);margin-top:6px;border-left:3px solid var(--hairline);padding-left:8px}
+.cov-note strong{color:var(--teal-dark)}
+.scorebar .fill.partial{background:repeating-linear-gradient(135deg,var(--teal),var(--teal) 6px,#3C6E70 6px,#3C6E70 12px)}
 
 /* badges + status */
 .badge{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;letter-spacing:.03em;text-transform:uppercase}
@@ -245,9 +250,30 @@ var PROVIDER_CONFIG = {
     { id: "hh",   name: "Host Home" },
     { id: "sl",   name: "Supported Living" },
     { id: "ids",  name: "Individualized Day Supports" },
-    { id: "comp", name: "Companion" }
+    { id: "comp", name: "Companion" },
+    { id: "resHab",   name: "Residential Habilitation" },
+    { id: "dayHab",   name: "Day Habilitation" },
+    { id: "respiteD", name: "Respite - Daily" },
+    { id: "respiteH", name: "Respite - Hourly" },
+    { id: "suppEmp",  name: "Supported Employment" },
+    { id: "empReady", name: "Employment Readiness" }
   ],
+  /* Service line -> the living arrangement most people on that service usually have. Only a
+     starting suggestion in the Edit Person form (auto-fills, always overridable) — living
+     arrangement is tracked separately because it (not service line) drives which rubric
+     indicators apply via each indicator's appliesTo filter. Day/respite/employment services are
+     typically delivered to people living in their own family home; adjust per agency reality. */
+  defaultLivingArrangement: {
+    ihs: "Family/Own Home", hh: "Host Home", sl: "Supported Living Residence",
+    ids: "Family/Own Home", comp: "Family/Own Home",
+    resHab: "Supported Living Residence", dayHab: "Family/Own Home",
+    respiteD: "Family/Own Home", respiteH: "Family/Own Home",
+    suppEmp: "Family/Own Home", empReady: "Family/Own Home"
+  },
   livingArrangements: ["Family/Own Home", "Host Home", "Supported Living Residence", "Independent Living"],
+  /* In-Home Supports has a distinct "High Intensity" waiver tier with its own clinical
+     documentation timeline; tracked as plain client metadata (no rubric gate content for it yet). */
+  ihsIntensityOptions: ["Standard", "High Intensity"],
   clientFlags: [
     { key: "hasBSP", short: "BSP", label: "Behaviors that may benefit from a BSP" },
     { key: "hasRestrictiveComponents", short: "Restrictive", label: "BSP includes restrictive components" },
@@ -298,7 +324,8 @@ var PROVIDER_CONFIG = {
         { id: "SD.4", weight: 3, text: "Transition/discharge documentation from prior provider obtained and reconciled." }
       ]},
     { id: "org-hcbs", name: "PCR HCBS Org Assessment Validation",
-      excludedServiceLines: ["ihs", "comp"], /* not applicable to In-Home Supports, Respite, or Companion 1:1 */
+      /* not applicable to non-residential/non-provider-controlled-setting services */
+      excludedServiceLines: ["ihs", "comp", "respiteD", "respiteH", "empReady", "suppEmp"],
       items: [
         { id: "HV.1", weight: 5, text: "HCBS Settings self-assessment complete and validated for each applicable site." },
         { id: "HV.2", weight: 5, text: "Remediation plan for any settings deficiencies is current and on schedule." },
@@ -319,8 +346,9 @@ var PROVIDER_CONFIG = {
     { id: "isp",    label: "Person-Specific ISP/BSP Training",       expires: false }
   ],
   expiryWarningDays: 60,
-  /* QIDP & ISP tracking: quarterly reports are authored in Therap, not here.
-     This only computes due dates from the ISP date and tracks receipt. */
+  /* QIDP & ISP tracking: quarterly reports are written by the QIDP and uploaded to MCIS
+     (DC DDA's system of record), not authored here. This only computes due dates from the
+     ISP date and tracks receipt. */
   qidp: {
     dueSoonDays: 21,
     periods: [
@@ -328,6 +356,77 @@ var PROVIDER_CONFIG = {
       { key: "q2", months: 6,  label: "Quarterly Report 2", kind: "quarterly" },
       { key: "q3", months: 9,  label: "Quarterly Report 3", kind: "quarterly" },
       { key: "renewal", months: 12, label: "Annual ISP Renewal", kind: "annual" }
+    ]
+  },
+  /* Residential Medical Review — a nurse-administered per-client medical-records completeness
+     checklist Hope Found already runs on paper for medically complex residents (Host Home /
+     Supported Living). Deliberately separate from the weighted rubric: a Satisfactory/Concern/N/A
+     completeness check, not a weighted-tier score. Domains/items are Hope Found's own inventory. */
+  medicalReview: {
+    serviceLines: ["hh", "sl"],
+    domains: [
+      { name: "Medical Records Review", items: [
+        { key: "annualPhysical", label: "Annual Physical" },
+        { key: "labWork", label: "LAB Work and results" }
+      ]},
+      { name: "Immunization Records", items: [
+        { key: "immCovid", label: "COVID" },
+        { key: "immPpd", label: "PPD (every year) / Chest X-ray (every 5 years)" },
+        { key: "immFlu", label: "Flu Shot" },
+        { key: "immHepB", label: "Hepatitis B Vaccine" },
+        { key: "immTetanus", label: "Tetanus (every 10 years)" },
+        { key: "immMmr", label: "MMR / Varicella / Pneumococcal" }
+      ]},
+      { name: "Health Forms", items: [
+        { key: "healthPassport", label: "Health Passport (medical info and doctor information/diagnosis current)" },
+        { key: "hcmp", label: "HCMP (every quarter)" }
+      ]},
+      { name: "Physician / Specialist", items: [
+        { key: "mdFollowUp", label: "Medical Doctor follow up" }
+      ]},
+      { name: "Professional Services", items: [
+        { key: "specialistFollowUp", label: "Specialist appointment completed and follow up (Pulmonary, ENT, Audiology, Podiatry, GI, Endocrinology, Neurology, Dermatology)" },
+        { key: "dentalService", label: "Dental" },
+        { key: "vision", label: "Vision" },
+        { key: "colonoscopy", label: "Colonoscopy (50 years & older)" },
+        { key: "prostate", label: "Prostate Screening (male, 40 years & older)" },
+        { key: "mammogram", label: "Mammogram (female, 50 years & older)" },
+        { key: "pap", label: "PAP smear (female)" }
+      ]},
+      { name: "Dental Services", items: [
+        { key: "dentalEval", label: "Annual Dental Evaluation" },
+        { key: "dentalConsult", label: "Dental consultation" }
+      ]},
+      { name: "Nursing Assessments", items: [
+        { key: "nursingAssessment", label: "Nursing Assessment" },
+        { key: "preventiveScreening", label: "Annual Preventive Health Screening" },
+        { key: "selfAdminMed", label: "Self-Administration Medication Form" },
+        { key: "bradenScale", label: "Braden Scale (skin/pressure-ulcer risk)" }
+      ]},
+      { name: "Nursing Notes", items: [
+        { key: "nursingNotes", label: "Nursing Notes" },
+        { key: "vitalSigns", label: "Vital Signs" }
+      ]},
+      { name: "Psychiatry", items: [
+        { key: "psychMedReview", label: "Psychotropic Med Reviews" },
+        { key: "aims", label: "AIMS (every 6 months)" }
+      ]},
+      { name: "Medications / MARs", items: [
+        { key: "marMatch", label: "MAR (matches Physician Order Sheet and Health Passport)" },
+        { key: "medSideEffects", label: "Medication and side effects" },
+        { key: "physicianOrders", label: "Current Physician Orders, signed by doctor (diet, allergies, adaptive equipment)" }
+      ]},
+      { name: "Screenings & Logs", items: [
+        { key: "glasgowDepression", label: "Glasgow Depression Scale" },
+        { key: "fallRisk", label: "Fall Risk Assessment / Fall Risk Protocol (if needed)" },
+        { key: "dementiaScreening", label: "Dementia Screening" },
+        { key: "refusalProtocol", label: "Protocol for Refusal Form" },
+        { key: "sleepingLog", label: "Sleeping Log" }
+      ]},
+      { name: "Consents", items: [
+        { key: "medicalConsent", label: "Medical Consents" },
+        { key: "psychConsent", label: "Psychotropic Medication Consents" }
+      ]}
     ]
   },
   /* Fire & emergency readiness module */
@@ -459,6 +558,7 @@ var S = {
   qadoc: { versions: [] },
   runs: [],
   qtr: {},                               /* qtr["clientId|ispDate|periodKey"] = { done, doneDate, notes } */
+  medreview: {},                         /* medreview["clientId|itemKey"] = { status, comments, correctionDeadline, correctionCompleted } */
   census: {}, settings: {},
   ui: { tab: "dashboard", reviewClient: null, locatorQuery: "", locatorFilter: "all",
         rubricFilterSL: "all", rubricFilterType: "all", rubricShowRetired: false, saveFails: 0 }
@@ -466,7 +566,7 @@ var S = {
 
 var K = { rubric: "pcr:rubric", clients: "pcr:clients", staff: "pcr:staff", org: "pcr:org",
           fire: "pcr:fire", census: "pcr:census", settings: "pcr:settings", rec: "pcr:rec:",
-          policy: "pcr:policy", qadoc: "pcr:qadoc", runs: "pcr:runs", qtr: "pcr:qtr" };
+          policy: "pcr:policy", qadoc: "pcr:qadoc", runs: "pcr:runs", qtr: "pcr:qtr", medreview: "pcr:medreview" };
 
 async function loadAll() {
   S.rubric  = (await Store.get(K.rubric))  || [];
@@ -479,6 +579,7 @@ async function loadAll() {
   S.qadoc   = (await Store.get(K.qadoc))   || { versions: [] };
   S.runs    = (await Store.get(K.runs))    || [];
   S.qtr     = (await Store.get(K.qtr))     || {};
+  S.medreview = (await Store.get(K.medreview)) || {};
   S.settings= (await Store.get(K.settings))|| {};
   if (!S.rubric.length) { S.rubric = buildSeedRubric(); await Store.set(K.rubric, S.rubric); }
   if (!S.clients.length && !S.settings.seeded) {
@@ -577,15 +678,24 @@ var Engine = {
   },
   scoreServiceLine: function (slId) {
     var agg = { earned: 0, possible: 0, critEarned: 0, critPossible: 0, alerts: 0, notMet: 0,
-                hcbsRated: 0, hcbsMet: 0, satRated: 0, satMet: 0, ratedCount: 0, clients: 0 };
+                hcbsRated: 0, hcbsMet: 0, satRated: 0, satMet: 0, ratedCount: 0, clients: 0,
+                /* coverage: how much of the caseload this score actually speaks for */
+                people: 0, peopleScored: 0, peopleUnscored: 0, applicableQA: 0 };
     S.clients.forEach(function (c) {
       if (!c.activeStatus || c.serviceLine !== slId) { return; }
       var r = Engine.scoreClient(c);
-      if (r.ratedCount === 0 && r.satRated === 0) { return; }
-      agg.clients++;
+      agg.people++;
+      agg.applicableQA += r.applicableQA;
+      if (r.ratedCount === 0 && r.satRated === 0) { agg.peopleUnscored++; return; }
+      agg.clients++; agg.peopleScored++;
       ["earned","possible","critEarned","critPossible","alerts","notMet","hcbsRated","hcbsMet","satRated","satMet","ratedCount"]
         .forEach(function (k) { agg[k] += r[k]; });
     });
+    /* Coverage is reported, never folded into the score: an unanswered question is not a
+       failed question. A high score over thin coverage is provisional, not good news. */
+    agg.peoplePct = agg.people ? Math.round(100 * agg.peopleScored / agg.people) : null;
+    agg.itemPct = agg.applicableQA ? Math.round(100 * agg.ratedCount / agg.applicableQA) : null;
+    agg.provisional = agg.people > 0 && agg.peopleScored > 0 && agg.peopleScored < agg.people;
     agg.totalPct = agg.possible ? Math.round(100 * agg.earned / agg.possible) : null;
     agg.critPct = agg.critPossible ? Math.round(100 * agg.critEarned / agg.critPossible) : null;
     agg.hcbs100 = agg.hcbsRated === 0 ? null : (agg.hcbsMet === agg.hcbsRated);
@@ -658,6 +768,32 @@ var Engine = {
       });
     });
     return { located: located, rated: rated, pct: rated ? Math.round(100 * located / rated) : null };
+  },
+  /* Corrections tracking: a Not Met indicator (or a Concern-flagged Medical Review item) can carry
+     a correctionDeadline/correctionCompleted pair, mirroring what Hope Found already tracks by
+     hand on every paper binder-review tool. Overdue = deadline passed, not completed. */
+  openCorrections: function () {
+    var overdue = 0, upcoming = 0;
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    function tally(deadline, completed) {
+      if (!deadline || completed) { return; }
+      var d = new Date(deadline + "T00:00:00");
+      if (isNaN(d.getTime())) { return; }
+      if (d < today) { overdue++; } else { upcoming++; }
+    }
+    S.clients.forEach(function (c) {
+      if (!c.activeStatus) { return; }
+      var recs = S.records[c.id] || {};
+      Object.keys(recs).forEach(function (iid) {
+        var rec = recs[iid];
+        if (rec.rating === "not_met") { tally(rec.correctionDeadline, rec.correctionCompleted); }
+      });
+    });
+    Object.keys(S.medreview).forEach(function (k) {
+      var rec = S.medreview[k];
+      if (rec.status === "concern") { tally(rec.correctionDeadline, rec.correctionCompleted); }
+    });
+    return { overdue: overdue, upcoming: upcoming };
   },
   orgScore: function () {
     var earned = 0, possible = 0, openItems = 0;
@@ -868,10 +1004,10 @@ function tierBadgeCls(key) {
   return { excellent: "met", satisfactory: "met", needsImprovement: "warn",
            unsatisfactory: "gap", failed: "alert", alert: "alert", none: "outline" }[key] || "outline";
 }
-function barHtml(pct) {
+function barHtml(pct, partial) {
   var th = PROVIDER_CONFIG.scoring.thresholds;
   var w = pct === null ? 0 : Math.max(0, Math.min(100, pct));
-  var cls = pct === null ? "" : (pct >= th.satisfactory ? "" : (pct >= th.needsImprovement ? "warn" : "bad"));
+  var cls = pct === null ? "" : (pct >= th.satisfactory ? (partial ? "partial" : "") : (pct >= th.needsImprovement ? "warn" : "bad"));
   return '<div class="scorebar">' +
     '<div class="fill ' + cls + '" style="width:' + w + '%"></div>' +
     '<div class="tick" style="left:' + th.needsImprovement + '%"></div>' +
@@ -948,19 +1084,37 @@ function renderDashboard() {
       '<button class="btn small" type="button" data-action="nav" data-tab="policy" style="margin-left:6px">Open Policy Updates</button></div></div>';
   }
 
+  var covAll = { people: 0, scored: 0, items: 0, rated: 0 };
   html += '<div class="grid grid-cards">';
   PROVIDER_CONFIG.serviceLines.forEach(function (sl) {
     var sc = Engine.scoreServiceLine(sl.id);
     var samp = Engine.sampleSize(S.census[sl.id] || 0);
+    covAll.people += sc.people; covAll.scored += sc.peopleScored;
+    covAll.items += sc.applicableQA; covAll.rated += sc.ratedCount;
+    var scoreLbl = sc.provisional ? "Total score so far" : "Total score";
     html += '<div class="card"><div class="card-head"><h3>' + esc(sl.name) + "</h3>" +
-      badge(tierBadgeCls(sc.tier.key), sc.tier.label) + "</div>";
-    html += '<div class="bar-label"><span>Total score</span><span class="pct small">' + fmtPct(sc.totalPct) + "</span></div>" + barHtml(sc.totalPct);
-    html += '<div class="bar-label"><span>Critical (weight-' + PROVIDER_CONFIG.scoring.criticalWeight + ')</span><span class="pct small">' + fmtPct(sc.critPct) + "</span></div>" + barHtml(sc.critPct);
+      badge(tierBadgeCls(sc.tier.key), sc.tier.label) +
+      (sc.provisional ? badge("outline", "provisional") : "") + "</div>";
+    html += '<div class="bar-label"><span>' + scoreLbl + '</span><span class="pct small">' + fmtPct(sc.totalPct) + "</span></div>" + barHtml(sc.totalPct, sc.provisional);
+    html += '<div class="bar-label"><span>Critical (weight-' + PROVIDER_CONFIG.scoring.criticalWeight + ')</span><span class="pct small">' + fmtPct(sc.critPct) + "</span></div>" + barHtml(sc.critPct, sc.provisional);
+    /* Review coverage — the honest denominator. A 100% score over 1 of 20 people is not a 100% service line. */
+    html += '<div class="bar-label"><span>People reviewed</span><span class="pct small">' + fmtPct(sc.peoplePct) + "</span></div>" + barHtml(sc.peoplePct);
+    if (sc.people === 0) {
+      html += '<div class="cov-note">No active people are assigned to this service line yet.</div>';
+    } else if (sc.peopleScored === 0) {
+      html += '<div class="cov-note"><strong>' + sc.people + " on the roster, none scored yet.</strong> Nothing here is met or not met — it is simply not yet scored.</div>";
+    } else {
+      html += '<div class="cov-note"><strong>' + sc.peopleScored + " of " + sc.people + " people scored</strong>" +
+        (sc.peopleUnscored ? " — " + sc.peopleUnscored + " not yet scored" : " — full caseload") +
+        (sc.itemPct !== null ? ". " + sc.ratedCount + " of " + sc.applicableQA + " applicable questions answered (" + sc.itemPct + "%)." : ".") +
+        (sc.provisional ? " The percentages above cover only the people scored so far and will move as the rest are reviewed." : "") + "</div>";
+    }
     if (sc.tier.consequence) { html += '<div class="tier-line muted">' + esc(sc.tier.consequence) + "</div>"; }
     html += '<div class="ind-meta" style="margin-top:8px">' +
       (sc.alerts ? badge("alert", sc.alerts + " alert") : "") +
       (sc.notMet ? badge("gap", sc.notMet + " not met") : "") +
-      badge("neutral", sc.clients + " reviewed") +
+      badge("neutral", sc.peopleScored + " of " + sc.people + " scored") +
+      (sc.peopleUnscored ? badge("outline", sc.peopleUnscored + " not yet scored") : "") +
       badge("outline", "min sample " + samp.size + (S.census[sl.id] ? " of " + S.census[sl.id] : "")) +
       (sc.hcbs100 === false ? badge("warn", "HCBS < 100%") : "") +
       (sc.satPct !== null ? badge(sc.satPct >= PROVIDER_CONFIG.scoring.satisfactionMin ? "neutral" : "warn", "satisfaction " + sc.satPct + "%") : "") +
@@ -971,7 +1125,16 @@ function renderDashboard() {
   html += "</div>";
 
   var rr = Engine.retrievalRate(), org = Engine.orgScore(), stf = Engine.staffCompliance(), fire = Engine.fireReadiness();
+  var corr = Engine.openCorrections();
+  var unscored = covAll.people - covAll.scored;
   html += '<h3 class="section-title">Standing measures</h3><div class="stat-row">';
+  html += '<div class="stat"><div class="lbl">Review coverage</div><div class="pct">' +
+    fmtPct(covAll.people ? Math.round(100 * covAll.scored / covAll.people) : null) + '</div><div class="small muted">' +
+    covAll.scored + "/" + covAll.people + " people scored" + (unscored ? " — " + unscored + " not yet scored" : "") +
+    (covAll.items ? "; " + covAll.rated + "/" + covAll.items + " questions answered" : "") + "</div></div>";
+  html += '<div class="stat"><div class="lbl">Open corrections</div><div class="pct" style="color:' +
+    (corr.overdue ? "var(--gap)" : (corr.upcoming ? "var(--warn)" : "var(--met)")) + '">' + corr.overdue +
+    '</div><div class="small muted">past deadline' + (corr.upcoming ? ", " + corr.upcoming + " still open" : "") + "</div></div>";
   html += '<div class="stat"><div class="lbl">Record retrieval rate</div><div class="pct">' + fmtPct(rr.pct) + '</div><div class="small muted">' + rr.located + "/" + rr.rated + " rated records have a verified location</div></div>";
   html += '<div class="stat"><div class="lbl">Organizational tools</div><div class="pct">' + fmtPct(org.pct) + '</div><div class="small muted">' + org.openItems + " open item(s) across the 3 mandatory tools</div></div>";
   html += '<div class="stat"><div class="lbl">Staff records compliance</div><div class="pct">' + fmtPct(stf.pct) + '</div><div class="small muted">' + stf.ok + "/" + stf.total + " requirements current</div></div>";
@@ -1147,10 +1310,13 @@ function indicatorHtml(it, c) {
   var eff = Engine.effective(it, c);
   var disabled = eff.forced;
   var current = eff.forced ? "na" : (rec.rating || null);
-  var btns = ["met", "not_met", "na"].map(function (v) {
-    var lbl = v === "met" ? "Met" : (v === "not_met" ? "Not Met" : "N/A");
+  /* "none" is the standing default for every question and every person — an unanswered
+     question is never counted as a failure, only as not yet scored. */
+  var btns = ["met", "not_met", "na", "none"].map(function (v) {
+    var lbl = v === "met" ? "Met" : (v === "not_met" ? "Not Met" : (v === "na" ? "N/A" : "Not Yet Scored"));
+    var on = (v === "none") ? (!disabled && !current) : (current === v);
     return '<button type="button" data-action="rate" data-client="' + c.id + '" data-ind="' + it.id + '" data-val="' + v + '"' +
-      (disabled ? " disabled" : "") + ' class="' + (current === v ? "on-" + v : "") + '">' + lbl + "</button>";
+      (disabled ? " disabled" : "") + ' class="' + (v === "none" ? "unscored " : "") + (on ? "on-" + v : "") + '">' + lbl + "</button>";
   }).join("");
 
   return '<div class="ind' + (disabled ? " gated-off" : "") + '" id="ind-' + it.id + '"><div class="ind-top"><div>' +
@@ -1164,6 +1330,9 @@ function indicatorHtml(it, c) {
       '<div><label>Verified date</label><input type="date" value="' + esc(rec.verifiedDate || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="verifiedDate"></div>' +
       '<div><label>Evidence location</label><input type="text" placeholder="e.g. SharePoint/ISP/2026 or Binder 3, Shelf B" value="' + esc(rec.evidenceLocation || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="evidenceLocation"></div>' +
       '<div><label>Notes</label><input type="text" value="' + esc(rec.notes || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="notes"></div>' +
+      (current === "not_met" ?
+        '<div><label>Corrections deadline</label><input type="date" value="' + esc(rec.correctionDeadline || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="correctionDeadline"></div>' +
+        '<div><label>Corrections completed</label><input type="date" value="' + esc(rec.correctionCompleted || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="correctionCompleted"></div>' : "") +
       "</div>" : "") +
     (!disabled && current ? houseBtn : "") +
     "</div>";
@@ -1178,16 +1347,20 @@ function intentBlock(it, open) {
 function clientModal(c) {
   var isNew = !c;
   c = c || { id: "c-" + Date.now().toString(36), name: "", serviceLine: PROVIDER_CONFIG.serviceLines[0].id,
-             livingArrangement: PROVIDER_CONFIG.livingArrangements[0], flags: {}, priorPCRParticipant: false,
-             sampled: false, activeStatus: true };
+             livingArrangement: PROVIDER_CONFIG.livingArrangements[0], ihsIntensity: "Standard", flags: {},
+             priorPCRParticipant: false, sampled: false, activeStatus: true };
   var flagChecks = PROVIDER_CONFIG.clientFlags.map(function (f) {
     return '<div class="check-line"><input type="checkbox" id="cf-' + f.key + '"' + (c.flags && c.flags[f.key] ? " checked" : "") + '><label for="cf-' + f.key + '" style="text-transform:none;font-size:13.5px;margin:0">' + esc(f.label) + "</label></div>";
   }).join("");
   openModal('<h3>' + (isNew ? "Add person" : "Edit person") + '</h3><div class="form-grid">' +
     '<div class="full"><label>Name</label><input type="text" id="cm-name" value="' + esc(c.name) + '"></div>' +
-    '<div><label>Service line</label><select id="cm-sl">' + slOptions(c.serviceLine, false) + "</select></div>" +
+    '<div><label>Service line</label><select id="cm-sl" data-bind="cm-sl-live">' + slOptions(c.serviceLine, false) + "</select></div>" +
     '<div><label>Living arrangement</label><select id="cm-la">' + PROVIDER_CONFIG.livingArrangements.map(function (la) {
       return '<option' + (la === c.livingArrangement ? " selected" : "") + ">" + esc(la) + "</option>"; }).join("") + "</select></div>" +
+    '<div class="full small muted" style="margin-top:-6px">Service line is which program pays for and rates this person (drives the rubric). Living arrangement is where they physically live day to day — usually matches, but Day Hab, Respite, and IDS clients often live in a Family/Own Home while receiving services elsewhere. Changing service line updates this to a likely default; adjust if it does not fit.</div>' +
+    '<div class="full" id="cm-intensity-wrap" style="' + (c.serviceLine === "ihs" ? "" : "display:none") + '"><label>In-Home Support intensity</label><select id="cm-intensity">' +
+    PROVIDER_CONFIG.ihsIntensityOptions.map(function (o) { return '<option' + (o === (c.ihsIntensity || "Standard") ? " selected" : "") + ">" + esc(o) + "</option>"; }).join("") +
+    '</select><div class="small muted" style="margin-top:3px">High Intensity IHS carries its own clinical documentation timeline (tracked here as a record; not yet driving rubric scoring).</div></div>' +
     '<div class="full"><label>Home / location (people at the same home group together for review)</label>' +
     '<input type="text" id="cm-loc" list="loc-list" value="' + esc(c.location || "") + '" placeholder="e.g. Kenilworth Host Home">' +
     '<datalist id="loc-list">' + locationsList().map(function (l) { return "<option>" + esc(l) + "</option>"; }).join("") + "</datalist></div>" +
@@ -1211,6 +1384,7 @@ function saveClientFromModal(id, isNew) {
     id: id, name: name,
     serviceLine: document.getElementById("cm-sl").value,
     livingArrangement: document.getElementById("cm-la").value,
+    ihsIntensity: document.getElementById("cm-intensity").value,
     location: document.getElementById("cm-loc").value.trim(),
     qidpName: document.getElementById("cm-qidp").value.trim(),
     ispDate: document.getElementById("cm-isp").value,
@@ -2518,8 +2692,8 @@ function runPackView(run) {
 
 
 /* ============================ QIDP & ISP TRACKING ============================
-   Quarterly progress reports are authored in Therap by the QIDP, drawn from
-   direct-care staff's daily notes - also entered in Therap. This system does
+   Quarterly progress reports are authored by the QIDP and filed in MCIS (DC DDA's
+   system of record), drawn from direct-care staff's daily notes. This system does
    NOT write or store that narrative. It tracks two dates per person (QIDP /
    case manager name, and the annual ISP date) and computes when each
    quarterly report and the next annual ISP renewal fall due, so a gap never
@@ -2579,9 +2753,9 @@ var QTR_BADGE = { done: "met", overdue: "alert", soon: "warn", upcoming: "outlin
 function renderQidp() {
   var counts = qtrCounts();
   var html = '<h2 class="view-title">QIDP &amp; ISP Tracking</h2>' +
-    '<p class="view-sub">Quarterly progress reports are written in Therap by the QIDP from direct-care staff\'s daily notes — this system does not author or store that review. It only tracks whether each person\'s quarterly report and annual ISP renewal are coming due, computed from the ISP date, so nothing lapses unnoticed before a PCR. Set each person\'s QIDP (case manager) and ISP date via Edit person; quarterly dates recompute automatically.</p>';
+    '<p class="view-sub">Quarterly progress reports are written by the QIDP and filed in MCIS (DC DDA\'s system of record), drawn from direct-care staff\'s daily notes — this system does not author or store that review. It only tracks whether each person\'s quarterly report and annual ISP renewal are coming due, computed from the ISP date, so nothing lapses unnoticed before a PCR. Set each person\'s QIDP (case manager) and ISP date via Edit person; quarterly dates recompute automatically.</p>';
 
-  html += '<div class="note-box">Set once per person, on Edit person: <strong>QIDP name</strong> (case manager) and <strong>ISP date</strong> (the annual Medicaid-services planning meeting). Quarterly reports are expected 3, 6, and 9 months after that date; the next ISP renewal is expected at 12 months. Marking a period "filed" here records that it was confirmed in Therap — it will later sync automatically once the admin dashboard is connected.</div>';
+  html += '<div class="note-box">Set once per person, on Edit person: <strong>QIDP name</strong> (case manager) and <strong>ISP date</strong> (the annual Medicaid-services planning meeting). Quarterly reports are expected 3, 6, and 9 months after that date; the next ISP renewal is expected at 12 months. Marking a period "filed" here records that it was confirmed in MCIS — it will later sync automatically once the admin dashboard is connected.</div>';
 
   html += '<div class="toolbar no-print"><button class="btn secondary" type="button" data-action="run-print">Print due-dates list</button></div>';
 
@@ -2625,9 +2799,9 @@ function qtrModal(clientId, periodKey) {
   var due = addMonths(c.ispDate, period.months);
   var entry = qtrEntry(c.id, c.ispDate, periodKey) || {};
   openModal("<h3>" + esc(period.label) + " — " + esc(c.name) + '</h3>' +
-    '<div class="note-box">Due ' + esc(due) + '. Authored and filed in Therap — this only records that it was confirmed done.</div>' +
+    '<div class="note-box">Due ' + esc(due) + '. Authored by the QIDP and filed in MCIS — this only records that it was confirmed done.</div>' +
     '<div class="form-grid">' +
-    '<div class="full"><div class="check-line"><input type="checkbox" id="qm-done"' + (entry.done ? " checked" : "") + '><label for="qm-done" style="text-transform:none;margin:0">Confirmed filed in Therap</label></div></div>' +
+    '<div class="full"><div class="check-line"><input type="checkbox" id="qm-done"' + (entry.done ? " checked" : "") + '><label for="qm-done" style="text-transform:none;margin:0">Confirmed filed in MCIS</label></div></div>' +
     '<div><label>Date filed</label><input type="date" id="qm-date" value="' + esc(entry.doneDate || "") + '"></div>' +
     '<div class="full"><label>Notes</label><input type="text" id="qm-notes" value="' + esc(entry.notes || "") + '" placeholder="optional"></div>' +
     "</div>" +
@@ -2648,8 +2822,95 @@ function saveQtrFromModal(clientId, periodKey) {
 }
 
 /* ============================ NAV / RENDER / EVENTS ============================ */
+/* ====================== RESIDENTIAL MEDICAL REVIEW ======================
+   Hope Found's own nurse-administered binder check, not part of the weighted Qlarant
+   rubric: a completeness pass over each person's medical record. Same Satisfactory /
+   Concern / N/A scheme as the paper tool it replaces, plus the corrections pair. */
+function medKey(clientId, itemKey) { return clientId + "|" + itemKey; }
+function medClients() {
+  var lines = PROVIDER_CONFIG.medicalReview.serviceLines;
+  return S.clients.filter(function (c) {
+    return c.activeStatus && lines.indexOf(c.serviceLine) !== -1;
+  });
+}
+function medStats(c) {
+  var s = { total: 0, sat: 0, concern: 0, na: 0, unscored: 0 };
+  PROVIDER_CONFIG.medicalReview.domains.forEach(function (dm) {
+    dm.items.forEach(function (it) {
+      s.total++;
+      var rec = S.medreview[medKey(c.id, it.key)] || {};
+      if (rec.status === "sat") { s.sat++; }
+      else if (rec.status === "concern") { s.concern++; }
+      else if (rec.status === "na") { s.na++; }
+      else { s.unscored++; }
+    });
+  });
+  return s;
+}
+function renderMedReview() {
+  var cfg = PROVIDER_CONFIG.medicalReview;
+  var people = medClients();
+  var slNames = cfg.serviceLines.map(function (id) { return Engine.slName(id); }).join(" and ");
+  var html = '<h2 class="view-title">Residential Medical Review</h2>' +
+    '<p class="view-sub">The nurse\'s record-completeness check for ' + esc(slNames) + ' — the medical half of the ' +
+    'binder a surveyor opens. Every item starts <strong>not yet reviewed</strong>; nothing here counts against a ' +
+    'score until someone marks it. This is separate from the weighted rubric and does not feed the certification tier.</p>';
+
+  if (!people.length) {
+    return html + '<div class="note-box">No active people are on ' + esc(slNames) + ' yet. Add someone on Client Review, or ' +
+      'change which service lines this tool covers in <code>PROVIDER_CONFIG.medicalReview.serviceLines</code>.</div>';
+  }
+  if (!S.ui.medClient || !people.some(function (c) { return c.id === S.ui.medClient; })) {
+    S.ui.medClient = people[0].id;
+  }
+  var c = clientById(S.ui.medClient);
+
+  html += '<div class="no-print" style="margin:12px 0"><label>Person</label><select data-bind="med-client">' +
+    people.map(function (p) {
+      var st = medStats(p);
+      return '<option value="' + p.id + '"' + (p.id === c.id ? " selected" : "") + ">" + esc(p.name) +
+        " — " + esc(Engine.slName(p.serviceLine)) + " (" + (st.total - st.unscored) + "/" + st.total + " reviewed" +
+        (st.concern ? ", " + st.concern + " concern" : "") + ")</option>";
+    }).join("") + "</select></div>";
+
+  var s = medStats(c);
+  html += '<div class="pack-person"><div class="stat-row">' +
+    '<div class="stat"><div class="lbl">Reviewed</div><div class="pct">' + (s.total - s.unscored) + "/" + s.total +
+    '</div><div class="small muted">' + s.unscored + " not yet reviewed</div></div>" +
+    '<div class="stat"><div class="lbl">Satisfactory</div><div class="pct" style="color:var(--met)">' + s.sat + "</div><div class=\"small muted\">records complete</div></div>" +
+    '<div class="stat"><div class="lbl">Concerns noted</div><div class="pct" style="color:' + (s.concern ? "var(--gap)" : "var(--muted)") + '">' + s.concern +
+    '</div><div class="small muted">need a correction date</div></div>' +
+    '<div class="stat"><div class="lbl">Not applicable</div><div class="pct">' + s.na + '</div><div class="small muted">does not apply to this person</div></div>' +
+    "</div></div>";
+
+  cfg.domains.forEach(function (dm) {
+    html += '<h3 class="section-title">' + esc(dm.name) + "</h3>";
+    dm.items.forEach(function (it) {
+      var rec = S.medreview[medKey(c.id, it.key)] || {};
+      var st = rec.status || "";
+      html += '<div class="ind"><div class="ind-top"><div><div class="ind-q">' + esc(it.label) + "</div></div>" +
+        '<div style="min-width:170px"><select data-bind="mr-status" data-client="' + c.id + '" data-item="' + it.key + '">' +
+        ['<option value=""' + (st ? "" : " selected") + ">Not yet reviewed</option>",
+         '<option value="sat"' + (st === "sat" ? " selected" : "") + ">Satisfactory</option>",
+         '<option value="concern"' + (st === "concern" ? " selected" : "") + ">Concern noted</option>",
+         '<option value="na"' + (st === "na" ? " selected" : "") + ">N/A</option>"].join("") +
+        "</select></div></div>" +
+        '<div class="ind-fields">' +
+        '<div><label>Comments</label><input type="text" value="' + esc(rec.comments || "") + '" data-bind="mr-field" data-client="' + c.id + '" data-item="' + it.key + '" data-field="comments"></div>' +
+        (st === "concern" ?
+          '<div><label>Corrections deadline</label><input type="date" value="' + esc(rec.correctionDeadline || "") + '" data-bind="mr-field" data-client="' + c.id + '" data-item="' + it.key + '" data-field="correctionDeadline"></div>' +
+          '<div><label>Corrections completed</label><input type="date" value="' + esc(rec.correctionCompleted || "") + '" data-bind="mr-field" data-client="' + c.id + '" data-item="' + it.key + '" data-field="correctionCompleted"></div>' : "") +
+        "</div></div>";
+    });
+  });
+
+  html += '<div class="no-print" style="margin-top:14px"><button class="btn secondary" type="button" data-action="run-print">Print this review</button></div>';
+  return html;
+}
+
 var TABS = [
-  ["dashboard", "Dashboard"], ["review", "Client Review"], ["qidp", "QIDP & ISP"], ["sampling", "Sampling"],
+  ["dashboard", "Dashboard"], ["review", "Client Review"], ["medreview", "Medical Review"],
+  ["qidp", "QIDP & ISP"], ["sampling", "Sampling"],
   ["locator", "Document Locator"], ["runs", "Audit Run"], ["policy", "Policy Updates"],
   ["orgstaff", "Organization & Staff"], ["rubric", "Rubric Manager"]
 ];
@@ -2669,7 +2930,7 @@ function render() {
   var v = document.getElementById("view");
   var fn = { dashboard: renderDashboard, review: renderReview, sampling: renderSampling,
              locator: renderLocator, runs: renderRuns, policy: renderPolicy, qidp: renderQidp,
-             orgstaff: renderOrgStaff, rubric: renderRubric }[S.ui.tab] || renderDashboard;
+             medreview: renderMedReview, orgstaff: renderOrgStaff, rubric: renderRubric }[S.ui.tab] || renderDashboard;
   v.innerHTML = fn();
   if (S.ui.tab === "sampling") { updateSamplingTotals(); }
 }
@@ -2870,7 +3131,8 @@ function onClick(e) {
     case "save-client": saveClientFromModal(d.id, d.new === "true"); break;
     case "rate": (function () {
       var rec = (S.records[d.client] || {})[d.ind] || {};
-      var val = rec.rating === d.val ? null : d.val;
+      /* "none" returns the question to its default, not-yet-scored state. */
+      var val = (d.val === "none" || rec.rating === d.val) ? null : d.val;
       var patch = { rating: val };
       if (val && !rec.verifiedDate) { patch.verifiedDate = todayStr(); }
       updRec(d.client, d.ind, patch);
@@ -2954,7 +3216,29 @@ function onChange(e) {
   var d = t.dataset;
   switch (bind) {
     case "review-client": S.ui.reviewClient = t.value || null; render(); break;
+    /* Live inside the client modal: suggest the living arrangement that usually goes with the
+       chosen service line, and only surface IHS intensity when it applies. Both stay editable. */
+    case "cm-sl-live": (function () {
+      var la = document.getElementById("cm-la");
+      var suggested = PROVIDER_CONFIG.defaultLivingArrangement[t.value];
+      if (la && suggested) { la.value = suggested; }
+      var wrap = document.getElementById("cm-intensity-wrap");
+      if (wrap) { wrap.style.display = t.value === "ihs" ? "" : "none"; }
+    })(); break;
+    case "mr-status": (function () {
+      var k = d.client + "|" + d.item;
+      S.medreview[k] = Object.assign({}, S.medreview[k], { status: t.value || "" });
+      persist(K.medreview, S.medreview);
+      render();
+    })(); break;
+    case "mr-field": (function () {
+      var k = d.client + "|" + d.item, patch = {};
+      patch[d.field] = t.value;
+      S.medreview[k] = Object.assign({}, S.medreview[k], patch);
+      persist(K.medreview, S.medreview);
+    })(); break;
     case "review-location": S.ui.reviewLocation = t.value || ""; render(); break;
+    case "med-client": S.ui.medClient = t.value || null; render(); break;
     case "run-pick":
       S.ui.runPick = S.ui.runPick || {};
       S.ui.runPick[t.dataset.id] = t.checked;

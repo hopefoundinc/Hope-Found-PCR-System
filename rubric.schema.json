@@ -29,8 +29,8 @@
         },
         "serviceLine": {
           "type": "string",
-          "enum": ["ihs", "hh", "sl", "ids", "comp"],
-          "description": "ihs=In-Home Supports, hh=Host Home, sl=Supported Living, ids=Individualized Day Supports, comp=Companion. An indicator used by several service lines appears once per line with a distinct id."
+          "enum": ["ihs", "hh", "sl", "ids", "comp", "resHab", "dayHab", "respiteD", "respiteH", "suppEmp", "empReady"],
+          "description": "ihs=In-Home Supports, hh=Host Home, sl=Supported Living, ids=Individualized Day Supports, comp=Companion, resHab=Residential Habilitation, dayHab=Day Habilitation, respiteD=Respite (Daily), respiteH=Respite (Hourly), suppEmp=Supported Employment, empReady=Employment Readiness. An indicator used by several service lines appears once per line with a distinct id."
         },
         "domain": {
           "type": "string",
