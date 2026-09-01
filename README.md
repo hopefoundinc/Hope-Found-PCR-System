@@ -11,8 +11,9 @@ dependencies for core operation. Open it in any modern browser, or host it as a 
 ## The shell
 
 A fixed left sidebar carries the brand mark, the screen list with an icon per screen, and — at the
-foot — who is signed in, Settings, and Sign out. Below 900px it collapses to a horizontal strip.
-Cards are rounded and lightly shadowed; every visible date renders **MM-DD-YYYY** while stored data,
+foot — who is signed in, Settings, and Sign out. It stays a left rail at every width: it narrows
+below 1040px and drops to a 56px icon rail (labels on hover) below 760px, but it never becomes a
+strip across the top. Cards are rounded and lightly shadowed; every visible date renders **MM-DD-YYYY** while stored data,
 `<input type="date">` values, and JSON/CSV exports stay ISO, so nothing about the data model changes.
 
 ## The eleven screens
@@ -145,13 +146,19 @@ If the network or key fails, the app falls back to the offline draft and keeps w
 
 ## Sign-in and attribution
 
-The tool is behind a username and password, and the sign-in is what makes the audit trail
-automatic: **click Met / Not Met / N/A and the system stamps your name and the exact moment onto
+The tool is behind a sign-in — **full name and password, no username** — and that sign-in is what
+makes the audit trail automatic: **click Met / Not Met / N/A and the system stamps your name and the exact moment onto
 that answer** — nobody types a verifier name by hand any more, and when several people split the
 checks it is always clear who did which.
 
 - **First run** — with no accounts yet, the app opens on *Create the first administrator account*.
   That person then adds the rest of the team under **Users & Activity**.
+- **The full name is the account.** It is what you sign in with and what gets stamped on every
+  answer, so no one keeps a separate username in their head and the two can never drift apart.
+  Matching ignores capitals and stray spaces. Because a name has to identify one person, the system
+  refuses a second account under a name already in use — otherwise the audit trail could not say who
+  did what. Renaming an account changes how that person signs in; answers they already verified keep
+  the name they were stamped with.
 - **Roles** — *Administrator* (adds users, resets passwords, deactivates accounts, restores or
   clears data) and *QA staff* (everything else). New users get a temporary password and are made to
   choose their own at first sign-in.

@@ -43,7 +43,8 @@ a:hover{color:var(--teal-dark)}
 .side-nav .nav-ic{display:flex;align-items:center;flex-shrink:0;opacity:.85}
 .side-nav button.active .nav-ic{opacity:1;color:var(--teal)}
 .side-nav .nav-lbl{flex:1;min-width:0}
-.side-nav .badge.alert{border-radius:999px;margin-left:4px}
+.side-nav button{position:relative}
+.side-nav .nav-badge{border-radius:999px;font-size:10.5px;padding:1px 6px;flex-shrink:0}
 .side-foot{border-top:1px solid rgba(255,255,255,.12);padding-top:12px;margin-top:12px}
 .btn-ghost{display:flex;align-items:center;gap:10px;width:100%;background:transparent;color:#B9CCCA;border:none;border-radius:11px;padding:9px 11px;font-size:13.5px;font-weight:600;text-align:left}
 .btn-ghost:hover{color:#fff;background:rgba(255,255,255,.07)}
@@ -216,19 +217,39 @@ tr.flag-row:hover td{background:#F8ECE9}
 .dash .stat .small{font-size:9.5px;line-height:1.25}
 .dash .note-box{font-size:10.5px!important;padding:6px 12px!important;line-height:1.35}
 .dash .btn{padding:6px 14px;font-size:12.5px}
-@media (max-width:900px){
+/* Narrower, but still a left rail with readable labels. */
+@media (max-width:1040px){
   .dash .stat-row{flex-wrap:wrap}
-  .app-shell{display:block}
-  .sidebar{position:static;width:auto;height:auto;padding:14px 12px}
-  .side-brand{padding-bottom:12px;margin-bottom:10px}
-  .side-nav #navTabs{flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:4px}
-  .side-nav button{width:auto;white-space:nowrap;flex-shrink:0}
-  .side-label{display:none}
-  .side-foot{display:flex;align-items:center;gap:4px;border-top:none;padding-top:0;margin-top:6px}
-  .user-chip{padding:0 8px 0 2px;flex-shrink:0}
-  .btn-ghost{width:auto}
+  .sidebar{width:186px;padding:16px 9px 13px}
+  .brand-mark{width:32px;height:32px;border-radius:10px;font-size:13.5px}
+  .side-brand{gap:8px;padding:0 4px 13px;margin-bottom:12px}
+  .side-brand h1{font-size:13px}
+  .side-brand .sub{font-size:9.5px}
+  .side-label{padding:0 6px}
+  .side-nav button{padding:8px 9px;font-size:12.5px;gap:9px}
+  .btn-ghost{padding:8px 9px;font-size:12.5px;gap:9px}
+  .user-chip{padding:6px 8px 8px;gap:8px}
   main{padding:18px 14px 70px}
   #alertBanner,#storageNote{margin:12px 14px 0}
+}
+/* Too narrow to carry labels: an icon rail. Still vertical, still on the left. */
+@media (max-width:760px){
+  .sidebar{width:56px;padding:14px 6px 12px;align-items:center}
+  .side-brand{justify-content:center;padding:0 0 12px;margin-bottom:10px;width:100%}
+  .side-brand .who,.side-brand > div:last-child{display:none}
+  .side-label{display:none}
+  .side-nav{width:100%}
+  .side-nav button{justify-content:center;padding:10px 0;gap:0;border-radius:12px}
+  .side-nav .nav-lbl{display:none}
+  .side-nav .nav-badge{position:absolute;top:2px;right:2px;font-size:8.5px;padding:0 4px;line-height:1.5}
+  .side-foot{width:100%}
+  .btn-ghost{justify-content:center;padding:10px 0;gap:0}
+  .btn-ghost .btn-lbl{display:none}
+  .user-chip{justify-content:center;padding:6px 0 8px;gap:0}
+  .user-chip .who{display:none}
+  .user-chip .avatar{width:30px;height:30px}
+  main{padding:16px 12px 70px}
+  #alertBanner,#storageNote{margin:12px 12px 0}
   .ind-fields{grid-template-columns:1fr 1fr}
 }
 .print-only{display:none}
@@ -302,8 +323,8 @@ body.locked .app-shell{display:none!important}
   <nav class="side-nav"><div id="navTabs"></div></nav>
   <div class="side-foot">
     <div class="user-chip" id="userChip"></div>
-    <button class="btn-ghost" data-action="open-settings" type="button"><span class="nav-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"></path></svg></span>Settings</button>
-    <button class="btn-ghost" data-action="sign-out" type="button"><span class="nav-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.2 14H3.4c-.8 0-1.4-.6-1.4-1.4V3.4C2 2.6 2.6 2 3.4 2h2.8M10.4 11.2L13.6 8l-3.2-3.2M13.6 8H6.2"></path></svg></span>Sign out</button>
+    <button class="btn-ghost" data-action="open-settings" type="button"><span class="nav-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"></path></svg></span><span class="btn-lbl">Settings</span></button>
+    <button class="btn-ghost" data-action="sign-out" type="button"><span class="nav-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.2 14H3.4c-.8 0-1.4-.6-1.4-1.4V3.4C2 2.6 2.6 2 3.4 2h2.8M10.4 11.2L13.6 8l-3.2-3.2M13.6 8H6.2"></path></svg></span><span class="btn-lbl">Sign out</span></button>
   </div>
 </aside>
 <div class="app-main">
@@ -815,7 +836,10 @@ var Auth = (function () {
   var users = [];
   var me = null;
 
-  function norm(u) { return String(u == null ? "" : u).trim().toLowerCase(); }
+  /* The full name is the account: it is what people sign in with and what
+     gets stamped on every answer, so it has to be unique. Match forgivingly
+     — case and stray spaces should never lock someone out. */
+  function norm(u) { return String(u == null ? "" : u).trim().replace(/\s+/g, " ").toLowerCase(); }
   async function load() { users = (await Store.get(K.users)) || []; return users; }
   function save() { persist(K.users, users); }
   function all() { return users; }
@@ -823,7 +847,7 @@ var Auth = (function () {
   function activeUsers() { return users.filter(function (u) { return u.active !== false; }); }
   function adminCount() { return users.filter(function (u) { return u.active !== false && u.role === "admin"; }).length; }
   function byId(id) { return users.filter(function (u) { return u.id === id; })[0] || null; }
-  function byUsername(n) { var k = norm(n); return users.filter(function (u) { return norm(u.username) === k; })[0] || null; }
+  function byName(n) { var k = norm(n); return users.filter(function (u) { return norm(u.name) === k; })[0] || null; }
   function needsSetup() { return !activeUsers().length; }
   function current() { return me; }
   function isAdmin() { return !!(me && me.role === "admin" && me.active !== false); }
@@ -844,12 +868,12 @@ var Auth = (function () {
     writeSession(u);
     return me;
   }
-  async function signIn(username, password) {
+  async function signIn(name, password) {
     /* re-read accounts first: an admin may have just added or reset this
        one from another device while this sign-in screen sat open */
     try { await load(); } catch (e) {}
-    var u = byUsername(username);
-    if (!u || u.active === false) { return { ok: false, error: "No active account with that username." }; }
+    var u = byName(name);
+    if (!u || u.active === false) { return { ok: false, error: "No active account under that name." }; }
     var ok = await Hash.verify(password, u.cred);
     if (!ok) { return { ok: false, error: "Incorrect password." }; }
     u.lastSignIn = new Date().toISOString();
@@ -860,12 +884,14 @@ var Auth = (function () {
   }
   function signOut() { me = null; LocalSess.write(null); }
 
+  function nameTaken(name, exceptId) {
+    var existing = byName(name);
+    return !!(existing && existing.id !== exceptId);
+  }
   function validateNew(data) {
-    if (!String(data.name || "").trim()) { return "Enter the person's full name — it is what gets stamped on every answer."; }
-    var uname = norm(data.username);
-    if (uname.length < 3) { return "Username must be at least 3 characters."; }
-    if (!/^[a-z0-9._-]+$/.test(uname)) { return "Username can contain letters, numbers, dot, dash and underscore only."; }
-    if (byUsername(uname)) { return "That username is already taken."; }
+    var name = String(data.name || "").trim();
+    if (name.length < 2) { return "Enter the person's full name — it is how they sign in and what gets stamped on every answer."; }
+    if (nameTaken(name)) { return "An account already exists under that name. Names have to be unique, or the audit trail cannot say who did what."; }
     if (String(data.password || "").length < MIN_PW) { return "Password must be at least " + MIN_PW + " characters."; }
     if (data.password !== data.confirm) { return "The two passwords do not match."; }
     return "";
@@ -875,7 +901,7 @@ var Auth = (function () {
     if (err) { return { ok: false, error: err }; }
     var cred = await Hash.make(data.password);
     var u = { id: "u-" + Date.now().toString(36) + "-" + Hash.randomHex(3),
-              name: String(data.name).trim(), username: norm(data.username),
+              name: String(data.name).trim().replace(/\s+/g, " "),
               role: data.role === "admin" ? "admin" : "staff", active: true,
               cred: cred, pwVersion: 1, mustChange: !!data.mustChange,
               createdAt: new Date().toISOString(), lastSignIn: "" };
@@ -891,7 +917,13 @@ var Auth = (function () {
     if (u.role === "admin" && u.active !== false && !(stillAdmin && stillActive) && adminCount() <= 1) {
       return { ok: false, error: "This is the only active administrator — make someone else an administrator first." };
     }
-    if (patch.name !== undefined && String(patch.name).trim()) { u.name = String(patch.name).trim(); }
+    if (patch.name !== undefined && String(patch.name).trim()) {
+      var newName = String(patch.name).trim().replace(/\s+/g, " ");
+      if (nameTaken(newName, u.id)) {
+        return { ok: false, error: "Another account already uses that name." };
+      }
+      u.name = newName;
+    }
     if (patch.role !== undefined) { u.role = patch.role === "admin" ? "admin" : "staff"; }
     if (patch.active !== undefined) { u.active = !!patch.active; }
     save();
@@ -916,7 +948,7 @@ var Auth = (function () {
     if (!ok) { return { ok: false, error: "Current password is incorrect." }; }
     return await setPassword(me.id, newPw, confirmPw, false);
   }
-  return { load: load, save: save, all: all, replaceAll: replaceAll, byId: byId, byUsername: byUsername,
+  return { load: load, save: save, all: all, replaceAll: replaceAll, byId: byId, byName: byName,
            needsSetup: needsSetup, current: current, isAdmin: isAdmin, restore: restore, touch: touch,
            signIn: signIn, signOut: signOut, createUser: createUser, updateUser: updateUser,
            setPassword: setPassword, changeOwnPassword: changeOwnPassword, adminCount: adminCount,
@@ -2169,7 +2201,7 @@ function settingsModal() {
   var admin = Auth.isAdmin();
   openModal('<h3>Settings</h3>' +
     '<div class="note-box"><strong>Signed in as:</strong> ' + esc(me ? me.name : "—") +
-    (me ? " (" + esc(me.username) + ", " + (admin ? "administrator" : "QA staff") + ")" : "") +
+    (me ? " (" + (admin ? "administrator" : "QA staff") + ")" : "") +
     ' &nbsp;<button class="intent-toggle" type="button" data-action="change-my-password">Change my password</button>' +
     ' &nbsp;<button class="intent-toggle" type="button" data-action="sign-out">Sign out</button>' +
     '<br><span class="small">Everything you rate is stamped with this name. Manage the team under <strong>Users &amp; Activity</strong>.</span></div>' +
@@ -3538,10 +3570,9 @@ function renderAuthGate() {
   var html;
   if (Auth.needsSetup()) {
     html = mark + "<h2>" + title + "</h2>" +
-      '<div class="auth-sub">No accounts exist yet. Create the first administrator account — this is the name that will be stamped on everything you verify.</div>' + errHtml +
+      '<div class="auth-sub">No accounts exist yet. Create the first administrator account. Your full name is how you sign in, and it is what gets stamped on everything you verify.</div>' + errHtml +
       '<div class="form-grid">' +
-      authField("au-name", "Full name (shown as the verifier)", "text", ' autocomplete="name" placeholder="e.g. Maria Alvarez"') +
-      authField("au-user", "Username", "text", ' autocomplete="username" placeholder="e.g. malvarez"') +
+      authField("au-name", "Full name", "text", ' autocomplete="username" placeholder="e.g. Maria Alvarez"') +
       authField("au-pw", "Password (at least " + Auth.minPassword() + " characters)", "password", ' autocomplete="new-password"') +
       authField("au-pw2", "Confirm password", "password", ' autocomplete="new-password"') +
       "</div>" +
@@ -3551,11 +3582,11 @@ function renderAuthGate() {
     html = mark + "<h2>" + title + "</h2>" +
       '<div class="auth-sub">Sign in. Every Met / Not Met / N/A you record is stamped with your name and the moment you clicked it.</div>' + errHtml +
       '<div class="form-grid">' +
-      authField("au-user", "Username", "text", ' autocomplete="username"') +
+      authField("au-name", "Full name", "text", ' autocomplete="username" placeholder="e.g. Maria Alvarez"') +
       authField("au-pw", "Password", "password", ' autocomplete="current-password"') +
       "</div>" +
       '<div class="auth-actions"><button class="btn" type="button" id="auth-primary" data-action="auth-login">Sign in</button></div>' +
-      '<div class="auth-note">Forgot your password? An administrator can reset it under Users &amp; Activity. Sessions stay signed in on this browser for ' + Auth.sessionHours() + " hours.</div>";
+      '<div class="auth-note">Sign in with the full name your account was created under — capitals and extra spaces do not matter. Forgot your password? An administrator can reset it under Users &amp; Activity. Sessions stay signed in on this browser for ' + Auth.sessionHours() + " hours.</div>";
   } else {
     html = mark + "<h2>Choose a password</h2>" +
       '<div class="auth-sub">Signed in as <strong>' + esc(Auth.current().name) + "</strong>. Your password was set by an administrator — replace it with one only you know before continuing.</div>" + errHtml +
@@ -3579,17 +3610,17 @@ function authVal(id) {
 function authFail(msg) { authErr = msg; renderAuthGate(); }
 
 async function doAuthSetup() {
-  var res = await Auth.createUser({ name: authVal("au-name"), username: authVal("au-user"),
+  var res = await Auth.createUser({ name: authVal("au-name"),
     password: authVal("au-pw"), confirm: authVal("au-pw2"), role: "admin" });
   if (!res.ok) { authFail(res.error); return; }
-  var signed = await Auth.signIn(res.user.username, authVal("au-pw"));
+  var signed = await Auth.signIn(res.user.name, authVal("au-pw"));
   if (!signed.ok) { authFail(signed.error); return; }
   authErr = "";
   await enterApp();
   logAct("account", "Created the first administrator account (" + res.user.name + ")");
 }
 async function doAuthLogin() {
-  var res = await Auth.signIn(authVal("au-user"), authVal("au-pw"));
+  var res = await Auth.signIn(authVal("au-name"), authVal("au-pw"));
   if (!res.ok) { authFail(res.error); return; }
   authErr = "";
   if (res.user.mustChange) { renderAuthGate(); return; }
@@ -3719,13 +3750,12 @@ function renderUsers() {
   } else {
     html += '<div class="note-box">Only an administrator can add accounts or reset passwords. Ask one of the administrators listed below.</div>';
   }
-  html += '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Last sign-in</th>' +
+  html += '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Last sign-in</th>' +
     (admin ? "<th></th>" : "") + "</tr></thead><tbody>";
   Auth.all().slice().sort(function (a, b) { return a.name < b.name ? -1 : 1; }).forEach(function (u) {
     var isMe = me && u.id === me.id;
     html += "<tr" + (u.active === false ? ' class="flag-row"' : "") + "><td><strong>" + esc(u.name) + "</strong>" +
       (isMe ? " " + badge("neutral", "you") : "") + "</td>" +
-      "<td class='small'>" + esc(u.username) + "</td>" +
       "<td>" + badge(u.role === "admin" ? "neutral" : "outline", u.role === "admin" ? "Administrator" : "QA staff") + "</td>" +
       "<td>" + (u.active === false ? badge("gap", "Deactivated") : badge("met", "Active")) +
       (u.mustChange ? " " + badge("warn", "must set password") : "") + "</td>" +
@@ -3784,10 +3814,8 @@ function userModal(u) {
   openModal("<h3>" + (isNew ? "Add user" : "Manage " + esc(u.name)) + "</h3>" +
     '<div class="auth-err" id="um-err"></div>' +
     '<div class="form-grid">' +
-    '<div class="full"><label>Full name (stamped as the verifier)</label><input type="text" id="um-name" value="' + esc(isNew ? "" : u.name) + '"></div>' +
-    (isNew ? '<div><label>Username</label><input type="text" id="um-user" autocomplete="off"></div>' :
-      '<div><label>Username</label><input type="text" value="' + esc(u.username) + '" disabled></div>') +
-    '<div><label>Role</label><select id="um-role">' +
+    '<div class="full"><label>Full name — how they sign in, and what is stamped as the verifier</label><input type="text" id="um-name" value="' + esc(isNew ? "" : u.name) + '" autocomplete="off"></div>' +
+    '<div class="full"><label>Role</label><select id="um-role">' +
     '<option value="staff"' + (!isNew && u.role !== "admin" ? " selected" : "") + '>QA staff</option>' +
     '<option value="admin"' + (!isNew && u.role === "admin" ? " selected" : "") + ">Administrator</option></select></div>" +
     (isNew ? '<div class="full"><label>Temporary password (at least ' + min + ' characters)</label><input type="password" id="um-pw" autocomplete="new-password"></div>' +
@@ -3797,6 +3825,7 @@ function userModal(u) {
              '<div class="full"><label>Reset password (leave blank to keep the current one)</label><input type="password" id="um-pw" autocomplete="new-password"></div>' +
              '<div class="full"><label>Confirm new password</label><input type="password" id="um-pw2" autocomplete="new-password"></div>') +
     "</div>" +
+    (isNew ? "" : '<div class="small muted" style="margin-top:8px">Renaming changes how this person signs in. Answers they already verified keep the name they were stamped with, which is what the audit trail is for.</div>') +
     '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
     '<button class="btn" type="button" data-action="save-user" data-id="' + (isNew ? "" : u.id) + '" data-new="' + isNew + '">Save</button></div>');
 }
@@ -3812,10 +3841,10 @@ async function saveUserFromModal(id, isNew) {
   var pw = document.getElementById("um-pw").value;
   var pw2 = document.getElementById("um-pw2").value;
   if (isNew) {
-    var res = await Auth.createUser({ name: name, username: document.getElementById("um-user").value,
-      role: role, password: pw, confirm: pw2, mustChange: document.getElementById("um-must").checked });
+    var res = await Auth.createUser({ name: name, role: role, password: pw, confirm: pw2,
+      mustChange: document.getElementById("um-must").checked });
     if (!res.ok) { umErr(res.error); return; }
-    logAct("account", "Added user " + res.user.name + " (" + res.user.username + ", " + (role === "admin" ? "administrator" : "QA staff") + ")");
+    logAct("account", "Added user " + res.user.name + " (" + (role === "admin" ? "administrator" : "QA staff") + ")");
     toast("User added");
   } else {
     var target = Auth.byId(id);
@@ -3982,10 +4011,11 @@ function renderNav() {
   var att = polAttention();
   var qAtt = qtrAttention();
   document.getElementById("navTabs").innerHTML = TABS.map(function (t) {
-    var label = t[1];
     var n = t[0] === "policy" ? att : t[0] === "qidp" ? qAtt : 0;
-    if (n) { label += ' <span class="badge alert" style="font-size:10.5px;padding:1px 6px">' + n + "</span>"; }
-    return '<button type="button" data-action="nav" data-tab="' + t[0] + '" class="' + (S.ui.tab === t[0] ? "active" : "") + '"><span class="nav-ic">' + (NAV_ICONS[t[0]] || "") + '</span><span class="nav-lbl">' + label + "</span></button>";
+    return '<button type="button" data-action="nav" data-tab="' + t[0] + '" title="' + esc(t[1]) + '" class="' +
+      (S.ui.tab === t[0] ? "active" : "") + '"><span class="nav-ic">' + (NAV_ICONS[t[0]] || "") + "</span>" +
+      '<span class="nav-lbl">' + esc(t[1]) + "</span>" +
+      (n ? '<span class="badge alert nav-badge">' + n + "</span>" : "") + "</button>";
   }).join("");
 }
 function render() {

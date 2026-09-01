@@ -58,8 +58,11 @@ Every feature works fully offline with deterministic logic. AI mode is optional 
   badge, since that is the point staff can act, and the second gives each person a computed **book-by**
   date (ISP date − 30). `quarterlyWindowDays` (15) drives the quarterly checklist and its badges. Each list prints alone via a `body.print-only-isp` / `body.print-only-quarterly`
   class that the print stylesheet uses to hide the other `.qidp-block`s.
-- `pcr:users` — accounts: `id, name, username, role (admin|staff), active, cred {salt, hash, algo},
+- `pcr:users` — accounts: `id, name, role (admin|staff), active, cred {salt, hash, algo},
   pwVersion, mustChange, createdAt, lastSignIn`. Shared, so credentials work on every device.
+  There is no username: `name` is the credential and the stamp both, looked up case- and
+  whitespace-insensitively, and enforced unique on create and on rename — a duplicate name would make
+  the audit trail ambiguous about who did what.
   `cred.algo` is `pbkdf2` (PBKDF2-HMAC-SHA256, 150k iterations, Web Crypto) or `sha256x` (iterated
   pure-JS SHA-256) — recorded per account so verification always uses the algorithm the hash was made
   with. `pwVersion` increments on every password change and is carried in the session, so a reset
