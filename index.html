@@ -9,132 +9,148 @@
   --teal:#10474A; --teal-dark:#0B3335; --teal-tint:#E8EFEE;
   --ink:#1E2A2B; --muted:#5C6B6A; --hairline:#D5DDDB;
   --met:#2F6B4E; --gap:#A63B2C; --na:#7C8A88; --alert:#7E1C1C; --warn:#9A6A00;
-  --paper:#FFFFFF; --paper-alt:#F6F8F7;
+  --paper:#FFFFFF; --paper-alt:#F4F7F6;
+  --r-card:16px; --r-ctl:10px;
+  --shadow-card:0 1px 2px rgba(11,51,53,.04), 0 14px 34px -18px rgba(11,51,53,.18);
+  --shadow-pop:0 24px 60px -12px rgba(11,51,53,.35);
   --serif:Georgia,'Times New Roman',serif;
   --sans:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
 }
-*{box-sizing:border-box;margin:0;padding:0;border-radius:0}
-html{background:#F6F8F7}
-body{background:#F6F8F7;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
-h1,h2,h3,h4{font-family:var(--serif);font-weight:700;color:var(--teal-dark);line-height:1.2}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#F1F5F4}
+body{background:#F1F5F4;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:700;color:var(--teal-dark);line-height:1.25}
 button{font-family:var(--sans);cursor:pointer}
-input,select,textarea{font-family:var(--sans);font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--hairline);padding:7px 9px;width:100%}
+input,select,textarea{font-family:var(--sans);font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--hairline);border-radius:var(--r-ctl);padding:8px 11px;width:100%}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--teal);outline-offset:-1px}
-label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px}
+label{font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px}
 a{color:var(--teal)}
+a:hover{color:var(--teal-dark)}
 
-/* header */
-.app-header{background:var(--teal);color:#fff;padding:14px 18px;border-bottom:4px solid var(--teal-dark)}
-.app-header h1{color:#fff;font-size:21px;margin:0}
-.app-header .sub{color:#CBDBD9;font-size:12.5px;margin-top:2px}
-.header-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;max-width:1180px;margin:0 auto}
-.header-actions{display:flex;gap:8px;flex-shrink:0}
-.btn-ghost{background:transparent;color:#fff;border:1px solid #3E6D6F;padding:6px 12px;font-size:13px}
-.btn-ghost:hover{background:var(--teal-dark)}
+/* ===== app shell: fixed left sidebar + fluid main ===== */
+.app-shell{display:flex;min-height:100vh}
+.sidebar{width:236px;flex-shrink:0;background:linear-gradient(180deg,var(--teal-dark) 0%,var(--teal) 130%);color:#fff;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;padding:20px 14px 16px}
+.side-brand{display:flex;gap:10px;align-items:center;padding:2px 8px 18px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:16px}
+.brand-mark{width:38px;height:38px;flex-shrink:0;border-radius:12px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;font-size:16px;color:#fff}
+.side-brand h1{color:#fff;font-size:15px;line-height:1.25;margin:0}
+.side-brand .sub{color:#9DBBB9;font-size:11px;margin-top:2px;line-height:1.35}
+.side-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:#7FA3A1;padding:0 10px;margin-bottom:6px}
+.side-nav{flex:1;overflow-y:auto;min-height:0}
+.side-nav #navTabs{display:flex;flex-direction:column;gap:2px}
+.side-nav button{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:transparent;color:#B9CCCA;border:none;border-radius:11px;padding:9px 11px;font-size:13.5px;font-weight:600;letter-spacing:.01em}
+.side-nav button:hover{color:#fff;background:rgba(255,255,255,.07)}
+.side-nav button.active{color:var(--teal-dark);background:#fff;box-shadow:0 6px 18px -8px rgba(0,0,0,.4)}
+.side-nav .nav-ic{display:flex;align-items:center;flex-shrink:0;opacity:.85}
+.side-nav button.active .nav-ic{opacity:1;color:var(--teal)}
+.side-nav .nav-lbl{flex:1;min-width:0}
+.side-nav .badge.alert{border-radius:999px;margin-left:4px}
+.side-foot{border-top:1px solid rgba(255,255,255,.12);padding-top:12px;margin-top:12px}
+.btn-ghost{display:flex;align-items:center;gap:10px;width:100%;background:transparent;color:#B9CCCA;border:none;border-radius:11px;padding:9px 11px;font-size:13.5px;font-weight:600;text-align:left}
+.btn-ghost:hover{color:#fff;background:rgba(255,255,255,.07)}
+.app-main{flex:1;min-width:0;display:flex;flex-direction:column}
 
-/* alert banner */
-#alertBanner{display:none;background:var(--alert);color:#fff;padding:10px 18px;font-size:14px;font-weight:600}
+/* alert + storage banners */
+#alertBanner{display:none;background:var(--alert);color:#fff;padding:8px 15px;font-size:13px;font-weight:600;border-radius:12px;margin:12px 20px 0}
 #alertBanner.on{display:block}
-#alertBanner .inner{max-width:1180px;margin:0 auto}
 #alertBanner a{color:#fff;text-decoration:underline;cursor:pointer}
-#storageNote{display:none;background:var(--warn);color:#fff;padding:7px 18px;font-size:13px}
+#storageNote{display:none;background:var(--warn);color:#fff;padding:5px 14px;font-size:11px;border-radius:10px;margin:10px 20px 0}
 #storageNote.on{display:block}
-#storageNote .inner{max-width:1180px;margin:0 auto}
-
-/* nav */
-.nav-tabs{background:var(--teal-dark);overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
-.nav-tabs .inner{max-width:1180px;margin:0 auto;display:flex}
-.nav-tabs button{background:transparent;color:#B9CCCA;border:none;border-bottom:3px solid transparent;padding:11px 15px;font-size:14px;font-weight:600;flex-shrink:0}
-.nav-tabs button.active{color:#fff;border-bottom-color:#fff}
-.nav-tabs button:hover{color:#fff}
 
 /* layout */
-main{max-width:1180px;margin:0 auto;padding:18px 14px 60px}
-.view-title{font-size:24px;margin-bottom:2px}
-.view-sub{color:var(--muted);font-size:13.5px;margin-bottom:16px;max-width:70em}
-.grid{display:grid;gap:14px}
-.grid-cards{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
-.grid-2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
-.card{background:var(--paper);border:1px solid var(--hairline);padding:14px}
-.card h3{font-size:17px;margin-bottom:8px}
-.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap}
-.section-title{font-size:19px;margin:22px 0 8px}
+main{width:100%;max-width:1400px;padding:18px 20px 36px}
+.view-title{font-size:28px;margin-bottom:4px;letter-spacing:-.01em}
+.view-sub{color:var(--muted);font-size:14px;margin-bottom:24px;max-width:70em}
+.grid{display:grid;gap:18px}
+.grid-cards{grid-template-columns:repeat(auto-fill,minmax(310px,1fr))}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+.card{background:var(--paper);border:1px solid rgba(213,221,219,.7);border-radius:var(--r-card);padding:20px;box-shadow:var(--shadow-card)}
+.card h3{font-size:17px;margin-bottom:10px}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.section-title{font-size:20px;margin:30px 0 12px}
 
 /* buttons */
-.btn{background:var(--teal);color:#fff;border:1px solid var(--teal);padding:8px 14px;font-size:13.5px;font-weight:600}
+.btn{background:var(--teal);color:#fff;border:1px solid var(--teal);border-radius:999px;padding:8px 17px;font-size:13.5px;font-weight:600}
 .btn:hover{background:var(--teal-dark)}
 .btn.secondary{background:#fff;color:var(--teal);border:1px solid var(--teal)}
 .btn.secondary:hover{background:var(--teal-tint)}
 .btn.danger{background:#fff;color:var(--gap);border:1px solid var(--gap)}
-.btn.small{padding:4px 9px;font-size:12.5px}
+.btn.small{padding:4px 12px;font-size:12.5px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 
 /* rating buttons */
 .rate-group{display:flex;gap:0}
-.rate-group button{border:1px solid var(--hairline);background:#fff;color:var(--muted);padding:6px 11px;font-size:12.5px;font-weight:700;border-left-width:0}
-.rate-group button:first-child{border-left-width:1px}
+.rate-group button{border:1px solid var(--hairline);background:#fff;color:var(--muted);padding:6px 13px;font-size:12.5px;font-weight:700;border-left-width:0}
+.rate-group button:first-child{border-left-width:1px;border-radius:999px 0 0 999px;padding-left:15px}
+.rate-group button:nth-child(3){border-radius:0 999px 999px 0;padding-right:15px}
 .rate-group button.on-met{background:var(--met);border-color:var(--met);color:#fff}
 .rate-group button.on-not_met{background:var(--gap);border-color:var(--gap);color:#fff}
 .rate-group button.on-na{background:var(--na);border-color:var(--na);color:#fff}
+.rate-group button.unscored{margin-left:10px;border-left-width:1px;border-style:dashed;border-radius:999px}
+.rate-group button.on-none{background:var(--teal-tint);border-color:var(--muted);color:var(--teal-dark);border-style:dashed}
 .rate-group button:disabled{opacity:.4;cursor:not-allowed}
+.cov-note{font-size:12px;color:var(--muted);margin-top:8px;border-left:3px solid var(--hairline);padding-left:9px}
+.cov-note strong{color:var(--teal-dark)}
+.scorebar .fill.partial{background:repeating-linear-gradient(135deg,var(--teal),var(--teal) 6px,#3C6E70 6px,#3C6E70 12px)}
 
-/* badges + status */
-.badge{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;letter-spacing:.03em;text-transform:uppercase}
-.badge.met{background:var(--met);color:#fff}
-.badge.gap{background:var(--gap);color:#fff}
-.badge.na{background:var(--na);color:#fff}
+/* badges — pill, tinted */
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;border:1px solid transparent}
+.badge.met{background:color-mix(in srgb,var(--met) 11%,#fff);color:var(--met);border-color:color-mix(in srgb,var(--met) 35%,#fff)}
+.badge.gap{background:color-mix(in srgb,var(--gap) 10%,#fff);color:var(--gap);border-color:color-mix(in srgb,var(--gap) 35%,#fff)}
+.badge.na{background:color-mix(in srgb,var(--na) 12%,#fff);color:#5F6D6B;border-color:color-mix(in srgb,var(--na) 40%,#fff)}
 .badge.alert{background:var(--alert);color:#fff}
-.badge.warn{background:var(--warn);color:#fff}
+.badge.warn{background:color-mix(in srgb,var(--warn) 12%,#fff);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,#fff)}
 .badge.neutral{background:var(--teal-tint);color:var(--teal-dark)}
 .badge.outline{background:#fff;color:var(--muted);border:1px solid var(--hairline)}
 
 /* score bars */
-.scorebar{position:relative;height:18px;background:var(--teal-tint);border:1px solid var(--hairline);margin:5px 0 3px}
-.scorebar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--teal)}
+.scorebar{position:relative;height:12px;background:var(--teal-tint);border-radius:999px;margin:8px 0 5px;overflow:hidden}
+.scorebar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--teal);border-radius:999px}
 .scorebar .fill.bad{background:var(--gap)}
 .scorebar .fill.warn{background:var(--warn)}
-.scorebar .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--muted);opacity:.75}
+.scorebar .tick{position:absolute;top:0;bottom:0;width:2px;background:var(--muted);opacity:.55}
 .scorebar .tick.t90{background:var(--met)}
 .bar-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
-.pct{font-family:var(--serif);font-size:26px;color:var(--teal-dark);font-weight:700}
-.pct.small{font-size:20px}
+.pct{font-family:var(--serif);font-size:30px;color:var(--teal-dark);font-weight:700;letter-spacing:-.01em}
+.pct.small{font-size:21px}
 
 /* tables */
-.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--hairline);background:#fff}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid rgba(213,221,219,.7);border-radius:var(--r-card);background:#fff;box-shadow:var(--shadow-card)}
 table{border-collapse:collapse;width:100%;min-width:640px;font-size:13.5px}
-th{background:var(--teal-tint);color:var(--teal-dark);text-align:left;padding:8px 10px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--hairline);white-space:nowrap}
-td{padding:8px 10px;border-bottom:1px solid var(--hairline);vertical-align:top}
+th{background:var(--paper-alt);color:var(--muted);text-align:left;padding:10px 14px;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--hairline);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid color-mix(in srgb,var(--hairline) 55%,#fff);vertical-align:top}
 tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:color-mix(in srgb,var(--teal-tint) 40%,#fff)}
 tr.flag-row td{background:#FBF3F1}
+tr.flag-row:hover td{background:#F8ECE9}
 
 /* indicator rows (client review) */
-.domain-block{margin-bottom:14px}
-.domain-head{background:var(--teal-dark);color:#fff;padding:8px 12px;font-family:var(--serif);font-size:15.5px;font-weight:700}
-.ind{background:#fff;border:1px solid var(--hairline);border-top:none;padding:12px}
+.domain-block{margin-bottom:18px;border-radius:var(--r-card);overflow:hidden;box-shadow:var(--shadow-card);border:1px solid rgba(213,221,219,.7)}
+.domain-head{background:var(--teal-dark);color:#fff;padding:11px 16px;font-family:var(--serif);font-size:15.5px;font-weight:700}
+.ind{background:#fff;border-top:1px solid color-mix(in srgb,var(--hairline) 55%,#fff);padding:16px}
 .ind.gated-off{background:var(--paper-alt)}
 .ind-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
 .ind-id{font-weight:700;color:var(--teal);font-size:12.5px;white-space:nowrap}
-.ind-q{font-size:14.5px;margin:3px 0 8px;max-width:62em}
+.ind-q{font-size:14.5px;margin:4px 0 10px;max-width:62em}
 .ind-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
 .intent-toggle{background:none;border:none;color:var(--teal);font-size:12.5px;font-weight:600;padding:0;text-decoration:underline}
-.intent-body{display:none;background:var(--teal-tint);border-left:3px solid var(--teal);padding:9px 11px;font-size:13px;margin:7px 0;max-width:70em}
+.intent-body{display:none;background:var(--teal-tint);border-radius:10px;padding:10px 13px;font-size:13px;margin:8px 0;max-width:70em}
 .intent-body.open{display:block}
-.ind-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:9px}
-.gate-note{font-size:12.5px;color:var(--muted);font-style:italic;margin-top:5px}
+.ind-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:11px}
+.gate-note{font-size:12.5px;color:var(--muted);font-style:italic;margin-top:6px}
 
-/* sticky summary */
-.sticky-score{position:sticky;top:0;z-index:40;background:var(--teal-dark);color:#fff;padding:9px 14px;display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-.sticky-score .num{font-family:var(--serif);font-size:20px;font-weight:700}
-.sticky-score .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#B9CCCA}
+/* sticky summary — dark hero band */
+.sticky-score{position:sticky;top:10px;z-index:40;background:linear-gradient(120deg,var(--teal-dark),var(--teal));color:#fff;padding:14px 20px;display:flex;gap:22px;flex-wrap:wrap;align-items:center;margin-bottom:18px;border-radius:var(--r-card);box-shadow:0 16px 36px -14px rgba(11,51,53,.45)}
+.sticky-score .num{font-family:var(--serif);font-size:22px;font-weight:700}
+.sticky-score .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:#9DBBB9}
 .sticky-score .cell{min-width:70px}
 
 /* modal */
-.modal-back{display:none;position:fixed;inset:0;background:rgba(11,51,53,.55);z-index:100;padding:20px;overflow-y:auto}
+.modal-back{display:none;position:fixed;inset:0;background:rgba(11,51,53,.5);backdrop-filter:blur(2px);z-index:100;padding:20px;overflow-y:auto}
 .modal-back.open{display:block}
-.modal{background:#fff;border:1px solid var(--hairline);max-width:680px;margin:30px auto;padding:18px}
-.modal h3{font-size:19px;margin-bottom:12px}
-.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.modal{background:#fff;border-radius:20px;max-width:680px;margin:36px auto;padding:24px;box-shadow:var(--shadow-pop)}
+.modal h3{font-size:20px;margin-bottom:14px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .form-grid .full{grid-column:1 / -1}
 .check-line{display:flex;align-items:center;gap:7px;font-size:14px;padding:4px 0}
 .check-line input{width:auto}
@@ -144,65 +160,112 @@ tr.flag-row td{background:#FBF3F1}
 .domain-head .dh-left{display:flex;align-items:center;gap:8px}
 .domain-head .caret{font-size:11px;width:12px;display:inline-block;flex-shrink:0}
 .domain-head .dh-right{display:flex;gap:8px;align-items:center;font-family:var(--sans);font-size:12px;font-weight:400;flex-wrap:wrap}
-.dh-prog{width:84px;height:8px;background:rgba(255,255,255,.28);position:relative;flex-shrink:0}
-.dh-prog .fill{position:absolute;left:0;top:0;bottom:0;background:#fff}
-.resident-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-.resident-chips button{border:1px solid var(--hairline);background:#fff;color:var(--ink);padding:6px 11px;font-size:13px;text-align:left}
+.dh-prog{width:84px;height:7px;background:rgba(255,255,255,.28);border-radius:999px;position:relative;flex-shrink:0;overflow:hidden}
+.dh-prog .fill{position:absolute;left:0;top:0;bottom:0;background:#fff;border-radius:999px}
+.resident-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.resident-chips button{border:1px solid var(--hairline);background:#fff;color:var(--ink);border-radius:14px;padding:8px 14px;font-size:13px;text-align:left;box-shadow:0 1px 2px rgba(11,51,53,.04)}
 .resident-chips button .sub{display:block;font-size:11px;color:var(--muted)}
 .resident-chips button.active{background:var(--teal);border-color:var(--teal);color:#fff}
 .resident-chips button.active .sub{color:#CBDBD9}
-.house-btn{background:none;border:none;color:var(--teal);font-size:12px;font-weight:600;text-decoration:underline;padding:0;margin-top:7px;display:inline-block}
+.house-btn{background:none;border:none;color:var(--teal);font-size:12px;font-weight:600;text-decoration:underline;padding:0;margin-top:8px;display:inline-block}
 .sticky-actions{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.sticky-actions .btn.secondary{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.35)}
+.sticky-actions .btn.secondary:hover{background:rgba(255,255,255,.22)}
 
 /* misc */
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px}
 .toolbar .field{min-width:150px;flex:1;max-width:260px}
 .muted{color:var(--muted)}
 .small{font-size:12.5px}
-.note-box{background:var(--teal-tint);border-left:3px solid var(--teal);padding:10px 13px;font-size:13.5px;margin-bottom:14px;max-width:72em}
-.rule-box{background:#fff;border:1px solid var(--alert);border-left:5px solid var(--alert);padding:11px 14px;margin-bottom:14px}
+.note-box{background:var(--teal-tint);border-radius:14px;padding:13px 17px;font-size:13.5px;margin-bottom:18px;max-width:72em}
+.rule-box{background:color-mix(in srgb,var(--alert) 5%,#fff);border:1px solid color-mix(in srgb,var(--alert) 30%,#fff);border-radius:14px;padding:14px 17px;margin-bottom:18px}
 .rule-box h4{color:var(--alert);font-size:15px;margin-bottom:4px}
-.ai-out{background:var(--paper-alt);border:1px solid var(--hairline);padding:12px;font-size:13.5px;white-space:pre-wrap;margin-top:10px;max-height:420px;overflow-y:auto}
-#saveStatus{position:fixed;bottom:14px;right:14px;background:var(--teal-dark);color:#fff;padding:6px 12px;font-size:12.5px;display:none;z-index:200}
+.ai-out{background:var(--paper-alt);border:1px solid var(--hairline);border-radius:12px;padding:14px;font-size:13.5px;white-space:pre-wrap;margin-top:10px;max-height:420px;overflow-y:auto}
+#saveStatus{position:fixed;bottom:16px;right:16px;background:var(--teal-dark);color:#fff;padding:7px 16px;font-size:12.5px;border-radius:999px;box-shadow:0 8px 20px -6px rgba(11,51,53,.5);display:none;z-index:200}
 #saveStatus.on{display:block}
-.empty{padding:26px;text-align:center;color:var(--muted);background:#fff;border:1px solid var(--hairline)}
+.empty{padding:34px;text-align:center;color:var(--muted);background:#fff;border:1px dashed var(--hairline);border-radius:var(--r-card)}
 .stat-row{display:flex;gap:14px;flex-wrap:wrap}
-.stat{background:#fff;border:1px solid var(--hairline);padding:10px 14px;min-width:150px;flex:1}
-.stat .lbl{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.stat{background:#fff;border:1px solid rgba(213,221,219,.7);border-radius:14px;padding:13px 17px;min-width:150px;flex:1;box-shadow:var(--shadow-card)}
+.stat .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .tier-line{font-size:13px;margin-top:6px}
-@media (max-width:640px){
-  .app-header h1{font-size:18px}
-  main{padding:12px 8px 60px}
+
+/* dashboard: compact one-screen density */
+.dash h2.view-title{display:inline;font-size:19px;margin:0 10px 0 0;vertical-align:baseline}
+.dash .view-sub{display:inline;font-size:11.5px;margin:0}
+.dash .rule-box{display:flex;gap:12px;align-items:baseline;padding:6px 13px;margin:10px 0 9px;border-radius:10px}
+.dash .rule-box h4{font-size:12px;white-space:nowrap;margin:0}
+.dash .rule-box .small{font-size:10px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dash .grid-cards{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.dash .card{padding:8px 10px;border-radius:11px;overflow:hidden}
+.dash .card h3{font-size:12px;margin-bottom:0;line-height:1.2}
+.dash .card-head{margin-bottom:4px;gap:4px}
+.dash .badge{font-size:7.5px;padding:1px 5px;letter-spacing:.02em}
+.dash .mrow{display:flex;align-items:center;gap:6px;margin:2px 0}
+.dash .mrow .ml{font-size:9px;color:var(--muted);width:74px;flex-shrink:0;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash .mrow .scorebar{flex:1;height:5px;margin:0}
+.dash .mrow .pct.small{font-size:10.5px;width:34px;text-align:right;flex-shrink:0}
+.dash .cov-note{font-size:9px;margin-top:3px;line-height:1.25;padding-left:6px;border-left-width:2px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.dash .tier-line{font-size:9px;margin-top:2px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash .ind-meta{gap:2px;margin-top:4px}
+.dash .card .btn.small{padding:0 7px;font-size:9.5px}
+.dash .section-title{font-size:12.5px;margin:9px 0 5px}
+.dash .stat-row{gap:8px;flex-wrap:wrap}
+.dash .stat{padding:5px 10px;min-width:104px;border-radius:10px}
+.dash .stat .lbl{font-size:9px;letter-spacing:.04em;line-height:1.3}
+.dash .stat .pct{font-size:15px}
+.dash .stat .small{font-size:9.5px;line-height:1.25}
+.dash .note-box{font-size:10.5px!important;padding:6px 12px!important;line-height:1.35}
+.dash .btn{padding:6px 14px;font-size:12.5px}
+@media (max-width:900px){
+  .dash .stat-row{flex-wrap:wrap}
+  .app-shell{display:block}
+  .sidebar{position:static;width:auto;height:auto;padding:14px 12px}
+  .side-brand{padding-bottom:12px;margin-bottom:10px}
+  .side-nav #navTabs{flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:4px}
+  .side-nav button{width:auto;white-space:nowrap;flex-shrink:0}
+  .side-label{display:none}
+  .side-foot{display:flex;align-items:center;gap:4px;border-top:none;padding-top:0;margin-top:6px}
+  .user-chip{padding:0 8px 0 2px;flex-shrink:0}
+  .btn-ghost{width:auto}
+  main{padding:18px 14px 70px}
+  #alertBanner,#storageNote{margin:12px 14px 0}
   .ind-fields{grid-template-columns:1fr 1fr}
 }
 .print-only{display:none}
 .pack-cover h2{font-size:22px}
 .pack-person{margin-top:14px}
 /* sign-in gate + identity */
-#authGate{display:none;position:fixed;inset:0;background:var(--teal-dark);z-index:300;overflow-y:auto;padding:24px 14px}
+#authGate{display:none;position:fixed;inset:0;z-index:300;overflow-y:auto;padding:24px 14px;
+  background:linear-gradient(160deg,var(--teal-dark) 0%,var(--teal) 120%)}
 #authGate.on{display:block}
-.auth-card{background:#fff;border:1px solid var(--hairline);max-width:430px;margin:5vh auto;padding:22px}
-.auth-card h2{font-size:22px;margin-bottom:3px}
+.auth-card{background:#fff;border:1px solid var(--hairline);border-radius:var(--r-card);box-shadow:var(--shadow-pop);max-width:430px;margin:5vh auto;padding:24px}
+.auth-brand{display:flex;gap:11px;align-items:center;margin-bottom:14px}
+.auth-brand .brand-mark{background:var(--teal-tint);border:1px solid var(--hairline);color:var(--teal-dark)}
+.auth-card h2{font-size:21px;margin-bottom:3px}
 .auth-card .auth-sub{color:var(--muted);font-size:13.5px;margin-bottom:16px}
 .auth-card .form-grid{grid-template-columns:1fr}
-.auth-err{background:#FBF3F1;border-left:3px solid var(--gap);color:var(--gap);padding:9px 11px;font-size:13px;margin-bottom:12px;display:none}
+.auth-err{background:#FBF3F1;border-left:3px solid var(--gap);border-radius:var(--r-ctl);color:var(--gap);padding:9px 12px;font-size:13px;margin-bottom:12px;display:none}
 .auth-err.on{display:block}
 .auth-note{font-size:12.5px;color:var(--muted);margin-top:14px;border-top:1px solid var(--hairline);padding-top:10px}
 .auth-actions{margin-top:14px}
-.auth-actions .btn{width:100%;padding:10px 14px;font-size:15px}
-body.locked .header-actions,body.locked .nav-tabs,body.locked main,body.locked #alertBanner,body.locked #storageNote{display:none!important}
-.user-chip{text-align:right;color:#CBDBD9;font-size:11.5px;line-height:1.25;align-self:center}
-.user-chip strong{color:#fff;font-size:13.5px;display:block;font-weight:600}
+.auth-actions .btn{width:100%;padding:11px 14px;font-size:15px;justify-content:center}
+body.locked .app-shell{display:none!important}
+.user-chip{display:flex;align-items:center;gap:9px;padding:7px 11px 9px;color:#9DBBB9;font-size:10.5px;line-height:1.3}
+.user-chip .avatar{width:28px;height:28px;flex-shrink:0;border-radius:9px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;font-size:11.5px;color:#fff}
+.user-chip .who{min-width:0}
+.user-chip strong{color:#fff;font-size:12.5px;display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stamp{font-size:11.5px;color:var(--muted);margin-top:6px}
 .stamp strong{color:var(--teal-dark);font-weight:600}
 .act-filter{max-width:240px}
 
 @media print {
-  .app-header, .nav-tabs, #storageNote, #alertBanner, .no-print, #saveStatus, .modal-back, #authGate, button { display: none !important; }
+  .sidebar, #storageNote, #alertBanner, .no-print, #saveStatus, .modal-back, #authGate, button { display: none !important; }
   .print-only { display: block !important; }
   html, body { background: #fff; font-size: 11.5px; }
+  .app-shell { display: block; }
   main { max-width: none; padding: 0; }
-  .card { border: 1px solid #999; box-shadow: none; margin-bottom: 8px; }
+  .card, .table-wrap, .domain-block, .stat { border-radius: 0; box-shadow: none; }
+  .card { border: 1px solid #999; margin-bottom: 8px; }
   .pack-person { page-break-before: always; margin-top: 0; }
   .pack-cover + .pack-person { page-break-before: always; }
   .table-wrap { border: none; overflow: visible; }
@@ -223,27 +286,32 @@ body.locked .header-actions,body.locked .nav-tabs,body.locked main,body.locked #
   input[type="checkbox"] { -webkit-appearance: checkbox; appearance: checkbox;
     -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
-
 </style>
 </head>
 <body>
-<header class="app-header">
-  <div class="header-row">
+<div class="app-shell">
+<aside class="sidebar">
+  <div class="side-brand">
+    <div class="brand-mark" id="brandMark"></div>
     <div>
       <h1 id="brandName">PCR Audit-Readiness System</h1>
       <div class="sub" id="brandSub"></div>
     </div>
-    <div class="header-actions">
-      <div class="user-chip" id="userChip"></div>
-      <button class="btn-ghost" data-action="open-settings" type="button">Settings</button>
-      <button class="btn-ghost" data-action="sign-out" type="button">Sign out</button>
-    </div>
   </div>
-</header>
+  <div class="side-label">Workspace</div>
+  <nav class="side-nav"><div id="navTabs"></div></nav>
+  <div class="side-foot">
+    <div class="user-chip" id="userChip"></div>
+    <button class="btn-ghost" data-action="open-settings" type="button"><span class="nav-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"></path></svg></span>Settings</button>
+    <button class="btn-ghost" data-action="sign-out" type="button"><span class="nav-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.2 14H3.4c-.8 0-1.4-.6-1.4-1.4V3.4C2 2.6 2.6 2 3.4 2h2.8M10.4 11.2L13.6 8l-3.2-3.2M13.6 8H6.2"></path></svg></span>Sign out</button>
+  </div>
+</aside>
+<div class="app-main">
 <div id="alertBanner"><div class="inner"></div></div>
 <div id="storageNote"><div class="inner"></div></div>
-<nav class="nav-tabs"><div class="inner" id="navTabs"></div></nav>
 <main id="view"></main>
+</div>
+</div>
 <div class="modal-back" id="modalBack"><div class="modal" id="modalBox"></div></div>
 <div id="saveStatus"></div>
 <div id="authGate"><div class="auth-card" id="authCard"></div></div>
@@ -260,6 +328,7 @@ var PROVIDER_CONFIG = {
   meta: {
     providerName: "Hope Found, Inc.",
     appTitle: "PCR Audit-Readiness System",
+    mark: "HF",
     subtitle: "Hope Found, Inc. — DC DDA Person-Centered Review preparation",
     reviewName: "Person-Centered Review (PCR)",
     auditor: "Qlarant (DC DDS/DDA)"
@@ -275,9 +344,30 @@ var PROVIDER_CONFIG = {
     { id: "hh",   name: "Host Home" },
     { id: "sl",   name: "Supported Living" },
     { id: "ids",  name: "Individualized Day Supports" },
-    { id: "comp", name: "Companion" }
+    { id: "comp", name: "Companion" },
+    { id: "resHab",   name: "Residential Habilitation" },
+    { id: "dayHab",   name: "Day Habilitation" },
+    { id: "respiteD", name: "Respite - Daily" },
+    { id: "respiteH", name: "Respite - Hourly" },
+    { id: "suppEmp",  name: "Supported Employment" },
+    { id: "empReady", name: "Employment Readiness" }
   ],
+  /* Service line -> the living arrangement most people on that service usually have. Only a
+     starting suggestion in the Edit Person form (auto-fills, always overridable) — living
+     arrangement is tracked separately because it (not service line) drives which rubric
+     indicators apply via each indicator's appliesTo filter. Day/respite/employment services are
+     typically delivered to people living in their own family home; adjust per agency reality. */
+  defaultLivingArrangement: {
+    ihs: "Family/Own Home", hh: "Host Home", sl: "Supported Living Residence",
+    ids: "Family/Own Home", comp: "Family/Own Home",
+    resHab: "Supported Living Residence", dayHab: "Family/Own Home",
+    respiteD: "Family/Own Home", respiteH: "Family/Own Home",
+    suppEmp: "Family/Own Home", empReady: "Family/Own Home"
+  },
   livingArrangements: ["Family/Own Home", "Host Home", "Supported Living Residence", "Independent Living"],
+  /* In-Home Supports has a distinct "High Intensity" waiver tier with its own clinical
+     documentation timeline; tracked as plain client metadata (no rubric gate content for it yet). */
+  ihsIntensityOptions: ["Standard", "High Intensity"],
   clientFlags: [
     { key: "hasBSP", short: "BSP", label: "Behaviors that may benefit from a BSP" },
     { key: "hasRestrictiveComponents", short: "Restrictive", label: "BSP includes restrictive components" },
@@ -328,7 +418,8 @@ var PROVIDER_CONFIG = {
         { id: "SD.4", weight: 3, text: "Transition/discharge documentation from prior provider obtained and reconciled." }
       ]},
     { id: "org-hcbs", name: "PCR HCBS Org Assessment Validation",
-      excludedServiceLines: ["ihs", "comp"], /* not applicable to In-Home Supports, Respite, or Companion 1:1 */
+      /* not applicable to non-residential/non-provider-controlled-setting services */
+      excludedServiceLines: ["ihs", "comp", "respiteD", "respiteH", "empReady", "suppEmp"],
       items: [
         { id: "HV.1", weight: 5, text: "HCBS Settings self-assessment complete and validated for each applicable site." },
         { id: "HV.2", weight: 5, text: "Remediation plan for any settings deficiencies is current and on schedule." },
@@ -349,14 +440,15 @@ var PROVIDER_CONFIG = {
     { id: "isp",    label: "Person-Specific ISP/BSP Training",       expires: false }
   ],
   expiryWarningDays: 60,
-  /* QIDP & ISP tracking: quarterly reports are authored in Therap, not here.
-     This only computes due dates from the ISP date and tracks receipt. */
+  /* QIDP & ISP tracking: quarterly reports are written by the QIDP and uploaded to MCIS
+     (DC DDA's system of record), not authored here. This only computes due dates from the
+     ISP date and tracks receipt. */
   qidp: {
     /* The ISP date is the annual date the current plan concludes. The
        meeting that renews it has to be on the calendar well before then:
        staff start booking at ispBookingOpensDays out and it must be
        scheduled by ispBookingDeadlineDays out. A quarterly report needs no
-       booking — it is written from notes already in Therap — so it gets a
+       booking — it is written from notes already in MCIS — so it gets a
        single, shorter window. */
     ispWindowDays: 30,
     ispBookingOpensDays: 45,
@@ -367,6 +459,77 @@ var PROVIDER_CONFIG = {
       { key: "q2", months: 6,  label: "Quarterly Report 2", kind: "quarterly" },
       { key: "q3", months: 9,  label: "Quarterly Report 3", kind: "quarterly" },
       { key: "renewal", months: 12, label: "Annual ISP Date", kind: "annual" }
+    ]
+  },
+  /* Residential Medical Review — a nurse-administered per-client medical-records completeness
+     checklist Hope Found already runs on paper for medically complex residents (Host Home /
+     Supported Living). Deliberately separate from the weighted rubric: a Satisfactory/Concern/N/A
+     completeness check, not a weighted-tier score. Domains/items are Hope Found's own inventory. */
+  medicalReview: {
+    serviceLines: ["hh", "sl"],
+    domains: [
+      { name: "Medical Records Review", items: [
+        { key: "annualPhysical", label: "Annual Physical" },
+        { key: "labWork", label: "LAB Work and results" }
+      ]},
+      { name: "Immunization Records", items: [
+        { key: "immCovid", label: "COVID" },
+        { key: "immPpd", label: "PPD (every year) / Chest X-ray (every 5 years)" },
+        { key: "immFlu", label: "Flu Shot" },
+        { key: "immHepB", label: "Hepatitis B Vaccine" },
+        { key: "immTetanus", label: "Tetanus (every 10 years)" },
+        { key: "immMmr", label: "MMR / Varicella / Pneumococcal" }
+      ]},
+      { name: "Health Forms", items: [
+        { key: "healthPassport", label: "Health Passport (medical info and doctor information/diagnosis current)" },
+        { key: "hcmp", label: "HCMP (every quarter)" }
+      ]},
+      { name: "Physician / Specialist", items: [
+        { key: "mdFollowUp", label: "Medical Doctor follow up" }
+      ]},
+      { name: "Professional Services", items: [
+        { key: "specialistFollowUp", label: "Specialist appointment completed and follow up (Pulmonary, ENT, Audiology, Podiatry, GI, Endocrinology, Neurology, Dermatology)" },
+        { key: "dentalService", label: "Dental" },
+        { key: "vision", label: "Vision" },
+        { key: "colonoscopy", label: "Colonoscopy (50 years & older)" },
+        { key: "prostate", label: "Prostate Screening (male, 40 years & older)" },
+        { key: "mammogram", label: "Mammogram (female, 50 years & older)" },
+        { key: "pap", label: "PAP smear (female)" }
+      ]},
+      { name: "Dental Services", items: [
+        { key: "dentalEval", label: "Annual Dental Evaluation" },
+        { key: "dentalConsult", label: "Dental consultation" }
+      ]},
+      { name: "Nursing Assessments", items: [
+        { key: "nursingAssessment", label: "Nursing Assessment" },
+        { key: "preventiveScreening", label: "Annual Preventive Health Screening" },
+        { key: "selfAdminMed", label: "Self-Administration Medication Form" },
+        { key: "bradenScale", label: "Braden Scale (skin/pressure-ulcer risk)" }
+      ]},
+      { name: "Nursing Notes", items: [
+        { key: "nursingNotes", label: "Nursing Notes" },
+        { key: "vitalSigns", label: "Vital Signs" }
+      ]},
+      { name: "Psychiatry", items: [
+        { key: "psychMedReview", label: "Psychotropic Med Reviews" },
+        { key: "aims", label: "AIMS (every 6 months)" }
+      ]},
+      { name: "Medications / MARs", items: [
+        { key: "marMatch", label: "MAR (matches Physician Order Sheet and Health Passport)" },
+        { key: "medSideEffects", label: "Medication and side effects" },
+        { key: "physicianOrders", label: "Current Physician Orders, signed by doctor (diet, allergies, adaptive equipment)" }
+      ]},
+      { name: "Screenings & Logs", items: [
+        { key: "glasgowDepression", label: "Glasgow Depression Scale" },
+        { key: "fallRisk", label: "Fall Risk Assessment / Fall Risk Protocol (if needed)" },
+        { key: "dementiaScreening", label: "Dementia Screening" },
+        { key: "refusalProtocol", label: "Protocol for Refusal Form" },
+        { key: "sleepingLog", label: "Sleeping Log" }
+      ]},
+      { name: "Consents", items: [
+        { key: "medicalConsent", label: "Medical Consents" },
+        { key: "psychConsent", label: "Psychotropic Medication Consents" }
+      ]}
     ]
   },
   /* Fire & emergency readiness module */
@@ -756,6 +919,7 @@ var S = {
   qadoc: { versions: [] },
   runs: [],
   qtr: {},                               /* qtr["clientId|ispDate|periodKey"] = { done, doneDate, notes } */
+  medreview: {},                         /* medreview["clientId|itemKey"] = { status, comments, correctionDeadline, correctionCompleted } */
   census: {}, settings: {}, audit: [],
   ui: { tab: "dashboard", reviewClient: null, locatorQuery: "", locatorFilter: "all",
         rubricFilterSL: "all", rubricFilterType: "all", rubricShowRetired: false, saveFails: 0,
@@ -765,7 +929,7 @@ var S = {
 var K = { rubric: "pcr:rubric", clients: "pcr:clients", staff: "pcr:staff", org: "pcr:org",
           fire: "pcr:fire", census: "pcr:census", settings: "pcr:settings", rec: "pcr:rec:",
           policy: "pcr:policy", qadoc: "pcr:qadoc", runs: "pcr:runs", qtr: "pcr:qtr",
-          users: "pcr:users", audit: "pcr:audit" };
+          medreview: "pcr:medreview", users: "pcr:users", audit: "pcr:audit" };
 
 async function loadAll() {
   S.rubric  = (await Store.get(K.rubric))  || [];
@@ -778,6 +942,7 @@ async function loadAll() {
   S.qadoc   = (await Store.get(K.qadoc))   || { versions: [] };
   S.runs    = (await Store.get(K.runs))    || [];
   S.qtr     = (await Store.get(K.qtr))     || {};
+  S.medreview = (await Store.get(K.medreview)) || {};
   S.audit   = (await Store.get(K.audit))   || [];
   S.settings= (await Store.get(K.settings))|| {};
   if (!S.rubric.length) { S.rubric = buildSeedRubric(); await Store.set(K.rubric, S.rubric); }
@@ -877,15 +1042,24 @@ var Engine = {
   },
   scoreServiceLine: function (slId) {
     var agg = { earned: 0, possible: 0, critEarned: 0, critPossible: 0, alerts: 0, notMet: 0,
-                hcbsRated: 0, hcbsMet: 0, satRated: 0, satMet: 0, ratedCount: 0, clients: 0 };
+                hcbsRated: 0, hcbsMet: 0, satRated: 0, satMet: 0, ratedCount: 0, clients: 0,
+                /* coverage: how much of the caseload this score actually speaks for */
+                people: 0, peopleScored: 0, peopleUnscored: 0, applicableQA: 0 };
     S.clients.forEach(function (c) {
       if (!c.activeStatus || c.serviceLine !== slId) { return; }
       var r = Engine.scoreClient(c);
-      if (r.ratedCount === 0 && r.satRated === 0) { return; }
-      agg.clients++;
+      agg.people++;
+      agg.applicableQA += r.applicableQA;
+      if (r.ratedCount === 0 && r.satRated === 0) { agg.peopleUnscored++; return; }
+      agg.clients++; agg.peopleScored++;
       ["earned","possible","critEarned","critPossible","alerts","notMet","hcbsRated","hcbsMet","satRated","satMet","ratedCount"]
         .forEach(function (k) { agg[k] += r[k]; });
     });
+    /* Coverage is reported, never folded into the score: an unanswered question is not a
+       failed question. A high score over thin coverage is provisional, not good news. */
+    agg.peoplePct = agg.people ? Math.round(100 * agg.peopleScored / agg.people) : null;
+    agg.itemPct = agg.applicableQA ? Math.round(100 * agg.ratedCount / agg.applicableQA) : null;
+    agg.provisional = agg.people > 0 && agg.peopleScored > 0 && agg.peopleScored < agg.people;
     agg.totalPct = agg.possible ? Math.round(100 * agg.earned / agg.possible) : null;
     agg.critPct = agg.critPossible ? Math.round(100 * agg.critEarned / agg.critPossible) : null;
     agg.hcbs100 = agg.hcbsRated === 0 ? null : (agg.hcbsMet === agg.hcbsRated);
@@ -958,6 +1132,32 @@ var Engine = {
       });
     });
     return { located: located, rated: rated, pct: rated ? Math.round(100 * located / rated) : null };
+  },
+  /* Corrections tracking: a Not Met indicator (or a Concern-flagged Medical Review item) can carry
+     a correctionDeadline/correctionCompleted pair, mirroring what Hope Found already tracks by
+     hand on every paper binder-review tool. Overdue = deadline passed, not completed. */
+  openCorrections: function () {
+    var overdue = 0, upcoming = 0;
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    function tally(deadline, completed) {
+      if (!deadline || completed) { return; }
+      var d = new Date(deadline + "T00:00:00");
+      if (isNaN(d.getTime())) { return; }
+      if (d < today) { overdue++; } else { upcoming++; }
+    }
+    S.clients.forEach(function (c) {
+      if (!c.activeStatus) { return; }
+      var recs = S.records[c.id] || {};
+      Object.keys(recs).forEach(function (iid) {
+        var rec = recs[iid];
+        if (rec.rating === "not_met") { tally(rec.correctionDeadline, rec.correctionCompleted); }
+      });
+    });
+    Object.keys(S.medreview).forEach(function (k) {
+      var rec = S.medreview[k];
+      if (rec.status === "concern") { tally(rec.correctionDeadline, rec.correctionCompleted); }
+    });
+    return { overdue: overdue, upcoming: upcoming };
   },
   orgScore: function () {
     var earned = 0, possible = 0, openItems = 0;
@@ -1168,10 +1368,10 @@ function tierBadgeCls(key) {
   return { excellent: "met", satisfactory: "met", needsImprovement: "warn",
            unsatisfactory: "gap", failed: "alert", alert: "alert", none: "outline" }[key] || "outline";
 }
-function barHtml(pct) {
+function barHtml(pct, partial) {
   var th = PROVIDER_CONFIG.scoring.thresholds;
   var w = pct === null ? 0 : Math.max(0, Math.min(100, pct));
-  var cls = pct === null ? "" : (pct >= th.satisfactory ? "" : (pct >= th.needsImprovement ? "warn" : "bad"));
+  var cls = pct === null ? "" : (pct >= th.satisfactory ? (partial ? "partial" : "") : (pct >= th.needsImprovement ? "warn" : "bad"));
   return '<div class="scorebar">' +
     '<div class="fill ' + cls + '" style="width:' + w + '%"></div>' +
     '<div class="tick" style="left:' + th.needsImprovement + '%"></div>' +
@@ -1187,6 +1387,7 @@ function slOptions(selected, includeAll) {
 }
 function openModal(html) {
   document.getElementById("modalBox").innerHTML = html;
+  formatDatesIn(document.getElementById("modalBox"));
   document.getElementById("modalBack").classList.add("open");
 }
 function closeModal() {
@@ -1196,7 +1397,20 @@ function closeModal() {
   box.style.maxWidth = "";
 }
 function todayStr() { return new Date().toISOString().slice(0, 10); }
-
+/* Display-only date formatting: rewrite visible ISO dates to MM-DD-YYYY. Stored data,
+   <input type="date"> values, and JSON/text exports (textarea) are untouched. */
+function formatDatesIn(root) {
+  if (!root) { return; }
+  var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  var n;
+  while ((n = w.nextNode())) {
+    var p = n.parentNode && n.parentNode.nodeName;
+    if (p === "TEXTAREA" || p === "SCRIPT" || p === "STYLE") { continue; }
+    if (/\d{4}-\d{2}-\d{2}/.test(n.nodeValue)) {
+      n.nodeValue = n.nodeValue.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, "$2-$3-$1");
+    }
+  }
+}
 function safeConfirm(msg) { try { return window.confirm(msg); } catch (e) { return false; } }
 function safeAlert(msg) { try { window.alert(msg); } catch (e) { console.log(msg); } }
 function toast(msg) {
@@ -1234,7 +1448,7 @@ function renderAlertBanner() {
 /* ============================ DASHBOARD ============================ */
 function renderDashboard() {
   var th = PROVIDER_CONFIG.scoring.thresholds;
-  var html = '<h2 class="view-title">Readiness Dashboard</h2>' +
+  var html = '<div class="dash"><h2 class="view-title">Readiness Dashboard</h2>' +
     '<p class="view-sub">Projected standing for the next ' + esc(PROVIDER_CONFIG.meta.reviewName) +
     ', computed live from entered reviews. Thresholds: ' + th.needsImprovement + ' / ' + th.satisfactory + ' / ' + th.excellent + '%.</p>';
 
@@ -1249,30 +1463,56 @@ function renderDashboard() {
       '<button class="btn small" type="button" data-action="nav" data-tab="policy" style="margin-left:6px">Open Policy Updates</button></div></div>';
   }
 
+  var covAll = { people: 0, scored: 0, items: 0, rated: 0 };
   html += '<div class="grid grid-cards">';
   PROVIDER_CONFIG.serviceLines.forEach(function (sl) {
     var sc = Engine.scoreServiceLine(sl.id);
     var samp = Engine.sampleSize(S.census[sl.id] || 0);
+    covAll.people += sc.people; covAll.scored += sc.peopleScored;
+    covAll.items += sc.applicableQA; covAll.rated += sc.ratedCount;
+    var scoreLbl = sc.provisional ? "Total score so far" : "Total score";
     html += '<div class="card"><div class="card-head"><h3>' + esc(sl.name) + "</h3>" +
-      badge(tierBadgeCls(sc.tier.key), sc.tier.label) + "</div>";
-    html += '<div class="bar-label"><span>Total score</span><span class="pct small">' + fmtPct(sc.totalPct) + "</span></div>" + barHtml(sc.totalPct);
-    html += '<div class="bar-label"><span>Critical (weight-' + PROVIDER_CONFIG.scoring.criticalWeight + ')</span><span class="pct small">' + fmtPct(sc.critPct) + "</span></div>" + barHtml(sc.critPct);
-    if (sc.tier.consequence) { html += '<div class="tier-line muted">' + esc(sc.tier.consequence) + "</div>"; }
+      badge(tierBadgeCls(sc.tier.key), sc.tier.label) +
+      (sc.provisional ? badge("outline", "provisional") : "") + "</div>";
+    html += '<div class="mrow"><span class="ml">' + scoreLbl + '</span>' + barHtml(sc.totalPct, sc.provisional) + '<span class="pct small">' + fmtPct(sc.totalPct) + "</span></div>";
+    html += '<div class="mrow"><span class="ml">Critical (weight-' + PROVIDER_CONFIG.scoring.criticalWeight + ')</span>' + barHtml(sc.critPct, sc.provisional) + '<span class="pct small">' + fmtPct(sc.critPct) + "</span></div>";
+    /* Review coverage — the honest denominator. A 100% score over 1 of 20 people is not a 100% service line. */
+    html += '<div class="mrow"><span class="ml">People reviewed</span>' + barHtml(sc.peoplePct) + '<span class="pct small">' + fmtPct(sc.peoplePct) + "</span></div>";
+    if (sc.people === 0) {
+      html += '<div class="cov-note">No active people are assigned to this service line yet.</div>';
+    } else if (sc.peopleScored === 0) {
+      html += '<div class="cov-note"><strong>' + sc.people + " on the roster, none scored yet.</strong> Nothing here is met or not met — it is simply not yet scored.</div>";
+    } else {
+      html += '<div class="cov-note"><strong>' + sc.peopleScored + " of " + sc.people + " people scored</strong>" +
+        (sc.peopleUnscored ? " — " + sc.peopleUnscored + " not yet scored" : " — full caseload") +
+        (sc.itemPct !== null ? ". " + sc.ratedCount + " of " + sc.applicableQA + " applicable questions answered (" + sc.itemPct + "%)." : ".") +
+        (sc.provisional ? " The percentages above cover only the people scored so far and will move as the rest are reviewed." : "") + "</div>";
+    }
+    if (sc.tier.consequence) { html += '<div class="tier-line muted" title="' + esc(sc.tier.consequence) + '">' + esc(sc.tier.consequence) + "</div>"; }
     html += '<div class="ind-meta" style="margin-top:8px">' +
       (sc.alerts ? badge("alert", sc.alerts + " alert") : "") +
       (sc.notMet ? badge("gap", sc.notMet + " not met") : "") +
-      badge("neutral", sc.clients + " reviewed") +
+      badge("neutral", sc.peopleScored + " of " + sc.people + " scored") +
+      (sc.peopleUnscored ? badge("outline", sc.peopleUnscored + " not yet scored") : "") +
       badge("outline", "min sample " + samp.size + (S.census[sl.id] ? " of " + S.census[sl.id] : "")) +
       (sc.hcbs100 === false ? badge("warn", "HCBS < 100%") : "") +
       (sc.satPct !== null ? badge(sc.satPct >= PROVIDER_CONFIG.scoring.satisfactionMin ? "neutral" : "warn", "satisfaction " + sc.satPct + "%") : "") +
-      "</div>";
-    html += '<div style="margin-top:10px"><button class="btn secondary small" type="button" data-action="cap-draft" data-sl="' + sl.id + '">CAP draft</button></div>';
+      ' <button class="btn secondary small" type="button" data-action="cap-draft" data-sl="' + sl.id + '">CAP draft</button></div>';
     html += "</div>";
   });
   html += "</div>";
 
   var rr = Engine.retrievalRate(), org = Engine.orgScore(), stf = Engine.staffCompliance(), fire = Engine.fireReadiness();
+  var corr = Engine.openCorrections();
+  var unscored = covAll.people - covAll.scored;
   html += '<h3 class="section-title">Standing measures</h3><div class="stat-row">';
+  html += '<div class="stat"><div class="lbl">Review coverage</div><div class="pct">' +
+    fmtPct(covAll.people ? Math.round(100 * covAll.scored / covAll.people) : null) + '</div><div class="small muted">' +
+    covAll.scored + "/" + covAll.people + " people scored" + (unscored ? " — " + unscored + " not yet scored" : "") +
+    (covAll.items ? "; " + covAll.rated + "/" + covAll.items + " questions answered" : "") + "</div></div>";
+  html += '<div class="stat"><div class="lbl">Open corrections</div><div class="pct" style="color:' +
+    (corr.overdue ? "var(--gap)" : (corr.upcoming ? "var(--warn)" : "var(--met)")) + '">' + corr.overdue +
+    '</div><div class="small muted">past deadline' + (corr.upcoming ? ", " + corr.upcoming + " still open" : "") + "</div></div>";
   html += '<div class="stat"><div class="lbl">Record retrieval rate</div><div class="pct">' + fmtPct(rr.pct) + '</div><div class="small muted">' + rr.located + "/" + rr.rated + " rated records have a verified location</div></div>";
   html += '<div class="stat"><div class="lbl">Organizational tools</div><div class="pct">' + fmtPct(org.pct) + '</div><div class="small muted">' + org.openItems + " open item(s) across the 3 mandatory tools</div></div>";
   html += '<div class="stat"><div class="lbl">Staff records compliance</div><div class="pct">' + fmtPct(stf.pct) + '</div><div class="small muted">' + stf.ok + "/" + stf.total + " requirements current</div></div>";
@@ -1281,9 +1521,9 @@ function renderDashboard() {
   html += '<div class="stat"><div class="lbl">QIDP quarterly / ISP</div><div class="pct" style="color:' + (qCounts.overdue ? "var(--gap)" : (qCounts.soon ? "var(--warn)" : "var(--met)")) + '">' + qCounts.overdue + '</div><div class="small muted">overdue' + (qCounts.soon ? ", " + qCounts.soon + " due soon" : "") + '</div></div>';
   html += "</div>";
 
-  html += '<div style="margin-top:16px"><button class="btn" type="button" data-action="ai-briefing">Readiness briefing</button></div>';
-  html += '<div class="note-box" style="margin-top:14px"><strong>CAP &amp; appeals timing.</strong> ' + esc(PROVIDER_CONFIG.capRules.text) + "</div>";
-  return html;
+  html += '<div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap"><button class="btn" type="button" data-action="ai-briefing" style="flex-shrink:0">Readiness briefing</button>' +
+    '<div class="note-box" style="flex:1;min-width:280px;margin:0;padding:8px 13px;font-size:11.5px"><strong>CAP &amp; appeals timing.</strong> ' + esc(PROVIDER_CONFIG.capRules.text) + "</div></div>";
+  return html + "</div>";
 }
 
 /* ============================ CLIENT REVIEW ============================ */
@@ -1450,10 +1690,13 @@ function indicatorHtml(it, c) {
   var eff = Engine.effective(it, c);
   var disabled = eff.forced;
   var current = eff.forced ? "na" : (rec.rating || null);
-  var btns = ["met", "not_met", "na"].map(function (v) {
-    var lbl = v === "met" ? "Met" : (v === "not_met" ? "Not Met" : "N/A");
+  /* "none" is the standing default for every question and every person — an unanswered
+     question is never counted as a failure, only as not yet scored. */
+  var btns = ["met", "not_met", "na", "none"].map(function (v) {
+    var lbl = v === "met" ? "Met" : (v === "not_met" ? "Not Met" : (v === "na" ? "N/A" : "Not Yet Scored"));
+    var on = (v === "none") ? (!disabled && !current) : (current === v);
     return '<button type="button" data-action="rate" data-client="' + c.id + '" data-ind="' + it.id + '" data-val="' + v + '"' +
-      (disabled ? " disabled" : "") + ' class="' + (current === v ? "on-" + v : "") + '">' + lbl + "</button>";
+      (disabled ? " disabled" : "") + ' class="' + (v === "none" ? "unscored " : "") + (on ? "on-" + v : "") + '">' + lbl + "</button>";
   }).join("");
 
   return '<div class="ind' + (disabled ? " gated-off" : "") + '" id="ind-' + it.id + '"><div class="ind-top"><div>' +
@@ -1467,6 +1710,9 @@ function indicatorHtml(it, c) {
       '<div><label>Verified date</label><input type="date" value="' + esc(rec.verifiedDate || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="verifiedDate"></div>' +
       '<div><label>Evidence location</label><input type="text" placeholder="e.g. SharePoint/ISP/2026 or Binder 3, Shelf B" value="' + esc(rec.evidenceLocation || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="evidenceLocation"></div>' +
       '<div><label>Notes</label><input type="text" value="' + esc(rec.notes || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="notes"></div>' +
+      (current === "not_met" ?
+        '<div><label>Corrections deadline</label><input type="date" value="' + esc(rec.correctionDeadline || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="correctionDeadline"></div>' +
+        '<div><label>Corrections completed</label><input type="date" value="' + esc(rec.correctionCompleted || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="correctionCompleted"></div>' : "") +
       "</div>" + stampLine(rec) : "") +
     (!disabled && current ? houseBtn : "") +
     "</div>";
@@ -1481,16 +1727,20 @@ function intentBlock(it, open) {
 function clientModal(c) {
   var isNew = !c;
   c = c || { id: "c-" + Date.now().toString(36), name: "", serviceLine: PROVIDER_CONFIG.serviceLines[0].id,
-             livingArrangement: PROVIDER_CONFIG.livingArrangements[0], flags: {}, priorPCRParticipant: false,
-             sampled: false, activeStatus: true };
+             livingArrangement: PROVIDER_CONFIG.livingArrangements[0], ihsIntensity: "Standard", flags: {},
+             priorPCRParticipant: false, sampled: false, activeStatus: true };
   var flagChecks = PROVIDER_CONFIG.clientFlags.map(function (f) {
     return '<div class="check-line"><input type="checkbox" id="cf-' + f.key + '"' + (c.flags && c.flags[f.key] ? " checked" : "") + '><label for="cf-' + f.key + '" style="text-transform:none;font-size:13.5px;margin:0">' + esc(f.label) + "</label></div>";
   }).join("");
   openModal('<h3>' + (isNew ? "Add person" : "Edit person") + '</h3><div class="form-grid">' +
     '<div class="full"><label>Name</label><input type="text" id="cm-name" value="' + esc(c.name) + '"></div>' +
-    '<div><label>Service line</label><select id="cm-sl">' + slOptions(c.serviceLine, false) + "</select></div>" +
+    '<div><label>Service line</label><select id="cm-sl" data-bind="cm-sl-live">' + slOptions(c.serviceLine, false) + "</select></div>" +
     '<div><label>Living arrangement</label><select id="cm-la">' + PROVIDER_CONFIG.livingArrangements.map(function (la) {
       return '<option' + (la === c.livingArrangement ? " selected" : "") + ">" + esc(la) + "</option>"; }).join("") + "</select></div>" +
+    '<div class="full small muted" style="margin-top:-6px">Service line is which program pays for and rates this person (drives the rubric). Living arrangement is where they physically live day to day — usually matches, but Day Hab, Respite, and IDS clients often live in a Family/Own Home while receiving services elsewhere. Changing service line updates this to a likely default; adjust if it does not fit.</div>' +
+    '<div class="full" id="cm-intensity-wrap" style="' + (c.serviceLine === "ihs" ? "" : "display:none") + '"><label>In-Home Support intensity</label><select id="cm-intensity">' +
+    PROVIDER_CONFIG.ihsIntensityOptions.map(function (o) { return '<option' + (o === (c.ihsIntensity || "Standard") ? " selected" : "") + ">" + esc(o) + "</option>"; }).join("") +
+    '</select><div class="small muted" style="margin-top:3px">High Intensity IHS carries its own clinical documentation timeline (tracked here as a record; not yet driving rubric scoring).</div></div>' +
     '<div class="full"><label>Home / location (people at the same home group together for review)</label>' +
     '<input type="text" id="cm-loc" list="loc-list" value="' + esc(c.location || "") + '" placeholder="e.g. Kenilworth Host Home">' +
     '<datalist id="loc-list">' + locationsList().map(function (l) { return "<option>" + esc(l) + "</option>"; }).join("") + "</datalist></div>" +
@@ -1514,6 +1764,7 @@ function saveClientFromModal(id, isNew) {
     id: id, name: name,
     serviceLine: document.getElementById("cm-sl").value,
     livingArrangement: document.getElementById("cm-la").value,
+    ihsIntensity: document.getElementById("cm-intensity").value,
     location: document.getElementById("cm-loc").value.trim(),
     qidpName: document.getElementById("cm-qidp").value.trim(),
     ispDate: document.getElementById("cm-isp").value,
@@ -1681,7 +1932,8 @@ function renderOrgStaff() {
       var btns = ["met", "not_met", "na"].map(function (v) {
         var lbl = v === "met" ? "Met" : (v === "not_met" ? "Not Met" : "N/A");
         return '<button type="button" data-action="org-rate" data-tool="' + tool.id + '" data-item="' + item.id + '" data-val="' + v + '" class="' + (rec.rating === v ? "on-" + v : "") + '">' + lbl + "</button>";
-      }).join("");
+      }).join("") +
+      '<button type="button" data-action="org-rate" data-tool="' + tool.id + '" data-item="' + item.id + '" data-val="none" class="unscored ' + (!rec.rating ? "on-none" : "") + '">Not Yet Scored</button>';
       html += '<div style="border-top:1px solid var(--hairline);padding:9px 0">' +
         '<div class="ind-top"><div style="flex:1"><span class="ind-id">' + esc(item.id) + "</span> " + badge("outline", "w" + item.weight) +
         '<div class="ind-q" style="font-size:13.5px">' + esc(item.text) + "</div></div>" +
@@ -2873,8 +3125,8 @@ function runPackView(run) {
 
 
 /* ============================ QIDP & ISP TRACKING ============================
-   Quarterly progress reports are authored in Therap by the QIDP, drawn from
-   direct-care staff's daily notes - also entered in Therap. This system does
+   Quarterly progress reports are authored by the QIDP and filed in MCIS (DC DDA's
+   system of record), drawn from direct-care staff's daily notes. This system does
    NOT write or store that narrative. It tracks two dates per person (QIDP /
    case manager name, and the annual ISP date) and computes when each
    quarterly report and the next annual ISP renewal fall due, so a gap never
@@ -3041,9 +3293,9 @@ var QTR_BADGE = { done: "met", overdue: "alert", soon: "warn", upcoming: "outlin
 function renderQidp() {
   var counts = qtrCounts();
   var html = '<h2 class="view-title">QIDP &amp; ISP Tracking</h2>' +
-    '<p class="view-sub">Quarterly progress reports are written in Therap by the QIDP from direct-care staff\'s daily notes — this system does not author or store that review. It only tracks whether each person\'s quarterly report and annual ISP renewal are coming due, computed from the ISP date, so nothing lapses unnoticed before a PCR. Set each person\'s QIDP (case manager) and ISP date via Edit person; quarterly dates recompute automatically. Two working lists sit at the top and each prints on its own: <strong>ISP dates in the next ' + PROVIDER_CONFIG.qidp.ispWindowDays + ' days</strong> — plus the booking window behind it, because the renewal meeting has to be scheduled ' + PROVIDER_CONFIG.qidp.ispBookingOpensDays + '–' + PROVIDER_CONFIG.qidp.ispBookingDeadlineDays + ' days before that date — and the <strong>quarterly report checklist for the next ' + PROVIDER_CONFIG.qidp.quarterlyWindowDays + ' days</strong>.</p>';
+    '<p class="view-sub">Quarterly progress reports are written by the QIDP and filed in MCIS (DC DDA\'s system of record), drawn from direct-care staff\'s daily notes — this system does not author or store that review. It only tracks whether each person\'s quarterly report and annual ISP renewal are coming due, computed from the ISP date, so nothing lapses unnoticed before a PCR. Set each person\'s QIDP (case manager) and ISP date via Edit person; quarterly dates recompute automatically. Two working lists sit at the top and each prints on its own: <strong>ISP dates in the next ' + PROVIDER_CONFIG.qidp.ispWindowDays + ' days</strong> — plus the booking window behind it, because the renewal meeting has to be scheduled ' + PROVIDER_CONFIG.qidp.ispBookingOpensDays + '–' + PROVIDER_CONFIG.qidp.ispBookingDeadlineDays + ' days before that date — and the <strong>quarterly report checklist for the next ' + PROVIDER_CONFIG.qidp.quarterlyWindowDays + ' days</strong>.</p>';
 
-  html += '<div class="note-box no-print">Set once per person, on Edit person: <strong>QIDP name</strong> (case manager) and <strong>ISP date</strong> (the annual Medicaid-services planning meeting). Quarterly reports are expected 3, 6, and 9 months after that date; the next ISP renewal is expected at 12 months. The ISP date is the annual date the plan concludes; the meeting that renews it must be scheduled ' + PROVIDER_CONFIG.qidp.ispBookingOpensDays + '–' + PROVIDER_CONFIG.qidp.ispBookingDeadlineDays + ' days before it, so each person carries a <strong>book-by</strong> date. A quarterly report needs no booking — it is written from notes already in Therap — so it gets a single ' + PROVIDER_CONFIG.qidp.quarterlyWindowDays + '-day window. Marking a period done here records that it was confirmed in Therap — it will later sync automatically once the admin dashboard is connected.</div>';
+  html += '<div class="note-box no-print">Set once per person, on Edit person: <strong>QIDP name</strong> (case manager) and <strong>ISP date</strong> (the annual Medicaid-services planning meeting). Quarterly reports are expected 3, 6, and 9 months after that date; the next ISP renewal is expected at 12 months. The ISP date is the annual date the plan concludes; the meeting that renews it must be scheduled ' + PROVIDER_CONFIG.qidp.ispBookingOpensDays + '–' + PROVIDER_CONFIG.qidp.ispBookingDeadlineDays + ' days before it, so each person carries a <strong>book-by</strong> date. A quarterly report needs no booking — it is written from notes already in MCIS — so it gets a single ' + PROVIDER_CONFIG.qidp.quarterlyWindowDays + '-day window. Marking a period done here records that it was confirmed in MCIS — it will later sync automatically once the admin dashboard is connected.</div>';
 
   var isp = ispDueList();
   var qtrDue = quarterlyDueList();
@@ -3159,7 +3411,7 @@ function quarterlyChecklistHtml(q) {
     qidpPrintHead("Quarterly reports due in the next " + q.window + " days",
       "Every quarterly progress report falling due within " + q.window + " days, or already past due and not yet filed") +
     '<h3 class="section-title">Quarterly report checklist — due in the next ' + q.window + " days</h3>" +
-    '<div class="note-box no-print">The reports the QIDP has to have in Therap within ' + q.window +
+    '<div class="note-box no-print">The reports the QIDP has to have in MCIS within ' + q.window +
     ' days, plus anything already past due and unfiled. Tick one off here once you have confirmed it is filed — your name and the time are recorded with it. Reports filed before their due date drop off the list.</div>' +
     '<div class="toolbar no-print"><button class="btn" type="button" data-action="qidp-print" data-which="quarterly">Print quarterly checklist (' + q.window + ' days)</button></div>';
   if (!q.rows.length) {
@@ -3207,11 +3459,11 @@ function qtrModal(clientId, periodKey) {
   openModal("<h3>" + esc(period.label) + " — " + esc(c.name) + '</h3>' +
     '<div class="note-box">Due ' + esc(due) + ". " + (annual ?
       "The annual planning meeting: record when it is booked, then tick it once it has been held." :
-      "Authored and filed in Therap — this only records that it was confirmed done.") + "</div>" +
+      "Authored by the QIDP and filed in MCIS — this only records that it was confirmed done.") + "</div>" +
     '<div class="form-grid">' +
     (annual ? '<div class="full"><label>Meeting scheduled for (leave blank if not yet booked)</label><input type="date" id="qm-sched" value="' + esc(entry.scheduledDate || "") + '"></div>' : "") +
     '<div class="full"><div class="check-line"><input type="checkbox" id="qm-done"' + (entry.done ? " checked" : "") + '><label for="qm-done" style="text-transform:none;margin:0">' +
-    (annual ? "Meeting held and confirmed" : "Confirmed filed in Therap") + "</label></div></div>" +
+    (annual ? "Meeting held and confirmed" : "Confirmed filed in MCIS") + "</label></div></div>" +
     '<div><label>' + (annual ? "Date held" : "Date filed") + '</label><input type="date" id="qm-date" value="' + esc(entry.doneDate || "") + '"></div>' +
     '<div class="full"><label>Notes</label><input type="text" id="qm-notes" value="' + esc(entry.notes || "") + '" placeholder="optional"></div>' +
     "</div>" +
@@ -3265,9 +3517,13 @@ function renderAuthGate() {
   var card = document.getElementById("authCard");
   var errHtml = '<div class="auth-err' + (authErr ? " on" : "") + '">' + esc(authErr) + "</div>";
   var title = esc(PROVIDER_CONFIG.meta.appTitle);
+  var mark = '<div class="auth-brand"><div class="brand-mark">' + esc(brandMark()) + "</div><div>" +
+    '<div style="font-family:var(--serif);font-weight:700;color:var(--teal-dark);font-size:15px">' +
+    esc(PROVIDER_CONFIG.meta.providerName) + "</div>" +
+    '<div class="small muted">' + esc(PROVIDER_CONFIG.meta.subtitle || "") + "</div></div></div>";
   var html;
   if (Auth.needsSetup()) {
-    html = "<h2>" + title + "</h2>" +
+    html = mark + "<h2>" + title + "</h2>" +
       '<div class="auth-sub">No accounts exist yet. Create the first administrator account — this is the name that will be stamped on everything you verify.</div>' + errHtml +
       '<div class="form-grid">' +
       authField("au-name", "Full name (shown as the verifier)", "text", ' autocomplete="name" placeholder="e.g. Maria Alvarez"') +
@@ -3278,7 +3534,7 @@ function renderAuthGate() {
       '<div class="auth-actions"><button class="btn" type="button" id="auth-primary" data-action="auth-setup">Create administrator account</button></div>' +
       '<div class="auth-note">Administrators add the rest of the team under <strong>Users &amp; Activity</strong>. Passwords are salted and hashed — no one, including an administrator, can read them back.</div>';
   } else if (!Auth.current()) {
-    html = "<h2>" + title + "</h2>" +
+    html = mark + "<h2>" + title + "</h2>" +
       '<div class="auth-sub">Sign in. Every Met / Not Met / N/A you record is stamped with your name and the moment you clicked it.</div>' + errHtml +
       '<div class="form-grid">' +
       authField("au-user", "Username", "text", ' autocomplete="username"') +
@@ -3287,7 +3543,7 @@ function renderAuthGate() {
       '<div class="auth-actions"><button class="btn" type="button" id="auth-primary" data-action="auth-login">Sign in</button></div>' +
       '<div class="auth-note">Forgot your password? An administrator can reset it under Users &amp; Activity. Sessions stay signed in on this browser for ' + Auth.sessionHours() + " hours.</div>";
   } else {
-    html = "<h2>Choose a password</h2>" +
+    html = mark + "<h2>Choose a password</h2>" +
       '<div class="auth-sub">Signed in as <strong>' + esc(Auth.current().name) + "</strong>. Your password was set by an administrator — replace it with one only you know before continuing.</div>" + errHtml +
       '<div class="form-grid">' +
       authField("au-pw", "New password (at least " + Auth.minPassword() + " characters)", "password", ' autocomplete="new-password"') +
@@ -3344,11 +3600,23 @@ function doSignOut() {
   renderUserChip();
   showAuthGate();
 }
+/* the two-letter mark on the sidebar and the sign-in card, always the same */
+function brandMark() {
+  return PROVIDER_CONFIG.meta.mark || initialsOf(PROVIDER_CONFIG.meta.providerName);
+}
+function initialsOf(name) {
+  var parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) { return "?"; }
+  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+}
 function renderUserChip() {
   var el = document.getElementById("userChip");
   var me = Auth.current();
-  el.innerHTML = me ? "<strong>" + esc(me.name) + "</strong>" +
-    esc(me.role === "admin" ? "Administrator" : "QA staff") : "";
+  el.innerHTML = me
+    ? '<div class="avatar">' + esc(initialsOf(me.name)) + "</div>" +
+      '<div class="who"><strong>' + esc(me.name) + "</strong>" +
+      esc(me.role === "admin" ? "Administrator" : "QA staff") + "</div>"
+    : "";
 }
 
 /* ============================ ATTRIBUTION ============================
@@ -3591,8 +3859,108 @@ function exportActivityCsv() {
 }
 
 /* ============================ NAV / RENDER / EVENTS ============================ */
+/* ====================== RESIDENTIAL MEDICAL REVIEW ======================
+   Hope Found's own nurse-administered binder check, not part of the weighted Qlarant
+   rubric: a completeness pass over each person's medical record. Same Satisfactory /
+   Concern / N/A scheme as the paper tool it replaces, plus the corrections pair. */
+function medKey(clientId, itemKey) { return clientId + "|" + itemKey; }
+function medClients() {
+  var lines = PROVIDER_CONFIG.medicalReview.serviceLines;
+  return S.clients.filter(function (c) {
+    return c.activeStatus && lines.indexOf(c.serviceLine) !== -1;
+  });
+}
+function medStats(c) {
+  var s = { total: 0, sat: 0, concern: 0, na: 0, unscored: 0 };
+  PROVIDER_CONFIG.medicalReview.domains.forEach(function (dm) {
+    dm.items.forEach(function (it) {
+      s.total++;
+      var rec = S.medreview[medKey(c.id, it.key)] || {};
+      if (rec.status === "sat") { s.sat++; }
+      else if (rec.status === "concern") { s.concern++; }
+      else if (rec.status === "na") { s.na++; }
+      else { s.unscored++; }
+    });
+  });
+  return s;
+}
+function renderMedReview() {
+  var cfg = PROVIDER_CONFIG.medicalReview;
+  var people = medClients();
+  var slNames = cfg.serviceLines.map(function (id) { return Engine.slName(id); }).join(" and ");
+  var html = '<h2 class="view-title">Residential Medical Review</h2>' +
+    '<p class="view-sub">The nurse\'s record-completeness check for ' + esc(slNames) + ' — the medical half of the ' +
+    'binder a surveyor opens. Every item starts <strong>not yet reviewed</strong>; nothing here counts against a ' +
+    'score until someone marks it. This is separate from the weighted rubric and does not feed the certification tier.</p>';
+
+  if (!people.length) {
+    return html + '<div class="note-box">No active people are on ' + esc(slNames) + ' yet. Add someone on Client Review, or ' +
+      'change which service lines this tool covers in <code>PROVIDER_CONFIG.medicalReview.serviceLines</code>.</div>';
+  }
+  if (!S.ui.medClient || !people.some(function (c) { return c.id === S.ui.medClient; })) {
+    S.ui.medClient = people[0].id;
+  }
+  var c = clientById(S.ui.medClient);
+
+  html += '<div class="no-print" style="margin:12px 0"><label>Person</label><select data-bind="med-client">' +
+    people.map(function (p) {
+      var st = medStats(p);
+      return '<option value="' + p.id + '"' + (p.id === c.id ? " selected" : "") + ">" + esc(p.name) +
+        " — " + esc(Engine.slName(p.serviceLine)) + " (" + (st.total - st.unscored) + "/" + st.total + " reviewed" +
+        (st.concern ? ", " + st.concern + " concern" : "") + ")</option>";
+    }).join("") + "</select></div>";
+
+  var s = medStats(c);
+  html += '<div class="pack-person"><div class="stat-row">' +
+    '<div class="stat"><div class="lbl">Reviewed</div><div class="pct">' + (s.total - s.unscored) + "/" + s.total +
+    '</div><div class="small muted">' + s.unscored + " not yet reviewed</div></div>" +
+    '<div class="stat"><div class="lbl">Satisfactory</div><div class="pct" style="color:var(--met)">' + s.sat + "</div><div class=\"small muted\">records complete</div></div>" +
+    '<div class="stat"><div class="lbl">Concerns noted</div><div class="pct" style="color:' + (s.concern ? "var(--gap)" : "var(--muted)") + '">' + s.concern +
+    '</div><div class="small muted">need a correction date</div></div>' +
+    '<div class="stat"><div class="lbl">Not applicable</div><div class="pct">' + s.na + '</div><div class="small muted">does not apply to this person</div></div>' +
+    "</div></div>";
+
+  cfg.domains.forEach(function (dm) {
+    html += '<h3 class="section-title">' + esc(dm.name) + "</h3>";
+    dm.items.forEach(function (it) {
+      var rec = S.medreview[medKey(c.id, it.key)] || {};
+      var st = rec.status || "";
+      html += '<div class="ind"><div class="ind-top"><div><div class="ind-q">' + esc(it.label) + "</div></div>" +
+        '<div style="min-width:170px"><select data-bind="mr-status" data-client="' + c.id + '" data-item="' + it.key + '">' +
+        ['<option value=""' + (st ? "" : " selected") + ">Not yet reviewed</option>",
+         '<option value="sat"' + (st === "sat" ? " selected" : "") + ">Satisfactory</option>",
+         '<option value="concern"' + (st === "concern" ? " selected" : "") + ">Concern noted</option>",
+         '<option value="na"' + (st === "na" ? " selected" : "") + ">N/A</option>"].join("") +
+        "</select></div></div>" +
+        '<div class="ind-fields">' +
+        '<div><label>Comments</label><input type="text" value="' + esc(rec.comments || "") + '" data-bind="mr-field" data-client="' + c.id + '" data-item="' + it.key + '" data-field="comments"></div>' +
+        (st === "concern" ?
+          '<div><label>Corrections deadline</label><input type="date" value="' + esc(rec.correctionDeadline || "") + '" data-bind="mr-field" data-client="' + c.id + '" data-item="' + it.key + '" data-field="correctionDeadline"></div>' +
+          '<div><label>Corrections completed</label><input type="date" value="' + esc(rec.correctionCompleted || "") + '" data-bind="mr-field" data-client="' + c.id + '" data-item="' + it.key + '" data-field="correctionCompleted"></div>' : "") +
+        "</div></div>";
+    });
+  });
+
+  html += '<div class="no-print" style="margin-top:14px"><button class="btn secondary" type="button" data-action="run-print">Print this review</button></div>';
+  return html;
+}
+
+var NAV_ICONS = {
+  dashboard: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.8" y="1.8" width="5.2" height="5.2" rx="1.5"></rect><rect x="9" y="1.8" width="5.2" height="5.2" rx="1.5"></rect><rect x="1.8" y="9" width="5.2" height="5.2" rx="1.5"></rect><rect x="9" y="9" width="5.2" height="5.2" rx="1.5"></rect></svg>',
+  review: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="5.2" r="2.6"></circle><path d="M2.6 14c.6-3 2.6-4.4 5.4-4.4s4.8 1.4 5.4 4.4"></path></svg>',
+  medreview: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.2"></circle><path d="M8 5.3v5.4M5.3 8h5.4"></path></svg>',
+  qidp: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="2"></rect><path d="M2 6.4h12M5.4 1.6v2.8M10.6 1.6v2.8"></path></svg>',
+  sampling: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 12.8L12.8 3.2"></path><circle cx="4.6" cy="4.6" r="1.9"></circle><circle cx="11.4" cy="11.4" r="1.9"></circle></svg>',
+  locator: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 4.6c0-.8.6-1.4 1.4-1.4h2.9l1.4 1.9h5.3c.8 0 1.4.6 1.4 1.4v5.9c0 .8-.6 1.4-1.4 1.4H3.2c-.8 0-1.4-.6-1.4-1.4z"></path></svg>',
+  runs: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.2"></circle><path d="M8 4.6V8l2.4 1.5"></path></svg>',
+  policy: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.8h10c-1-1-1.5-2-1.5-3.9 0-2.4-1.2-4.3-3.5-4.3S4.5 5.5 4.5 7.9c0 1.9-.5 2.9-1.5 3.9z"></path><path d="M6.8 13.8a1.3 1.3 0 002.4 0"></path></svg>',
+  orgstaff: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="10" height="12" rx="1"></rect><path d="M6 5h1.2M8.8 5H10M6 7.8h1.2M8.8 7.8H10M7 14v-2.6h2V14"></path></svg>',
+  rubric: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 4.2h1.6M6.2 4.2h7.6M2.2 8h1.6M6.2 8h7.6M2.2 11.8h1.6M6.2 11.8h7.6"></path></svg>',
+  users: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5.4" r="2.4"></circle><path d="M1.6 13.4c.5-2.6 2.2-3.9 4.4-3.9s3.9 1.3 4.4 3.9"></path><path d="M11 3.4a2.2 2.2 0 010 4.1M12.2 9.9c1.3.5 2 1.7 2.2 3.5"></path></svg>'
+};
 var TABS = [
-  ["dashboard", "Dashboard"], ["review", "Client Review"], ["qidp", "QIDP & ISP"], ["sampling", "Sampling"],
+  ["dashboard", "Dashboard"], ["review", "Client Review"], ["medreview", "Medical Review"],
+  ["qidp", "QIDP & ISP"], ["sampling", "Sampling"],
   ["locator", "Document Locator"], ["runs", "Audit Run"], ["policy", "Policy Updates"],
   ["orgstaff", "Organization & Staff"], ["rubric", "Rubric Manager"], ["users", "Users & Activity"]
 ];
@@ -3603,7 +3971,7 @@ function renderNav() {
     var label = t[1];
     var n = t[0] === "policy" ? att : t[0] === "qidp" ? qAtt : 0;
     if (n) { label += ' <span class="badge alert" style="font-size:10.5px;padding:1px 6px">' + n + "</span>"; }
-    return '<button type="button" data-action="nav" data-tab="' + t[0] + '" class="' + (S.ui.tab === t[0] ? "active" : "") + '">' + label + "</button>";
+    return '<button type="button" data-action="nav" data-tab="' + t[0] + '" class="' + (S.ui.tab === t[0] ? "active" : "") + '"><span class="nav-ic">' + (NAV_ICONS[t[0]] || "") + '</span><span class="nav-lbl">' + label + "</span></button>";
   }).join("");
 }
 function render() {
@@ -3612,8 +3980,10 @@ function render() {
   var v = document.getElementById("view");
   var fn = { dashboard: renderDashboard, review: renderReview, sampling: renderSampling,
              locator: renderLocator, runs: renderRuns, policy: renderPolicy, qidp: renderQidp,
-             orgstaff: renderOrgStaff, rubric: renderRubric, users: renderUsers }[S.ui.tab] || renderDashboard;
+             medreview: renderMedReview, orgstaff: renderOrgStaff, rubric: renderRubric,
+             users: renderUsers }[S.ui.tab] || renderDashboard;
   v.innerHTML = fn();
+  formatDatesIn(v);
   if (S.ui.tab === "sampling") { updateSamplingTotals(); }
 }
 
@@ -3859,12 +4229,13 @@ function onClick(e) {
     case "save-client": saveClientFromModal(d.id, d.new === "true"); break;
     case "rate": (function () {
       var rec = (S.records[d.client] || {})[d.ind] || {};
-      var val = rec.rating === d.val ? null : d.val;
+      /* "none" returns the question to its default, not-yet-scored state. */
+      var val = (d.val === "none" || rec.rating === d.val) ? null : d.val;
       /* the click IS the verification: stamp who and exactly when, or wipe it on un-rate */
       var patch = Object.assign({ rating: val }, val ? actorStamp() : clearedStamp());
       updRec(d.client, d.ind, patch);
       var c = clientById(d.client);
-      logAct("rating", (c ? c.name : d.client) + " · " + d.ind + " → " + (val ? ratingLabel(val) : "cleared"));
+      logAct("rating", (c ? c.name : d.client) + " · " + d.ind + " → " + (val ? ratingLabel(val) : "not yet scored"));
       render();
       Auth.touch();
     })(); break;
@@ -3883,10 +4254,10 @@ function onClick(e) {
     case "org-rate": (function () {
       var tool = S.org[d.tool] || (S.org[d.tool] = {});
       var rec = tool[d.item] || (tool[d.item] = {});
-      rec.rating = rec.rating === d.val ? null : d.val;
+      rec.rating = d.val === "none" ? null : (rec.rating === d.val ? null : d.val);
       Object.assign(rec, rec.rating ? actorStamp() : clearedStamp());
       persist(K.org, S.org);
-      logAct("org", d.tool + " · " + d.item + " → " + (rec.rating ? ratingLabel(rec.rating) : "cleared"));
+      logAct("org", d.tool + " · " + d.item + " → " + (rec.rating ? ratingLabel(rec.rating) : "not yet scored"));
       render();
       Auth.touch();
     })(); break;
@@ -3989,11 +4360,33 @@ function onChange(e) {
       entry.confirmedById = t.checked ? actorId() : "";
       entry.confirmedAt = t.checked ? new Date().toISOString() : "";
       persist(K.qtr, S.qtr);
-      logAct("qidp", c.name + " · " + d.period + " → " + (t.checked ? "confirmed filed in Therap" : "unmarked"));
+      logAct("qidp", c.name + " · " + d.period + " → " + (t.checked ? "confirmed filed in MCIS" : "unmarked"));
       render();
     })(); break;
     case "review-client": S.ui.reviewClient = t.value || null; render(); break;
+    /* Live inside the client modal: suggest the living arrangement that usually goes with the
+       chosen service line, and only surface IHS intensity when it applies. Both stay editable. */
+    case "cm-sl-live": (function () {
+      var la = document.getElementById("cm-la");
+      var suggested = PROVIDER_CONFIG.defaultLivingArrangement[t.value];
+      if (la && suggested) { la.value = suggested; }
+      var wrap = document.getElementById("cm-intensity-wrap");
+      if (wrap) { wrap.style.display = t.value === "ihs" ? "" : "none"; }
+    })(); break;
+    case "mr-status": (function () {
+      var k = d.client + "|" + d.item;
+      S.medreview[k] = Object.assign({}, S.medreview[k], { status: t.value || "" });
+      persist(K.medreview, S.medreview);
+      render();
+    })(); break;
+    case "mr-field": (function () {
+      var k = d.client + "|" + d.item, patch = {};
+      patch[d.field] = t.value;
+      S.medreview[k] = Object.assign({}, S.medreview[k], patch);
+      persist(K.medreview, S.medreview);
+    })(); break;
     case "review-location": S.ui.reviewLocation = t.value || ""; render(); break;
+    case "med-client": S.ui.medClient = t.value || null; render(); break;
     case "run-pick":
       S.ui.runPick = S.ui.runPick || {};
       S.ui.runPick[t.dataset.id] = t.checked;
@@ -4097,6 +4490,7 @@ function applyTheme() {
   document.title = PROVIDER_CONFIG.meta.appTitle;
   document.getElementById("brandName").textContent = PROVIDER_CONFIG.meta.appTitle;
   document.getElementById("brandSub").textContent = PROVIDER_CONFIG.meta.subtitle;
+  document.getElementById("brandMark").textContent = brandMark();
 }
 function showStorageNote() {
   var mode = Store.getMode();

@@ -8,13 +8,28 @@ DC waiver providers by swapping configuration.
 **Everything is one file: [`index.html`](index.html).** No build step, no server, no network
 dependencies for core operation. Open it in any modern browser, or host it as a claude.ai artifact.
 
-## The ten screens
+## The shell
+
+A fixed left sidebar carries the brand mark, the screen list with an icon per screen, and — at the
+foot — who is signed in, Settings, and Sign out. Below 900px it collapses to a horizontal strip.
+Cards are rounded and lightly shadowed; every visible date renders **MM-DD-YYYY** while stored data,
+`<input type="date">` values, and JSON/CSV exports stay ISO, so nothing about the data model changes.
+
+## The eleven screens
 
 1. **Readiness Dashboard** — per-service-line total % and critical % against the 70/80/90 tier
    thresholds, projected tier and its consequence, alert/not-met counts, minimum sample size, plus
-   standing measures (record retrieval rate, org tools, staff records, fire & emergency) and a
-   global Alert banner.
-2. **Client Review** — the full rubric per person with Met / Not Met / N/A rating, gate questions
+   standing measures (record retrieval rate, org tools, staff records, fire & emergency, review
+   coverage, open corrections) and a global Alert banner. Scores are reported alongside the
+   **coverage** they rest on — people reviewed, and how many applicable questions are answered — and
+   any service line with people still unscored is labelled **provisional**, because a 100% score over
+   1 of 20 people is not a 100% service line. Coverage is reported, never folded into the score.
+2. **Client Review** — the full rubric per person with Met / Not Met / N/A / **Not Yet Scored**
+   rating. *Not Yet Scored* is the standing default for every question and every person — an
+   unanswered question is never counted as a failure — and clicking it returns a question to that
+   state. A Not Met answer opens **corrections deadline** and **corrections completed** dates,
+   mirroring what the agency already tracks by hand on every paper binder review; anything past its
+   deadline and not completed lands on the Dashboard. Also: gate questions
    that default from the person's attribute flags (QA can override), auto-N/A of gated indicator
    families, verification fields, evidence location, inline "what the surveyor looks for" text, and
    a sticky live score summary with **Next unanswered / Open all / Collapse all** controls.
@@ -26,8 +41,13 @@ dependencies for core operation. Open it in any modern browser, or host it as a 
    rows parse fully offline (header row auto-detected, service lines and living arrangements
    fuzzy-matched, Yes/No columns become flags); a PDF or photo roster extracts via AI mode. Every
    import lands in an editable preview with duplicate-name flagging before anything is saved.
-3. **QIDP & ISP Tracking** — quarterly progress reports are authored in Therap by the QIDP, drawn
-   from direct-care staff's daily notes also entered there; this system does **not** write or store
+3. **Residential Medical Review** — the nurse's record-completeness pass over each person's medical
+   record for the residential service lines, in the same Satisfactory / Concern noted / N/A scheme as
+   the paper tool it replaces, with comments and a corrections pair on every Concern. Deliberately
+   separate from the weighted Qlarant rubric: it does not feed the certification tier. Which service
+   lines it covers is `PROVIDER_CONFIG.medicalReview.serviceLines`.
+4. **QIDP & ISP Tracking** — quarterly progress reports are authored by the QIDP and filed in
+   MCIS (DC DDA's system of record), drawn from direct-care staff's daily notes; this system does **not** write or store
    that review. It tracks two dates per person — **QIDP (case manager)** and **ISP date** (the
    annual Medicaid-services planning meeting), both set on Edit person — and computes each
    quarterly report's due date (ISP + 3/6/9 months) plus the next annual ISP renewal (ISP + 12
@@ -50,18 +70,18 @@ dependencies for core operation. Open it in any modern browser, or host it as a 
    The windows are deliberately different (all in `PROVIDER_CONFIG.qidp`: `ispWindowDays` 30,
    `ispBookingOpensDays` 45, `ispBookingDeadlineDays` 30, `quarterlyWindowDays` 15). An ISP meeting
    has to be booked with the team and the person, so it gets a booking window rather than a single
-   deadline; a quarterly report is written from notes already in Therap and needs no booking. Below the lists, the full grid still shows every person and
-   every due date. Marking a period done records that it was confirmed in Therap — a manual receipt
+   deadline; a quarterly report is written from notes already in MCIS and needs no booking. Below the lists, the full grid still shows every person and
+   every due date. Marking a period done records that it was confirmed in MCIS — a manual receipt
    check for now, and the intended hook for a future admin dashboard to update automatically once
    connected (see **Cross-system sync** below). Overdue items badge the nav tab and appear on the
    Dashboard, same pattern as Policy Updates.
-4. **Sampling Exposure Calculator** — editable census per service line; minimum sample recomputes
+5. **Sampling Exposure Calculator** — editable census per service line; minimum sample recomputes
    live (Qlarant matrix, plus ceiling(10% + 1) for services under 10); oversample suggestion;
    prior-PCR participants flagged, never excluded.
-5. **Document Locator** — every rated record across clients, staff, and org tools with its verified
+6. **Document Locator** — every rated record across clients, staff, and org tools with its verified
    location, or a flagged **NO VERIFIED LOCATION**; searchable and filterable. Framed around the
    2-hour production rule and the 4:00 PM day-one deadline.
-6. **Audit Run** — the 2-hour scramble, operationalized. When the PCR reviewers deliver the
+7. **Audit Run** — the 2-hour scramble, operationalized. When the PCR reviewers deliver the
    sample key, check off the selected people (pre-checked from the "In sample" flag) and generate a
    **record production pack**: a cover sheet with the start time, the records-due deadline
    (start + 2 hours) and the 4:00 PM off-site deadline, readiness stats, and a homes-to-visit list —
@@ -71,7 +91,7 @@ dependencies for core operation. Open it in any modern browser, or host it as a 
    (census → sampling matrix, per service line) at random, producing the identical pack for
    rehearsal. Runs are saved and reprintable; a dedicated print stylesheet strips the chrome and
    breaks one person per page. Filter the pack to all / rated only / missing-location only.
-7. **Policy Updates** — what changed since the last yearly PCR audit, made impossible to miss.
+8. **Policy Updates** — what changed since the last yearly PCR audit, made impossible to miss.
    Set the last audit date once and every rubric indicator with a newer effective date (plus
    retired items) is listed automatically — each cycle's rubric import feeds it with no extra work.
    DDA policy/requirement updates are logged with source, summary, and affected areas; each must be
@@ -84,15 +104,15 @@ dependencies for core operation. Open it in any modern browser, or host it as a 
    tracked by version + storage location. "Suggest QA document updates" drafts revision guidance —
    offline as a structured worksheet, or via AI mode, which reads the stored QA document itself
    (PDF or text) and proposes section-by-section language.
-8. **Organization & Staff** — the three mandatory org tools (HCBS Org Assessment exclusions are
+9. **Organization & Staff** — the three mandatory org tools (HCBS Org Assessment exclusions are
    config, not code), staff roster with requirement/expiration tracking (expired and ≤60-day
    expirations flagged), and the fire & emergency module (quarterly drill log per site/shift plus a
    recurring safety checklist with due-date logic).
-9. **Users & Activity** — who is allowed in and the running record of who did what: the account
+10. **Users & Activity** — who is allowed in and the running record of who did what: the account
    list (add people, change roles, reset passwords, deactivate without erasing anyone's history),
    a **Verifications on record** tally counted straight from the answers themselves, and the
    **Activity log** (last 400 actions, filterable by person, exportable as CSV).
-10. **Rubric Manager** — the editable master rubric. Edit any field, add indicators, retire items
+11. **Rubric Manager** — the editable master rubric. Edit any field, add indicators, retire items
    (soft delete — history is preserved), export/import the whole rubric as JSON so each audit
    cycle's criteria load without a rebuild.
 
@@ -175,7 +195,7 @@ Person records (name, service line, living arrangement, home/location, flags, QI
 plus each period's scheduled/confirmed state in `qtr`)
 are meant to be the single source of truth for a person across every Hope Found tool — this PCR
 system today, and an admin dashboard planned for later that will read and write the same fields
-(e.g. QIDP quarterly/ISP status, updated from Therap). No live connection exists yet — nothing here
+(e.g. QIDP quarterly/ISP status, updated from MCIS). No live connection exists yet — nothing here
 calls out to another app. Until it does, **Settings → Export/Import full backup** is the interim
 sync path: it's plain JSON keyed by the same client `id`s used throughout the app (`clients`,
 `records`, `qtr` for QIDP/ISP status, etc.), so the second build can read this export or produce a
