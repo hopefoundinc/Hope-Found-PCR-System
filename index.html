@@ -178,8 +178,27 @@ tr.flag-row td{background:#FBF3F1}
 .print-only{display:none}
 .pack-cover h2{font-size:22px}
 .pack-person{margin-top:14px}
+/* sign-in gate + identity */
+#authGate{display:none;position:fixed;inset:0;background:var(--teal-dark);z-index:300;overflow-y:auto;padding:24px 14px}
+#authGate.on{display:block}
+.auth-card{background:#fff;border:1px solid var(--hairline);max-width:430px;margin:5vh auto;padding:22px}
+.auth-card h2{font-size:22px;margin-bottom:3px}
+.auth-card .auth-sub{color:var(--muted);font-size:13.5px;margin-bottom:16px}
+.auth-card .form-grid{grid-template-columns:1fr}
+.auth-err{background:#FBF3F1;border-left:3px solid var(--gap);color:var(--gap);padding:9px 11px;font-size:13px;margin-bottom:12px;display:none}
+.auth-err.on{display:block}
+.auth-note{font-size:12.5px;color:var(--muted);margin-top:14px;border-top:1px solid var(--hairline);padding-top:10px}
+.auth-actions{margin-top:14px}
+.auth-actions .btn{width:100%;padding:10px 14px;font-size:15px}
+body.locked .header-actions,body.locked .nav-tabs,body.locked main,body.locked #alertBanner,body.locked #storageNote{display:none!important}
+.user-chip{text-align:right;color:#CBDBD9;font-size:11.5px;line-height:1.25;align-self:center}
+.user-chip strong{color:#fff;font-size:13.5px;display:block;font-weight:600}
+.stamp{font-size:11.5px;color:var(--muted);margin-top:6px}
+.stamp strong{color:var(--teal-dark);font-weight:600}
+.act-filter{max-width:240px}
+
 @media print {
-  .app-header, .nav-tabs, #storageNote, #alertBanner, .no-print, #saveStatus, .modal-back, button { display: none !important; }
+  .app-header, .nav-tabs, #storageNote, #alertBanner, .no-print, #saveStatus, .modal-back, #authGate, button { display: none !important; }
   .print-only { display: block !important; }
   html, body { background: #fff; font-size: 11.5px; }
   main { max-width: none; padding: 0; }
@@ -207,7 +226,9 @@ tr.flag-row td{background:#FBF3F1}
       <div class="sub" id="brandSub"></div>
     </div>
     <div class="header-actions">
+      <div class="user-chip" id="userChip"></div>
       <button class="btn-ghost" data-action="open-settings" type="button">Settings</button>
+      <button class="btn-ghost" data-action="sign-out" type="button">Sign out</button>
     </div>
   </div>
 </header>
@@ -217,6 +238,7 @@ tr.flag-row td{background:#FBF3F1}
 <main id="view"></main>
 <div class="modal-back" id="modalBack"><div class="modal" id="modalBox"></div></div>
 <div id="saveStatus"></div>
+<div id="authGate"><div class="auth-card" id="authCard"></div></div>
 <script>
 (function(){"use strict";
 
@@ -449,6 +471,264 @@ var Store = (function () {
   return { init: init, get: get, set: set, del: del, getMode: function () { return mode; } };
 })();
 
+/* =====================================================================
+   IDENTITY — SIGN-IN, ACCOUNTS, ATTRIBUTION
+   Accounts live in the shared dataset (pcr:users) so the same
+   credentials work on every device the team opens the system on.
+   The *session* is deliberately browser-local (localStorage, never
+   Store) — in the shared claude.ai runtime one person's sign-in must
+   never become everyone's. Passwords are salted per account and
+   stretched with PBKDF2-HMAC-SHA256 (Web Crypto) where available, and
+   with an iterated pure-JS SHA-256 otherwise, so no password is ever
+   stored or exported in readable form.
+   ===================================================================== */
+var LocalSess = (function () {
+  var KEY = "pcr:session";
+  var mem = null;
+  function read() {
+    try {
+      var raw = window.localStorage.getItem(KEY);
+      return raw ? JSON.parse(raw) : mem;
+    } catch (e) { return mem; }
+  }
+  function write(v) {
+    mem = v;
+    try {
+      if (v) { window.localStorage.setItem(KEY, JSON.stringify(v)); }
+      else { window.localStorage.removeItem(KEY); }
+    } catch (e) {}
+  }
+  return { read: read, write: write };
+})();
+
+var Hash = (function () {
+  var PBKDF2_ITERS = 150000;
+  var FALLBACK_ITERS = 12000;
+  var SHA_K = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+
+  function toUtf8(str) {
+    var out = "", i, c;
+    for (i = 0; i < str.length; i++) {
+      c = str.charCodeAt(i);
+      if (c < 128) { out += String.fromCharCode(c); }
+      else if (c < 2048) { out += String.fromCharCode(192 | (c >> 6), 128 | (c & 63)); }
+      else { out += String.fromCharCode(224 | (c >> 12), 128 | ((c >> 6) & 63), 128 | (c & 63)); }
+    }
+    return out;
+  }
+  function rotr(x, n) { return (x >>> n) | (x << (32 - n)); }
+  function sha256Hex(input) {
+    var msg = toUtf8(String(input));
+    var bitHi = Math.floor(msg.length / 536870912);
+    var bitLo = (msg.length * 8) >>> 0;
+    msg += "\x80";
+    while (msg.length % 64 !== 56) { msg += "\x00"; }
+    var H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+    var words = [], w = new Array(64), i, j, t1, t2, s0, s1, a, b, c, dd, e, f, g, h;
+    for (i = 0; i < msg.length; i += 4) {
+      words.push(((msg.charCodeAt(i) & 255) << 24) | ((msg.charCodeAt(i + 1) & 255) << 16) |
+                 ((msg.charCodeAt(i + 2) & 255) << 8) | (msg.charCodeAt(i + 3) & 255));
+    }
+    words.push(bitHi | 0); words.push(bitLo | 0);
+    for (j = 0; j < words.length; j += 16) {
+      for (i = 0; i < 16; i++) { w[i] = words[j + i] | 0; }
+      for (i = 16; i < 64; i++) {
+        s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+        s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+        w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+      }
+      a = H[0]; b = H[1]; c = H[2]; dd = H[3]; e = H[4]; f = H[5]; g = H[6]; h = H[7];
+      for (i = 0; i < 64; i++) {
+        t1 = (h + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + SHA_K[i] + w[i]) | 0;
+        t2 = ((rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+        h = g; g = f; f = e; e = (dd + t1) | 0; dd = c; c = b; b = a; a = (t1 + t2) | 0;
+      }
+      H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + dd) | 0;
+      H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
+    }
+    var out = "";
+    for (i = 0; i < 8; i++) { out += ("00000000" + (H[i] >>> 0).toString(16)).slice(-8); }
+    return out;
+  }
+  function randomHex(bytes) {
+    var out = "", i;
+    try {
+      var arr = new Uint8Array(bytes);
+      window.crypto.getRandomValues(arr);
+      for (i = 0; i < bytes; i++) { out += ("0" + arr[i].toString(16)).slice(-2); }
+      return out;
+    } catch (e) {}
+    for (i = 0; i < bytes; i++) { out += ("0" + Math.floor(Math.random() * 256).toString(16)).slice(-2); }
+    return out;
+  }
+  function subtleOk() {
+    try {
+      return !!(window.crypto && window.crypto.subtle && window.crypto.subtle.importKey &&
+                window.crypto.subtle.deriveBits && window.TextEncoder);
+    } catch (e) { return false; }
+  }
+  function hexOf(buf) {
+    var v = new Uint8Array(buf), out = "", i;
+    for (i = 0; i < v.length; i++) { out += ("0" + v[i].toString(16)).slice(-2); }
+    return out;
+  }
+  async function pbkdf2Hex(password, saltHex) {
+    var key = await window.crypto.subtle.importKey("raw", new TextEncoder().encode(password),
+      { name: "PBKDF2" }, false, ["deriveBits"]);
+    var salt = new Uint8Array(saltHex.length / 2);
+    for (var i = 0; i < salt.length; i++) { salt[i] = parseInt(saltHex.substr(i * 2, 2), 16); }
+    var bits = await window.crypto.subtle.deriveBits(
+      { name: "PBKDF2", salt: salt, iterations: PBKDF2_ITERS, hash: "SHA-256" }, key, 256);
+    return hexOf(bits);
+  }
+  function fallbackHex(password, saltHex) {
+    var h = sha256Hex(saltHex + password);
+    for (var i = 0; i < FALLBACK_ITERS; i++) { h = sha256Hex(h + saltHex); }
+    return h;
+  }
+  async function derive(password, saltHex, algo) {
+    if (algo === "pbkdf2") { return await pbkdf2Hex(password, saltHex); }
+    return fallbackHex(password, saltHex);
+  }
+  async function make(password) {
+    var salt = randomHex(16);
+    var algo = subtleOk() ? "pbkdf2" : "sha256x";
+    var hash;
+    try { hash = await derive(password, salt, algo); }
+    catch (e) { algo = "sha256x"; hash = fallbackHex(password, salt); }
+    return { salt: salt, hash: hash, algo: algo };
+  }
+  async function verify(password, cred) {
+    if (!cred || !cred.salt || !cred.hash) { return false; }
+    var h;
+    try { h = await derive(password, cred.salt, cred.algo); } catch (e) { return false; }
+    return h === cred.hash;
+  }
+  return { make: make, verify: verify, randomHex: randomHex, strong: subtleOk };
+})();
+
+var Auth = (function () {
+  var SESSION_HOURS = 12;
+  var MIN_PW = 8;
+  var users = [];
+  var me = null;
+
+  function norm(u) { return String(u == null ? "" : u).trim().toLowerCase(); }
+  async function load() { users = (await Store.get(K.users)) || []; return users; }
+  function save() { persist(K.users, users); }
+  function all() { return users; }
+  function replaceAll(arr) { users = Array.isArray(arr) ? arr : []; save(); }
+  function activeUsers() { return users.filter(function (u) { return u.active !== false; }); }
+  function adminCount() { return users.filter(function (u) { return u.active !== false && u.role === "admin"; }).length; }
+  function byId(id) { return users.filter(function (u) { return u.id === id; })[0] || null; }
+  function byUsername(n) { var k = norm(n); return users.filter(function (u) { return norm(u.username) === k; })[0] || null; }
+  function needsSetup() { return !activeUsers().length; }
+  function current() { return me; }
+  function isAdmin() { return !!(me && me.role === "admin" && me.active !== false); }
+  function minPassword() { return MIN_PW; }
+  function sessionHours() { return SESSION_HOURS; }
+
+  function writeSession(u) {
+    LocalSess.write({ uid: u.id, pwv: u.pwVersion || 1, exp: Date.now() + SESSION_HOURS * 3600000 });
+  }
+  function touch() { if (me) { writeSession(me); } }
+  function restore() {
+    var sess = LocalSess.read();
+    if (!sess || !sess.uid) { return null; }
+    if (!sess.exp || sess.exp < Date.now()) { LocalSess.write(null); return null; }
+    var u = byId(sess.uid);
+    if (!u || u.active === false || (u.pwVersion || 1) !== sess.pwv) { LocalSess.write(null); return null; }
+    me = u;
+    writeSession(u);
+    return me;
+  }
+  async function signIn(username, password) {
+    /* re-read accounts first: an admin may have just added or reset this
+       one from another device while this sign-in screen sat open */
+    try { await load(); } catch (e) {}
+    var u = byUsername(username);
+    if (!u || u.active === false) { return { ok: false, error: "No active account with that username." }; }
+    var ok = await Hash.verify(password, u.cred);
+    if (!ok) { return { ok: false, error: "Incorrect password." }; }
+    u.lastSignIn = new Date().toISOString();
+    me = u;
+    writeSession(u);
+    save();
+    return { ok: true, user: u };
+  }
+  function signOut() { me = null; LocalSess.write(null); }
+
+  function validateNew(data) {
+    if (!String(data.name || "").trim()) { return "Enter the person's full name — it is what gets stamped on every answer."; }
+    var uname = norm(data.username);
+    if (uname.length < 3) { return "Username must be at least 3 characters."; }
+    if (!/^[a-z0-9._-]+$/.test(uname)) { return "Username can contain letters, numbers, dot, dash and underscore only."; }
+    if (byUsername(uname)) { return "That username is already taken."; }
+    if (String(data.password || "").length < MIN_PW) { return "Password must be at least " + MIN_PW + " characters."; }
+    if (data.password !== data.confirm) { return "The two passwords do not match."; }
+    return "";
+  }
+  async function createUser(data) {
+    var err = validateNew(data);
+    if (err) { return { ok: false, error: err }; }
+    var cred = await Hash.make(data.password);
+    var u = { id: "u-" + Date.now().toString(36) + "-" + Hash.randomHex(3),
+              name: String(data.name).trim(), username: norm(data.username),
+              role: data.role === "admin" ? "admin" : "staff", active: true,
+              cred: cred, pwVersion: 1, mustChange: !!data.mustChange,
+              createdAt: new Date().toISOString(), lastSignIn: "" };
+    users.push(u);
+    save();
+    return { ok: true, user: u };
+  }
+  function updateUser(id, patch) {
+    var u = byId(id);
+    if (!u) { return { ok: false, error: "Account not found." }; }
+    var stillAdmin = patch.role !== undefined ? patch.role === "admin" : u.role === "admin";
+    var stillActive = patch.active !== undefined ? !!patch.active : u.active !== false;
+    if (u.role === "admin" && u.active !== false && !(stillAdmin && stillActive) && adminCount() <= 1) {
+      return { ok: false, error: "This is the only active administrator — make someone else an administrator first." };
+    }
+    if (patch.name !== undefined && String(patch.name).trim()) { u.name = String(patch.name).trim(); }
+    if (patch.role !== undefined) { u.role = patch.role === "admin" ? "admin" : "staff"; }
+    if (patch.active !== undefined) { u.active = !!patch.active; }
+    save();
+    if (me && me.id === u.id && u.active === false) { signOut(); }
+    return { ok: true, user: u };
+  }
+  async function setPassword(id, password, confirm, mustChange) {
+    var u = byId(id);
+    if (!u) { return { ok: false, error: "Account not found." }; }
+    if (String(password || "").length < MIN_PW) { return { ok: false, error: "Password must be at least " + MIN_PW + " characters." }; }
+    if (confirm !== undefined && password !== confirm) { return { ok: false, error: "The two passwords do not match." }; }
+    u.cred = await Hash.make(password);
+    u.pwVersion = (u.pwVersion || 1) + 1;
+    u.mustChange = !!mustChange;
+    save();
+    if (me && me.id === u.id) { writeSession(u); }
+    return { ok: true, user: u };
+  }
+  async function changeOwnPassword(currentPw, newPw, confirmPw) {
+    if (!me) { return { ok: false, error: "Not signed in." }; }
+    var ok = await Hash.verify(currentPw, me.cred);
+    if (!ok) { return { ok: false, error: "Current password is incorrect." }; }
+    return await setPassword(me.id, newPw, confirmPw, false);
+  }
+  return { load: load, save: save, all: all, replaceAll: replaceAll, byId: byId, byUsername: byUsername,
+           needsSetup: needsSetup, current: current, isAdmin: isAdmin, restore: restore, touch: touch,
+           signIn: signIn, signOut: signOut, createUser: createUser, updateUser: updateUser,
+           setPassword: setPassword, changeOwnPassword: changeOwnPassword, adminCount: adminCount,
+           minPassword: minPassword, sessionHours: sessionHours };
+})();
+
 /* ============================ APP STATE ============================ */
 var S = {
   rubric: [], clients: [], records: {}, /* records[clientId] = { indicatorId: rec } */
@@ -459,14 +739,16 @@ var S = {
   qadoc: { versions: [] },
   runs: [],
   qtr: {},                               /* qtr["clientId|ispDate|periodKey"] = { done, doneDate, notes } */
-  census: {}, settings: {},
+  census: {}, settings: {}, audit: [],
   ui: { tab: "dashboard", reviewClient: null, locatorQuery: "", locatorFilter: "all",
-        rubricFilterSL: "all", rubricFilterType: "all", rubricShowRetired: false, saveFails: 0 }
+        rubricFilterSL: "all", rubricFilterType: "all", rubricShowRetired: false, saveFails: 0,
+        actUser: "all" }
 };
 
 var K = { rubric: "pcr:rubric", clients: "pcr:clients", staff: "pcr:staff", org: "pcr:org",
           fire: "pcr:fire", census: "pcr:census", settings: "pcr:settings", rec: "pcr:rec:",
-          policy: "pcr:policy", qadoc: "pcr:qadoc", runs: "pcr:runs", qtr: "pcr:qtr" };
+          policy: "pcr:policy", qadoc: "pcr:qadoc", runs: "pcr:runs", qtr: "pcr:qtr",
+          users: "pcr:users", audit: "pcr:audit" };
 
 async function loadAll() {
   S.rubric  = (await Store.get(K.rubric))  || [];
@@ -479,6 +761,7 @@ async function loadAll() {
   S.qadoc   = (await Store.get(K.qadoc))   || { versions: [] };
   S.runs    = (await Store.get(K.runs))    || [];
   S.qtr     = (await Store.get(K.qtr))     || {};
+  S.audit   = (await Store.get(K.audit))   || [];
   S.settings= (await Store.get(K.settings))|| {};
   if (!S.rubric.length) { S.rubric = buildSeedRubric(); await Store.set(K.rubric, S.rubric); }
   if (!S.clients.length && !S.settings.seeded) {
@@ -896,6 +1179,7 @@ function closeModal() {
   box.style.maxWidth = "";
 }
 function todayStr() { return new Date().toISOString().slice(0, 10); }
+
 function safeConfirm(msg) { try { return window.confirm(msg); } catch (e) { return false; } }
 function safeAlert(msg) { try { window.alert(msg); } catch (e) { console.log(msg); } }
 function toast(msg) {
@@ -1141,6 +1425,8 @@ function indicatorHtml(it, c) {
       "</div></div>" +
       '<div class="gate-note">Defaults to <strong>' + flagDefault.toUpperCase() + "</strong> from the person's attribute flags" +
       (overridden ? " — overridden by QA" : "") + ". No = the dependent indicators below are auto-N/A.</div>" +
+      (rec.gateBy ? '<div class="stamp">Answered by <strong>' + esc(rec.gateBy) + "</strong>" +
+        (rec.gateAt ? " · " + esc(fmtWhen(rec.gateAt)) : "") + "</div>" : "") +
       intentBlock(it, intentOpen) + houseBtn + "</div>";
   }
 
@@ -1164,7 +1450,7 @@ function indicatorHtml(it, c) {
       '<div><label>Verified date</label><input type="date" value="' + esc(rec.verifiedDate || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="verifiedDate"></div>' +
       '<div><label>Evidence location</label><input type="text" placeholder="e.g. SharePoint/ISP/2026 or Binder 3, Shelf B" value="' + esc(rec.evidenceLocation || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="evidenceLocation"></div>' +
       '<div><label>Notes</label><input type="text" value="' + esc(rec.notes || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="notes"></div>' +
-      "</div>" : "") +
+      "</div>" + stampLine(rec) : "") +
     (!disabled && current ? houseBtn : "") +
     "</div>";
 }
@@ -1219,8 +1505,17 @@ function saveClientFromModal(id, isNew) {
     sampled: document.getElementById("cm-sampled").checked,
     activeStatus: document.getElementById("cm-active").checked
   };
-  if (c) { Object.assign(c, data); } else { S.clients.push(data); S.records[id] = S.records[id] || {}; }
+  data.updatedBy = actorName();
+  data.updatedAt = new Date().toISOString();
+  if (c) { Object.assign(c, data); }
+  else {
+    data.createdBy = actorName();
+    data.createdAt = new Date().toISOString();
+    S.clients.push(data);
+    S.records[id] = S.records[id] || {};
+  }
   persist(K.clients, S.clients);
+  logAct("person", (isNew ? "Added " : "Edited ") + name + " (" + Engine.slName(data.serviceLine) + ")");
   if (isNew) { S.ui.reviewClient = id; }
   closeModal(); render();
 }
@@ -1375,7 +1670,8 @@ function renderOrgStaff() {
         '<div class="ind-q" style="font-size:13.5px">' + esc(item.text) + "</div></div>" +
         '<div class="rate-group">' + btns + "</div></div>" +
         '<div class="ind-fields" style="margin-top:6px"><div><label>Evidence location</label><input type="text" value="' + esc(rec.evidenceLocation || "") + '" data-bind="org-field" data-tool="' + tool.id + '" data-item="' + item.id + '" data-field="evidenceLocation"></div>' +
-        '<div><label>Open item / notes</label><input type="text" value="' + esc(rec.notes || "") + '" data-bind="org-field" data-tool="' + tool.id + '" data-item="' + item.id + '" data-field="notes"></div></div></div>';
+        '<div><label>Open item / notes</label><input type="text" value="' + esc(rec.notes || "") + '" data-bind="org-field" data-tool="' + tool.id + '" data-item="' + item.id + '" data-field="notes"></div></div>' +
+        stampLine(rec) + "</div>";
     });
     html += "</div>";
   });
@@ -1413,7 +1709,10 @@ function renderOrgStaff() {
     var rec = S.fire.checks[item.id] || {};
     var st = Engine.fireCheckStatus(item);
     var cls = { ok: "met", soon: "warn", overdue: "alert", missing: "gap" }[st.key];
-    html += "<tr><td>" + esc(item.label) + "</td><td class='small muted'>" + item.frequencyDays + "d</td>" +
+    html += "<tr><td>" + esc(item.label) +
+      (rec.verifiedBy ? "<div class='stamp'>by <strong>" + esc(rec.verifiedBy) + "</strong>" +
+        (rec.verifiedAt ? " · " + esc(fmtWhen(rec.verifiedAt)) : "") + "</div>" : "") + "</td>" +
+      "<td class='small muted'>" + item.frequencyDays + "d</td>" +
       '<td style="max-width:130px"><input type="date" value="' + esc(rec.lastDone || "") + '" data-bind="fire-date" data-item="' + item.id + '"></td>' +
       "<td>" + badge(cls, st.label) + "</td>" +
       '<td><button class="btn secondary small" type="button" data-action="fire-done" data-item="' + item.id + '">Today</button></td></tr>';
@@ -1424,10 +1723,11 @@ function renderOrgStaff() {
   if (!S.fire.drills.length) {
     html += '<div class="muted small">No drills logged.</div>';
   } else {
-    html += '<div class="table-wrap" style="border:none"><table style="min-width:520px"><thead><tr><th>Date</th><th>Site</th><th>Shift</th><th>Type</th><th>Evac (min)</th><th>Result</th><th></th></tr></thead><tbody>';
+    html += '<div class="table-wrap" style="border:none"><table style="min-width:600px"><thead><tr><th>Date</th><th>Site</th><th>Shift</th><th>Type</th><th>Evac (min)</th><th>Result</th><th>Logged by</th><th></th></tr></thead><tbody>';
     S.fire.drills.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).forEach(function (d) {
       html += "<tr><td>" + esc(d.date) + "</td><td>" + esc(d.site) + "</td><td>" + esc(d.shift) + "</td><td>" + esc(d.type) + "</td><td>" + esc(d.evacMinutes || "—") + "</td>" +
         "<td>" + (d.passed ? badge("met", "Pass") : badge("gap", "Issues")) + (d.issues ? "<div class='small muted'>" + esc(d.issues) + "</div>" : "") + "</td>" +
+        "<td class='small'>" + esc(d.loggedBy || "—") + (d.loggedAt ? "<div class='stamp'>" + esc(fmtWhen(d.loggedAt)) + "</div>" : "") + "</td>" +
         '<td><button class="btn danger small" type="button" data-action="del-drill" data-id="' + d.id + '">✕</button></td></tr>';
     });
     html += "</tbody></table></div>";
@@ -1461,7 +1761,7 @@ function streqModal(staffId, reqId) {
     '<div><label>Completed</label><input type="date" id="sq-completed" value="' + esc(rec.completed || "") + '"></div>' +
     (req.expires ? '<div><label>Expires</label><input type="date" id="sq-expires" value="' + esc(rec.expires || "") + '"></div>' : "") +
     '<div class="full"><label>Evidence location</label><input type="text" id="sq-loc" value="' + esc(rec.evidenceLocation || "") + '" placeholder="Personnel file, HR drive path…"></div>' +
-    "</div>" +
+    "</div>" + stampLine(rec, "Last recorded by") +
     '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
     '<button class="btn" type="button" data-action="save-streq" data-staff="' + staffId + '" data-req="' + reqId + '">Save</button></div>');
 }
@@ -1582,7 +1882,14 @@ function settingsModal() {
   var modeLabel = mode === "shared" ? "Shared dataset (window.storage) — all QA staff see the same records" :
     mode === "local" ? "This browser (localStorage) — use Export to move data between devices" :
     "In-memory only — data is LOST on close; use Export to back up";
+  var me = Auth.current();
+  var admin = Auth.isAdmin();
   openModal('<h3>Settings</h3>' +
+    '<div class="note-box"><strong>Signed in as:</strong> ' + esc(me ? me.name : "—") +
+    (me ? " (" + esc(me.username) + ", " + (admin ? "administrator" : "QA staff") + ")" : "") +
+    ' &nbsp;<button class="intent-toggle" type="button" data-action="change-my-password">Change my password</button>' +
+    ' &nbsp;<button class="intent-toggle" type="button" data-action="sign-out">Sign out</button>' +
+    '<br><span class="small">Everything you rate is stamped with this name. Manage the team under <strong>Users &amp; Activity</strong>.</span></div>' +
     '<div class="note-box"><strong>Storage:</strong> ' + esc(modeLabel) + "</div>" +
     '<h4 style="margin:10px 0 6px">AI assist (optional — everything works offline without it)</h4>' +
     '<div class="small muted" style="margin-bottom:8px">Adds AI-written CAP drafts and readiness briefings via the Anthropic API. Requires network access and an API key from console.anthropic.com. The key is stored in this system\'s storage — use a workspace-scoped key you can revoke.</div>' +
@@ -1594,11 +1901,13 @@ function settingsModal() {
     '<div style="align-self:end"><button class="btn secondary" type="button" data-action="test-ai">Test connection</button></div>' +
     "</div><div id="+'"ai-test-out"'+" class='small' style='margin-top:6px'></div>" +
     '<h4 style="margin:16px 0 6px">Data</h4>' +
+    '<div class="small muted" style="margin-bottom:8px">The backup includes user accounts and the activity log so a restore keeps everyone\'s sign-in and the record of who verified what. Passwords are only ever stored as salted hashes, never in readable form — but treat the backup file as confidential and keep it where the agency keeps its other personnel data.</div>' +
     '<div class="toolbar" style="margin:0">' +
     '<button class="btn secondary" type="button" data-action="export-all">Export full backup (JSON)</button>' +
-    '<button class="btn secondary" type="button" data-action="import-all">Import backup</button>' +
-    '<button class="btn danger" type="button" data-action="clear-all">Clear ALL data</button>' +
+    (admin ? '<button class="btn secondary" type="button" data-action="import-all">Import backup</button>' +
+             '<button class="btn danger" type="button" data-action="clear-all">Clear ALL data</button>' : "") +
     "</div>" +
+    (admin ? "" : '<div class="small muted" style="margin-top:6px">Restoring or clearing data is limited to administrators.</div>') +
     '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Close</button>' +
     '<button class="btn" type="button" data-action="save-settings">Save</button></div>');
 }
@@ -1621,8 +1930,11 @@ function pickFile(cb) {
   inp.click();
 }
 async function exportAll() {
-  var out = { exportedAt: new Date().toISOString(), rubric: S.rubric, clients: S.clients, records: S.records,
-              staff: S.staff, org: S.org, fire: S.fire, census: S.census, policy: S.policy, qadoc: S.qadoc, runs: S.runs, qtr: S.qtr };
+  var out = { exportedAt: new Date().toISOString(), exportedBy: actorName(),
+              rubric: S.rubric, clients: S.clients, records: S.records,
+              staff: S.staff, org: S.org, fire: S.fire, census: S.census, policy: S.policy, qadoc: S.qadoc,
+              runs: S.runs, qtr: S.qtr, users: Auth.all(), audit: S.audit };
+  logAct("data", "Exported a full backup");
   var text = JSON.stringify(out, null, 1);
   download("pcr-backup-" + todayStr() + ".json", text);
   showTextModal("Full backup", text, "pcr-backup-" + todayStr() + ".json");
@@ -1631,7 +1943,9 @@ function importAll(text) {
   var data;
   try { data = JSON.parse(text); } catch (e) { safeAlert("Not valid JSON."); return; }
   if (!data || !Array.isArray(data.rubric) || !Array.isArray(data.clients)) { safeAlert("Not a recognized backup file."); return; }
-  if (!safeConfirm("Replace ALL current data with this backup?")) { return; }
+  if (!Auth.isAdmin()) { safeAlert("Only an administrator can restore a backup."); return; }
+  if (!safeConfirm("Replace ALL current data with this backup?" +
+      (Array.isArray(data.users) && data.users.length ? " User accounts in this backup replace the current ones — you may have to sign in again." : ""))) { return; }
   S.rubric = data.rubric; S.clients = data.clients; S.records = data.records || {};
   S.staff = data.staff || { roster: [], records: {} }; S.org = data.org || {};
   S.fire = data.fire || { drills: [], checks: {} }; S.census = data.census || {};
@@ -1643,6 +1957,18 @@ function importAll(text) {
   persist(K.org, S.org); persist(K.fire, S.fire); persist(K.census, S.census);
   persist(K.policy, S.policy); persist(K.qadoc, S.qadoc); persist(K.runs, S.runs); persist(K.qtr, S.qtr);
   S.clients.forEach(function (c) { persist(K.rec + c.id, S.records[c.id] || {}); });
+  S.audit = Array.isArray(data.audit) ? data.audit : S.audit;
+  Store.set(K.audit, S.audit);
+  if (Array.isArray(data.users) && data.users.length) {
+    Auth.replaceAll(data.users);
+    Auth.signOut();
+    logAct("data", "Restored a full backup, including user accounts");
+    closeModal();
+    renderUserChip();
+    showAuthGate();
+    return;
+  }
+  logAct("data", "Restored a full backup");
   closeModal(); render();
 }
 function importRubric(text) {
@@ -1658,6 +1984,7 @@ function importRubric(text) {
                            hcbsSettings: false, effectiveDate: todayStr(), active: true, domain: "General" }, r);
   });
   persist(K.rubric, S.rubric);
+  logAct("rubric", "Imported a master rubric of " + arr.length + " indicators");
   render();
 }
 function aiModal(title, offlineFn, promptFn) {
@@ -1965,13 +2292,15 @@ function riConfirm() {
       location: (d.location || "").trim(),
       qidpName: (d.qidpName || "").trim(), ispDate: (d.ispDate || "").trim(),
       flags: { hasBSP: d.hasBSP, hasRestrictiveComponents: d.hasRestrictiveComponents, takesMedications: d.takesMedications },
-      priorPCRParticipant: d.priorPCRParticipant, sampled: d.sampled, activeStatus: true
+      priorPCRParticipant: d.priorPCRParticipant, sampled: d.sampled, activeStatus: true,
+      createdBy: actorName(), createdById: actorId(), createdAt: new Date().toISOString()
     });
     S.records[id] = {};
     added++;
   });
   if (!added) { return; }
   persist(K.clients, S.clients);
+  logAct("person", "Imported " + added + " person record(s) from a roster");
   rosterDraft = [];
   closeModal();
   render();
@@ -2092,14 +2421,17 @@ function renderPolicy() {
       "</div>" +
       (cur.note ? '<div class="small" style="margin-bottom:6px">' + esc(cur.note) + "</div>" : "") +
       (cur.location ? '<div class="small muted">Location: ' + esc(cur.location) + "</div>" : "") +
+      (cur.uploadedBy ? '<div class="stamp">Uploaded by <strong>' + esc(cur.uploadedBy) + "</strong>" +
+        (cur.uploadedAt ? " · " + esc(fmtWhen(cur.uploadedAt)) : "") + "</div>" : "") +
       (cur.content ? '<div style="margin-top:8px"><button class="btn secondary small" type="button" data-action="qa-download" data-id="' + cur.id + '">Download stored copy</button></div>' : "");
   }
   html += "</div>";
   if (qaVersions().length > 1) {
-    html += '<div class="table-wrap"><table><thead><tr><th>Version</th><th>Date</th><th>What changed</th><th>Addresses</th><th>File</th></tr></thead><tbody>';
+    html += '<div class="table-wrap"><table><thead><tr><th>Version</th><th>Date</th><th>What changed</th><th>Uploaded by</th><th>Addresses</th><th>File</th></tr></thead><tbody>';
     qaVersions().slice().reverse().forEach(function (ver, idx) {
       html += "<tr><td><strong>" + esc(ver.name) + "</strong>" + (idx === 0 ? " " + badge("met", "current") : "") + "</td><td>" + esc(ver.date) + "</td>" +
         '<td class="small" style="max-width:340px">' + esc(ver.note || "") + "</td>" +
+        '<td class="small">' + esc(ver.uploadedBy || "—") + "</td>" +
         '<td class="small">' + ((ver.addresses || []).length ? (ver.addresses || []).length + " update(s)" : "—") + "</td>" +
         "<td>" + (ver.content ? '<button class="btn secondary small" type="button" data-action="qa-download" data-id="' + ver.id + '">Download</button>' :
           '<span class="small muted">' + (ver.contentDropped ? "no longer stored in-app" : (ver.location ? esc(ver.location) : "external")) + "</span>") + "</td></tr>";
@@ -2130,8 +2462,8 @@ function ackModal(id) {
   if (!u) { return; }
   openModal("<h3>Acknowledge policy update</h3>" +
     '<div class="note-box"><strong>' + esc(u.title) + "</strong>" + (u.summary ? "<br>" + esc(u.summary) : "") + "</div>" +
-    '<div class="small muted" style="margin-bottom:8px">Acknowledging records, by name and date, that the agency has seen this change and is acting on it. This is your audit trail.</div>' +
-    '<div class="field"><label>Acknowledged by (name / title)</label><input type="text" id="ack-name" placeholder="e.g. Z. Malya, QA Director"></div>' +
+    '<div class="small muted" style="margin-bottom:8px">Acknowledging records, by name and date, that the agency has seen this change and is acting on it. This is your audit trail. Your signed-in name is filled in — change it only if you are acknowledging on someone else\'s behalf.</div>' +
+    '<div class="field"><label>Acknowledged by (name / title)</label><input type="text" id="ack-name" value="' + esc(actorName()) + '" placeholder="e.g. Z. Malya, QA Director"></div>' +
     '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
     '<button class="btn" type="button" data-action="save-ack" data-id="' + id + '">Acknowledge</button></div>');
 }
@@ -2173,7 +2505,10 @@ function saveQaDoc() {
     size: qaDraftFile ? qaDraftFile.size : 0,
     mime: qaDraftFile ? qaDraftFile.mime : "",
     content: qaDraftFile ? qaDraftFile.content : null,
-    contentKind: qaDraftFile ? qaDraftFile.kind : null
+    contentKind: qaDraftFile ? qaDraftFile.kind : null,
+    uploadedBy: actorName(),
+    uploadedById: actorId(),
+    uploadedAt: new Date().toISOString()
   };
   S.qadoc.versions = S.qadoc.versions || [];
   S.qadoc.versions.push(ver);
@@ -2190,6 +2525,8 @@ function saveQaDoc() {
   });
   persist(K.qadoc, S.qadoc);
   persist(K.policy, S.policy);
+  logAct("qadoc", "Saved QA document version \"" + name + "\"" +
+    (addresses.length ? " addressing " + addresses.length + " policy update(s)" : ""));
   qaDraftFile = null;
   closeModal();
   render();
@@ -2448,6 +2785,7 @@ function runPackView(run) {
     '<div class="ind-meta" style="margin:6px 0">' +
     (run.type === "live" ? badge("alert", "LIVE PCR AUDIT") : badge("neutral", "PREPARATION DRILL")) +
     badge("outline", esc(run.label)) + badge("outline", run.date + " · started " + fmtTime(run.startedAt)) +
+    (run.createdBy ? badge("outline", "generated by " + run.createdBy) : "") +
     "</div>" +
     '<div class="rule-box" style="margin:10px 0"><h4>Records due by ' + runDueTime(run) + "</h4>" +
     '<div class="small">All records for the people, staff training, and personnel files below must be produced within ' +
@@ -2631,6 +2969,8 @@ function qtrModal(clientId, periodKey) {
     '<div><label>Date filed</label><input type="date" id="qm-date" value="' + esc(entry.doneDate || "") + '"></div>' +
     '<div class="full"><label>Notes</label><input type="text" id="qm-notes" value="' + esc(entry.notes || "") + '" placeholder="optional"></div>' +
     "</div>" +
+    (entry.confirmedBy ? '<div class="stamp">Confirmed by <strong>' + esc(entry.confirmedBy) + "</strong>" +
+      (entry.confirmedAt ? " · " + esc(fmtWhen(entry.confirmedAt)) : "") + "</div>" : "") +
     '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
     '<button class="btn" type="button" data-action="save-qtr" data-client="' + c.id + '" data-period="' + periodKey + '">Save</button></div>');
 }
@@ -2640,18 +2980,368 @@ function saveQtrFromModal(clientId, periodKey) {
   var done = document.getElementById("qm-done").checked;
   var dateVal = document.getElementById("qm-date").value || (done ? todayStr() : "");
   S.qtr[qtrKey(clientId, c.ispDate, periodKey)] = {
-    done: done, doneDate: dateVal, notes: document.getElementById("qm-notes").value.trim()
+    done: done, doneDate: dateVal, notes: document.getElementById("qm-notes").value.trim(),
+    confirmedBy: done ? actorName() : "", confirmedById: done ? actorId() : "",
+    confirmedAt: done ? new Date().toISOString() : ""
   };
   persist(K.qtr, S.qtr);
+  logAct("qidp", c.name + " · " + periodKey + " → " + (done ? "confirmed filed in Therap" : "not filed"));
   closeModal(); render();
   toast(done ? "Marked filed" : "Updated");
+}
+
+/* ============================ SIGN-IN GATE ============================ */
+var authErr = "";
+function authGateEl() { return document.getElementById("authGate"); }
+function gateOpen() { return authGateEl().classList.contains("on"); }
+function showAuthGate() {
+  document.body.classList.add("locked");
+  authGateEl().classList.add("on");
+  renderAuthGate();
+}
+function hideAuthGate() {
+  document.body.classList.remove("locked");
+  authGateEl().classList.remove("on");
+  document.getElementById("authCard").innerHTML = "";
+  authErr = "";
+}
+function authField(id, label, type, extra) {
+  return '<div><label for="' + id + '">' + esc(label) + '</label><input type="' + type + '" id="' + id + '"' + (extra || "") + "></div>";
+}
+function renderAuthGate() {
+  var card = document.getElementById("authCard");
+  var errHtml = '<div class="auth-err' + (authErr ? " on" : "") + '">' + esc(authErr) + "</div>";
+  var title = esc(PROVIDER_CONFIG.meta.appTitle);
+  var html;
+  if (Auth.needsSetup()) {
+    html = "<h2>" + title + "</h2>" +
+      '<div class="auth-sub">No accounts exist yet. Create the first administrator account — this is the name that will be stamped on everything you verify.</div>' + errHtml +
+      '<div class="form-grid">' +
+      authField("au-name", "Full name (shown as the verifier)", "text", ' autocomplete="name" placeholder="e.g. Maria Alvarez"') +
+      authField("au-user", "Username", "text", ' autocomplete="username" placeholder="e.g. malvarez"') +
+      authField("au-pw", "Password (at least " + Auth.minPassword() + " characters)", "password", ' autocomplete="new-password"') +
+      authField("au-pw2", "Confirm password", "password", ' autocomplete="new-password"') +
+      "</div>" +
+      '<div class="auth-actions"><button class="btn" type="button" id="auth-primary" data-action="auth-setup">Create administrator account</button></div>' +
+      '<div class="auth-note">Administrators add the rest of the team under <strong>Users &amp; Activity</strong>. Passwords are salted and hashed — no one, including an administrator, can read them back.</div>';
+  } else if (!Auth.current()) {
+    html = "<h2>" + title + "</h2>" +
+      '<div class="auth-sub">Sign in. Every Met / Not Met / N/A you record is stamped with your name and the moment you clicked it.</div>' + errHtml +
+      '<div class="form-grid">' +
+      authField("au-user", "Username", "text", ' autocomplete="username"') +
+      authField("au-pw", "Password", "password", ' autocomplete="current-password"') +
+      "</div>" +
+      '<div class="auth-actions"><button class="btn" type="button" id="auth-primary" data-action="auth-login">Sign in</button></div>' +
+      '<div class="auth-note">Forgot your password? An administrator can reset it under Users &amp; Activity. Sessions stay signed in on this browser for ' + Auth.sessionHours() + " hours.</div>";
+  } else {
+    html = "<h2>Choose a password</h2>" +
+      '<div class="auth-sub">Signed in as <strong>' + esc(Auth.current().name) + "</strong>. Your password was set by an administrator — replace it with one only you know before continuing.</div>" + errHtml +
+      '<div class="form-grid">' +
+      authField("au-pw", "New password (at least " + Auth.minPassword() + " characters)", "password", ' autocomplete="new-password"') +
+      authField("au-pw2", "Confirm new password", "password", ' autocomplete="new-password"') +
+      "</div>" +
+      '<div class="auth-actions"><button class="btn" type="button" id="auth-primary" data-action="auth-change-forced">Save password and continue</button></div>' +
+      '<div class="auth-note"><button class="intent-toggle" type="button" data-action="sign-out">Sign out instead</button></div>';
+  }
+  card.innerHTML = html;
+  setTimeout(function () {
+    var first = card.querySelector("input");
+    if (first) { try { first.focus(); } catch (e) {} }
+  }, 30);
+}
+function authVal(id) {
+  var el = document.getElementById(id);
+  return el ? el.value : "";
+}
+function authFail(msg) { authErr = msg; renderAuthGate(); }
+
+async function doAuthSetup() {
+  var res = await Auth.createUser({ name: authVal("au-name"), username: authVal("au-user"),
+    password: authVal("au-pw"), confirm: authVal("au-pw2"), role: "admin" });
+  if (!res.ok) { authFail(res.error); return; }
+  var signed = await Auth.signIn(res.user.username, authVal("au-pw"));
+  if (!signed.ok) { authFail(signed.error); return; }
+  authErr = "";
+  await enterApp();
+  logAct("account", "Created the first administrator account (" + res.user.name + ")");
+}
+async function doAuthLogin() {
+  var res = await Auth.signIn(authVal("au-user"), authVal("au-pw"));
+  if (!res.ok) { authFail(res.error); return; }
+  authErr = "";
+  if (res.user.mustChange) { renderAuthGate(); return; }
+  await enterApp();
+  logAct("signin", "Signed in");
+}
+async function doAuthForcedChange() {
+  var me = Auth.current();
+  if (!me) { showAuthGate(); return; }
+  var res = await Auth.setPassword(me.id, authVal("au-pw"), authVal("au-pw2"), false);
+  if (!res.ok) { authFail(res.error); return; }
+  authErr = "";
+  await enterApp();
+  logAct("account", "Set a new password after an administrator reset");
+}
+function doSignOut() {
+  var me = Auth.current();
+  if (me) { logAct("signin", "Signed out"); }
+  Auth.signOut();
+  closeModal();
+  document.getElementById("view").innerHTML = "";
+  renderUserChip();
+  showAuthGate();
+}
+function renderUserChip() {
+  var el = document.getElementById("userChip");
+  var me = Auth.current();
+  el.innerHTML = me ? "<strong>" + esc(me.name) + "</strong>" +
+    esc(me.role === "admin" ? "Administrator" : "QA staff") : "";
+}
+
+/* ============================ ATTRIBUTION ============================
+   One helper stamps the signed-in person and the exact moment onto
+   whatever they just recorded, so nobody types their own name again. */
+function actorName() { var u = Auth.current(); return u ? u.name : ""; }
+function actorId() { var u = Auth.current(); return u ? u.id : ""; }
+function actorStamp() {
+  return { verifiedBy: actorName(), verifiedById: actorId(),
+           verifiedAt: new Date().toISOString(), verifiedDate: todayStr() };
+}
+function clearedStamp() {
+  return { verifiedBy: "", verifiedById: "", verifiedAt: "", verifiedDate: "" };
+}
+function fmtWhen(iso) {
+  if (!iso) { return ""; }
+  try {
+    return new Date(iso).toLocaleString([], { year: "numeric", month: "short", day: "numeric",
+                                              hour: "numeric", minute: "2-digit" });
+  } catch (e) { return String(iso).slice(0, 16).replace("T", " "); }
+}
+function stampLine(rec, verb) {
+  if (!rec || !rec.verifiedBy) { return ""; }
+  var when = rec.verifiedAt ? fmtWhen(rec.verifiedAt) : (rec.verifiedDate || "");
+  return '<div class="stamp">' + esc(verb || "Verified by") + " <strong>" + esc(rec.verifiedBy) + "</strong>" +
+    (when ? " · " + esc(when) : "") + "</div>";
+}
+
+/* ---- activity log: append-only, capped, browser-silent ---- */
+var auditTimer = null;
+function logAct(action, detail) {
+  var u = Auth.current();
+  S.audit.push({ ts: new Date().toISOString(), uid: u ? u.id : "", name: u ? u.name : "(not signed in)",
+                 action: action, detail: String(detail || "") });
+  while (S.audit.length > 400) { S.audit.shift(); }
+  clearTimeout(auditTimer);
+  auditTimer = setTimeout(function () { Store.set(K.audit, S.audit); }, 800);
+}
+
+/* ============================ USERS & ACTIVITY ============================
+   Who is allowed in, and the running record of who did what. */
+function verificationTally() {
+  var byKey = {};
+  function bump(id, name, at) {
+    if (!name) { return; }
+    var key = id || ("name:" + name);
+    var e = byKey[key] || (byKey[key] = { id: id, name: name, client: 0, org: 0, last: "" });
+    if (at && at > e.last) { e.last = at; }
+    return e;
+  }
+  Object.keys(S.records).forEach(function (cid) {
+    var recs = S.records[cid] || {};
+    Object.keys(recs).forEach(function (iid) {
+      var r = recs[iid];
+      if (!r || !r.rating || !r.verifiedBy) { return; }
+      var e = bump(r.verifiedById || "", r.verifiedBy, r.verifiedAt || "");
+      if (e) { e.client++; }
+    });
+  });
+  Object.keys(S.org).forEach(function (tid) {
+    var tool = S.org[tid] || {};
+    Object.keys(tool).forEach(function (iid) {
+      var r = tool[iid];
+      if (!r || !r.rating || !r.verifiedBy) { return; }
+      var e = bump(r.verifiedById || "", r.verifiedBy, r.verifiedAt || "");
+      if (e) { e.org++; }
+    });
+  });
+  return Object.keys(byKey).map(function (k) { return byKey[k]; })
+    .sort(function (a, b) { return (b.client + b.org) - (a.client + a.org); });
+}
+var ACT_LABEL = { rating: "Rating", gate: "Gate question", org: "Org tool", staff: "Staff record",
+                  fire: "Fire & emergency", policy: "Policy update", qadoc: "QA document",
+                  qidp: "QIDP / ISP", run: "Audit run", person: "Person record", rubric: "Rubric",
+                  account: "Account", signin: "Sign-in", data: "Data" };
+function renderUsers() {
+  var me = Auth.current();
+  var admin = Auth.isAdmin();
+  var html = '<h2 class="view-title">Users &amp; Activity</h2>' +
+    '<p class="view-sub">Everyone who records a Met / Not Met / N/A signs in first, so every answer carries the name of the person who made it and the moment they did — no one types a verifier name by hand.</p>';
+
+  html += '<h3 class="section-title">Accounts</h3>';
+  if (admin) {
+    html += '<div class="toolbar"><button class="btn secondary" type="button" data-action="add-user">+ Add user</button>' +
+      '<div class="small muted" style="align-self:center">You are an administrator: you can add people, change roles, and reset passwords.</div></div>';
+  } else {
+    html += '<div class="note-box">Only an administrator can add accounts or reset passwords. Ask one of the administrators listed below.</div>';
+  }
+  html += '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Last sign-in</th>' +
+    (admin ? "<th></th>" : "") + "</tr></thead><tbody>";
+  Auth.all().slice().sort(function (a, b) { return a.name < b.name ? -1 : 1; }).forEach(function (u) {
+    var isMe = me && u.id === me.id;
+    html += "<tr" + (u.active === false ? ' class="flag-row"' : "") + "><td><strong>" + esc(u.name) + "</strong>" +
+      (isMe ? " " + badge("neutral", "you") : "") + "</td>" +
+      "<td class='small'>" + esc(u.username) + "</td>" +
+      "<td>" + badge(u.role === "admin" ? "neutral" : "outline", u.role === "admin" ? "Administrator" : "QA staff") + "</td>" +
+      "<td>" + (u.active === false ? badge("gap", "Deactivated") : badge("met", "Active")) +
+      (u.mustChange ? " " + badge("warn", "must set password") : "") + "</td>" +
+      "<td class='small muted'>" + esc(u.lastSignIn ? fmtWhen(u.lastSignIn) : "never") + "</td>" +
+      (admin ? '<td><button class="btn secondary small" type="button" data-action="edit-user" data-id="' + u.id + '">Manage</button></td>' : "") +
+      "</tr>";
+  });
+  html += "</tbody></table></div>";
+
+  var tally = verificationTally();
+  html += '<h3 class="section-title">Verifications on record</h3>' +
+    '<div class="note-box">Counted from the answers themselves, so it survives beyond the activity log below. Names carried over from before sign-in was introduced appear here without an account.</div>';
+  if (!tally.length) {
+    html += '<div class="empty">Nothing verified yet.</div>';
+  } else {
+    html += '<div class="table-wrap"><table><thead><tr><th>Verifier</th><th>Client indicators</th><th>Org tool items</th><th>Most recent</th></tr></thead><tbody>';
+    tally.forEach(function (t) {
+      html += "<tr><td><strong>" + esc(t.name) + "</strong>" +
+        (t.id ? "" : " " + badge("outline", "no account")) + "</td>" +
+        "<td>" + t.client + "</td><td>" + t.org + "</td>" +
+        "<td class='small muted'>" + esc(t.last ? fmtWhen(t.last) : "—") + "</td></tr>";
+    });
+    html += "</tbody></table></div>";
+  }
+
+  var filter = S.ui.actUser || "all";
+  var entries = S.audit.slice().reverse().filter(function (a) {
+    return filter === "all" || a.uid === filter || a.name === filter;
+  });
+  html += '<h3 class="section-title">Activity log</h3>' +
+    '<div class="toolbar"><div class="field act-filter"><label>Filter by person</label><select data-bind="act-user">' +
+    '<option value="all">Everyone</option>' +
+    Auth.all().map(function (u) {
+      return '<option value="' + esc(u.id) + '"' + (filter === u.id ? " selected" : "") + ">" + esc(u.name) + "</option>";
+    }).join("") + "</select></div>" +
+    '<button class="btn secondary" type="button" data-action="export-activity">Export activity (CSV)</button></div>';
+  if (!entries.length) {
+    html += '<div class="empty">No activity recorded yet.</div>';
+  } else {
+    html += '<div class="small muted" style="margin-bottom:6px">Most recent first — the last ' + S.audit.length +
+      " actions are kept (older entries roll off; the verifier stamped on each answer never does).</div>" +
+      '<div class="table-wrap"><table><thead><tr><th>When</th><th>Who</th><th>What</th><th>Detail</th></tr></thead><tbody>';
+    entries.slice(0, 250).forEach(function (a) {
+      html += "<tr><td class='small' style='white-space:nowrap'>" + esc(fmtWhen(a.ts)) + "</td>" +
+        "<td class='small'><strong>" + esc(a.name) + "</strong></td>" +
+        "<td>" + badge("outline", ACT_LABEL[a.action] || a.action) + "</td>" +
+        "<td class='small'>" + esc(a.detail) + "</td></tr>";
+    });
+    html += "</tbody></table></div>";
+  }
+  return html;
+}
+function userModal(u) {
+  var isNew = !u;
+  var min = Auth.minPassword();
+  openModal("<h3>" + (isNew ? "Add user" : "Manage " + esc(u.name)) + "</h3>" +
+    '<div class="auth-err" id="um-err"></div>' +
+    '<div class="form-grid">' +
+    '<div class="full"><label>Full name (stamped as the verifier)</label><input type="text" id="um-name" value="' + esc(isNew ? "" : u.name) + '"></div>' +
+    (isNew ? '<div><label>Username</label><input type="text" id="um-user" autocomplete="off"></div>' :
+      '<div><label>Username</label><input type="text" value="' + esc(u.username) + '" disabled></div>') +
+    '<div><label>Role</label><select id="um-role">' +
+    '<option value="staff"' + (!isNew && u.role !== "admin" ? " selected" : "") + '>QA staff</option>' +
+    '<option value="admin"' + (!isNew && u.role === "admin" ? " selected" : "") + ">Administrator</option></select></div>" +
+    (isNew ? '<div class="full"><label>Temporary password (at least ' + min + ' characters)</label><input type="password" id="um-pw" autocomplete="new-password"></div>' +
+             '<div class="full"><label>Confirm password</label><input type="password" id="um-pw2" autocomplete="new-password"></div>' +
+             '<div class="full"><div class="check-line"><input type="checkbox" id="um-must" checked><label for="um-must" style="text-transform:none;margin:0">Require them to choose their own password at first sign-in</label></div></div>' :
+             '<div class="full"><div class="check-line"><input type="checkbox" id="um-active"' + (u.active !== false ? " checked" : "") + '><label for="um-active" style="text-transform:none;margin:0">Account is active (uncheck to revoke access without deleting the audit trail)</label></div></div>' +
+             '<div class="full"><label>Reset password (leave blank to keep the current one)</label><input type="password" id="um-pw" autocomplete="new-password"></div>' +
+             '<div class="full"><label>Confirm new password</label><input type="password" id="um-pw2" autocomplete="new-password"></div>') +
+    "</div>" +
+    '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
+    '<button class="btn" type="button" data-action="save-user" data-id="' + (isNew ? "" : u.id) + '" data-new="' + isNew + '">Save</button></div>');
+}
+function umErr(msg) {
+  var el = document.getElementById("um-err");
+  if (!el) { return; }
+  el.textContent = msg;
+  el.className = msg ? "auth-err on" : "auth-err";
+}
+async function saveUserFromModal(id, isNew) {
+  var name = document.getElementById("um-name").value;
+  var role = document.getElementById("um-role").value;
+  var pw = document.getElementById("um-pw").value;
+  var pw2 = document.getElementById("um-pw2").value;
+  if (isNew) {
+    var res = await Auth.createUser({ name: name, username: document.getElementById("um-user").value,
+      role: role, password: pw, confirm: pw2, mustChange: document.getElementById("um-must").checked });
+    if (!res.ok) { umErr(res.error); return; }
+    logAct("account", "Added user " + res.user.name + " (" + res.user.username + ", " + (role === "admin" ? "administrator" : "QA staff") + ")");
+    toast("User added");
+  } else {
+    var target = Auth.byId(id);
+    if (!target) { umErr("Account not found."); return; }
+    var wasActive = target.active !== false;
+    var upd = Auth.updateUser(id, { name: name, role: role, active: document.getElementById("um-active").checked });
+    if (!upd.ok) { umErr(upd.error); return; }
+    if (pw) {
+      var pres = await Auth.setPassword(id, pw, pw2, true);
+      if (!pres.ok) { umErr(pres.error); return; }
+      logAct("account", "Reset the password for " + target.name);
+    }
+    logAct("account", "Updated " + target.name + " — " + (role === "admin" ? "administrator" : "QA staff") +
+      ", " + (target.active === false ? "deactivated" : "active") + (wasActive && target.active === false ? " (access revoked)" : ""));
+    toast("Account updated");
+  }
+  closeModal();
+  if (!Auth.current()) { renderUserChip(); showAuthGate(); return; }
+  renderUserChip();
+  render();
+}
+function changePasswordModal() {
+  var min = Auth.minPassword();
+  openModal("<h3>Change my password</h3>" +
+    '<div class="auth-err" id="um-err"></div>' +
+    '<div class="form-grid">' +
+    '<div class="full"><label>Current password</label><input type="password" id="cp-old" autocomplete="current-password"></div>' +
+    '<div class="full"><label>New password (at least ' + min + ' characters)</label><input type="password" id="cp-new" autocomplete="new-password"></div>' +
+    '<div class="full"><label>Confirm new password</label><input type="password" id="cp-new2" autocomplete="new-password"></div>' +
+    "</div>" +
+    '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
+    '<button class="btn" type="button" data-action="save-my-password">Change password</button></div>');
+}
+async function saveOwnPassword() {
+  var res = await Auth.changeOwnPassword(document.getElementById("cp-old").value,
+    document.getElementById("cp-new").value, document.getElementById("cp-new2").value);
+  if (!res.ok) { umErr(res.error); return; }
+  logAct("account", "Changed their own password");
+  closeModal();
+  toast("Password changed");
+}
+function exportActivityCsv() {
+  var rows = [["Timestamp", "Person", "Action", "Detail"]];
+  S.audit.slice().reverse().forEach(function (a) {
+    rows.push([a.ts, a.name, ACT_LABEL[a.action] || a.action, a.detail]);
+  });
+  var csv = rows.map(function (r) {
+    return r.map(function (cell) { return '"' + String(cell == null ? "" : cell).replace(/"/g, '""') + '"'; }).join(",");
+  }).join("\n");
+  var a = document.createElement("a");
+  a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+  a.download = "pcr-activity-" + todayStr() + ".csv";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  showTextModal("Activity log", csv, "pcr-activity-" + todayStr() + ".csv");
 }
 
 /* ============================ NAV / RENDER / EVENTS ============================ */
 var TABS = [
   ["dashboard", "Dashboard"], ["review", "Client Review"], ["qidp", "QIDP & ISP"], ["sampling", "Sampling"],
   ["locator", "Document Locator"], ["runs", "Audit Run"], ["policy", "Policy Updates"],
-  ["orgstaff", "Organization & Staff"], ["rubric", "Rubric Manager"]
+  ["orgstaff", "Organization & Staff"], ["rubric", "Rubric Manager"], ["users", "Users & Activity"]
 ];
 function renderNav() {
   var att = polAttention();
@@ -2669,7 +3359,7 @@ function render() {
   var v = document.getElementById("view");
   var fn = { dashboard: renderDashboard, review: renderReview, sampling: renderSampling,
              locator: renderLocator, runs: renderRuns, policy: renderPolicy, qidp: renderQidp,
-             orgstaff: renderOrgStaff, rubric: renderRubric }[S.ui.tab] || renderDashboard;
+             orgstaff: renderOrgStaff, rubric: renderRubric, users: renderUsers }[S.ui.tab] || renderDashboard;
   v.innerHTML = fn();
   if (S.ui.tab === "sampling") { updateSamplingTotals(); }
 }
@@ -2690,7 +3380,21 @@ function onClick(e) {
   var a = t.getAttribute("data-action");
   var d = t.dataset;
   switch (a) {
-    case "nav": S.ui.tab = d.tab; if (d.tab !== "runs") { S.ui.runView = null; } render(); break;
+    case "auth-setup": doAuthSetup(); break;
+    case "auth-login": doAuthLogin(); break;
+    case "auth-change-forced": doAuthForcedChange(); break;
+    case "sign-out": doSignOut(); break;
+    case "add-user":
+      if (!Auth.isAdmin()) { safeAlert("Only an administrator can add users."); break; }
+      userModal(null); break;
+    case "edit-user":
+      if (!Auth.isAdmin()) { safeAlert("Only an administrator can manage users."); break; }
+      userModal(Auth.byId(d.id)); break;
+    case "save-user": saveUserFromModal(d.id, d.new === "true"); break;
+    case "change-my-password": changePasswordModal(); break;
+    case "save-my-password": saveOwnPassword(); break;
+    case "export-activity": exportActivityCsv(); break;
+    case "nav": S.ui.tab = d.tab; if (d.tab !== "runs") { S.ui.runView = null; } render(); Auth.touch(); break;
     case "close-modal": closeModal(); break;
     case "open-settings": settingsModal(); break;
     case "save-settings":
@@ -2718,12 +3422,15 @@ function onClick(e) {
     case "export-all": exportAll(); break;
     case "import-all": pickFile(importAll); break;
     case "clear-all":
-      if (safeConfirm("Delete ALL data (rubric resets to the pre-loaded official set)? Export a backup first.")) {
+      if (!Auth.isAdmin()) { safeAlert("Only an administrator can clear all data."); break; }
+      if (safeConfirm("Delete ALL data (rubric resets to the pre-loaded official set)? This also deletes every user account and the activity log — the next person to open the system creates the first administrator again. Export a backup first.")) {
         (async function () {
           for (var i = 0; i < S.clients.length; i++) { await Store.del(K.rec + S.clients[i].id); }
           await Store.del(K.rubric); await Store.del(K.clients); await Store.del(K.staff);
           await Store.del(K.org); await Store.del(K.fire); await Store.del(K.census); await Store.del(K.settings);
           await Store.del(K.policy); await Store.del(K.qadoc); await Store.del(K.runs); await Store.del(K.qtr);
+          await Store.del(K.users); await Store.del(K.audit);
+          Auth.signOut();
           window.location.reload();
         })();
       }
@@ -2746,7 +3453,9 @@ function onClick(e) {
       if (!picked.length) { safeAlert("Check at least one sampled person first."); return; }
       var label = document.getElementById("run-label").value.trim() || ("PCR sample " + todayStr());
       saveRun({ id: "run-" + Date.now().toString(36), type: "live", label: label, date: todayStr(),
-                startedAt: new Date().toISOString(), participants: picked });
+                startedAt: new Date().toISOString(), participants: picked,
+                createdBy: actorName(), createdById: actorId() });
+      logAct("run", "Generated a LIVE production pack (" + picked.length + " people): " + label);
       toast("Production pack generated — records due by " + runDueTime(runById(S.ui.runView)));
     })(); break;
     case "run-drill-generate": (function () {
@@ -2756,7 +3465,9 @@ function onClick(e) {
       });
       if (!picked.length) { safeAlert("Add people (and census numbers on the Sampling tab) before running a drill."); return; }
       saveRun({ id: "run-" + Date.now().toString(36), type: "drill", label: "Preparation drill " + todayStr(),
-                date: todayStr(), startedAt: new Date().toISOString(), participants: picked });
+                date: todayStr(), startedAt: new Date().toISOString(), participants: picked,
+                createdBy: actorName(), createdById: actorId() });
+      logAct("run", "Ran a preparation drill (" + picked.length + " people)");
     })(); break;
     case "run-open": S.ui.runView = d.id; render(); break;
     case "run-back": S.ui.runView = null; render(); break;
@@ -2784,8 +3495,11 @@ function onClick(e) {
         requiresQAUpdate: document.getElementById("pu-qa").checked
       };
       var existing = S.policy.updates.filter(function (x) { return x.id === d.id; })[0];
+      data.enteredBy = actorName();
+      data.enteredAt = new Date().toISOString();
       if (existing) { Object.assign(existing, data); } else { S.policy.updates.push(data); }
       persist(K.policy, S.policy);
+      logAct("policy", (existing ? "Edited" : "Logged") + " policy update: " + title);
       closeModal(); render();
     })(); break;
     case "del-policy-update":
@@ -2802,8 +3516,11 @@ function onClick(e) {
       var u = S.policy.updates.filter(function (x) { return x.id === d.id; })[0];
       if (!u) { return; }
       u.ackBy = name;
+      u.ackById = (name === actorName()) ? actorId() : "";
       u.ackDate = todayStr();
+      u.ackAt = new Date().toISOString();
       persist(K.policy, S.policy);
+      logAct("policy", "Acknowledged policy update: " + (u.title || u.id));
       closeModal(); render();
       toast("Acknowledged");
     })(); break;
@@ -2854,11 +3571,14 @@ function onClick(e) {
       hms.forEach(function (h) {
         var recs = S.records[h.id] || (S.records[h.id] = {});
         var dst = recs[d.ind] || (recs[d.ind] = {});
-        ["rating", "gateAnswer", "verifiedBy", "verifiedDate", "evidenceLocation", "notes"].forEach(function (k) {
+        ["rating", "gateAnswer", "evidenceLocation", "notes"].forEach(function (k) {
           if (src[k] !== undefined) { dst[k] = src[k]; }
         });
+        /* whoever copies it is the one asserting it holds for the housemate */
+        Object.assign(dst, src.rating ? actorStamp() : clearedStamp());
         persist(K.rec + h.id, recs);
       });
+      logAct("rating", "Copied " + d.ind + " from " + c.name + " to " + hms.length + " housemate(s) at " + (c.location || "the same home"));
       toast("Copied to " + hms.length + " housemate(s)");
       render();
     })(); break;
@@ -2871,12 +3591,22 @@ function onClick(e) {
     case "rate": (function () {
       var rec = (S.records[d.client] || {})[d.ind] || {};
       var val = rec.rating === d.val ? null : d.val;
-      var patch = { rating: val };
-      if (val && !rec.verifiedDate) { patch.verifiedDate = todayStr(); }
+      /* the click IS the verification: stamp who and exactly when, or wipe it on un-rate */
+      var patch = Object.assign({ rating: val }, val ? actorStamp() : clearedStamp());
       updRec(d.client, d.ind, patch);
+      var c = clientById(d.client);
+      logAct("rating", (c ? c.name : d.client) + " · " + d.ind + " → " + (val ? ratingLabel(val) : "cleared"));
       render();
+      Auth.touch();
     })(); break;
-    case "gate": updRec(d.client, d.ind, { gateAnswer: d.val }); render(); break;
+    case "gate": (function () {
+      updRec(d.client, d.ind, { gateAnswer: d.val, gateBy: actorName(), gateById: actorId(),
+                                gateAt: new Date().toISOString() });
+      var c = clientById(d.client);
+      logAct("gate", (c ? c.name : d.client) + " · " + d.ind + " → " + String(d.val).toUpperCase());
+      render();
+      Auth.touch();
+    })(); break;
     case "toggle-intent":
       S.ui.openIntents = S.ui.openIntents || {};
       S.ui.openIntents[d.ind] = !S.ui.openIntents[d.ind];
@@ -2885,7 +3615,11 @@ function onClick(e) {
       var tool = S.org[d.tool] || (S.org[d.tool] = {});
       var rec = tool[d.item] || (tool[d.item] = {});
       rec.rating = rec.rating === d.val ? null : d.val;
-      persist(K.org, S.org); render();
+      Object.assign(rec, rec.rating ? actorStamp() : clearedStamp());
+      persist(K.org, S.org);
+      logAct("org", d.tool + " · " + d.item + " → " + (rec.rating ? ratingLabel(rec.rating) : "cleared"));
+      render();
+      Auth.touch();
     })(); break;
     case "add-staff": staffModal(null); break;
     case "edit-staff": staffModal(S.staff.roster.filter(function (s) { return s.id === d.id; })[0]); break;
@@ -2909,27 +3643,35 @@ function onClick(e) {
     case "save-streq": (function () {
       var recs = S.staff.records[d.staff] || (S.staff.records[d.staff] = {});
       var expEl = document.getElementById("sq-expires");
-      recs[d.req] = {
+      recs[d.req] = Object.assign({
         status: document.getElementById("sq-status").value,
         completed: document.getElementById("sq-completed").value,
         expires: expEl ? expEl.value : "",
         evidenceLocation: document.getElementById("sq-loc").value.trim()
-      };
-      persist(K.staff, S.staff); closeModal(); render();
+      }, actorStamp());
+      persist(K.staff, S.staff);
+      var stf = S.staff.roster.filter(function (x) { return x.id === d.staff; })[0];
+      logAct("staff", (stf ? stf.name : d.staff) + " · " + d.req + " → " + (recs[d.req].status || "not recorded"));
+      closeModal(); render();
     })(); break;
     case "fire-done":
-      S.fire.checks[d.item] = Object.assign(S.fire.checks[d.item] || {}, { lastDone: todayStr() });
-      persist(K.fire, S.fire); render(); break;
+      S.fire.checks[d.item] = Object.assign(S.fire.checks[d.item] || {}, { lastDone: todayStr() }, actorStamp());
+      persist(K.fire, S.fire);
+      logAct("fire", "Marked safety check " + d.item + " done today");
+      render(); break;
     case "add-drill": drillModal(); break;
     case "save-drill": (function () {
       var date = document.getElementById("dm-date").value;
       var site = document.getElementById("dm-site").value.trim();
       if (!date || !site) { return; }
       var issues = document.getElementById("dm-issues").value.trim();
-      S.fire.drills.push({ id: "d-" + Date.now().toString(36), date: date, site: site,
+      S.fire.drills.push(Object.assign({ id: "d-" + Date.now().toString(36), date: date, site: site,
         shift: document.getElementById("dm-shift").value, type: document.getElementById("dm-type").value,
-        evacMinutes: document.getElementById("dm-evac").value, issues: issues, passed: !issues });
-      persist(K.fire, S.fire); closeModal(); render();
+        evacMinutes: document.getElementById("dm-evac").value, issues: issues, passed: !issues },
+        { loggedBy: actorName(), loggedById: actorId(), loggedAt: new Date().toISOString() }));
+      persist(K.fire, S.fire);
+      logAct("fire", "Logged a " + document.getElementById("dm-type").value + " drill at " + site + " (" + date + ")");
+      closeModal(); render();
     })(); break;
     case "del-drill":
       S.fire.drills = S.fire.drills.filter(function (x) { return x.id !== d.id; });
@@ -2953,6 +3695,7 @@ function onChange(e) {
   if (!bind) { return; }
   var d = t.dataset;
   switch (bind) {
+    case "act-user": S.ui.actUser = t.value; render(); break;
     case "review-client": S.ui.reviewClient = t.value || null; render(); break;
     case "review-location": S.ui.reviewLocation = t.value || ""; render(); break;
     case "run-pick":
@@ -3009,6 +3752,8 @@ function onChange(e) {
     case "rec-field": (function () {
       var patch = {};
       patch[d.field] = t.value;
+      /* a hand-typed verifier name is an override; record who typed it */
+      if (d.field === "verifiedBy") { patch.verifiedById = ""; patch.verifiedAt = new Date().toISOString(); }
       updRec(d.client, d.ind, patch);
       if (d.field === "evidenceLocation") { render(); }
     })(); break;
@@ -3019,8 +3764,10 @@ function onChange(e) {
       persist(K.org, S.org);
     })(); break;
     case "fire-date":
-      S.fire.checks[d.item] = Object.assign(S.fire.checks[d.item] || {}, { lastDone: t.value });
-      persist(K.fire, S.fire); render(); break;
+      S.fire.checks[d.item] = Object.assign(S.fire.checks[d.item] || {}, { lastDone: t.value }, actorStamp());
+      persist(K.fire, S.fire);
+      logAct("fire", "Set safety check " + d.item + " last done " + (t.value || "(blank)"));
+      render(); break;
     case "locator-filter": S.ui.locatorFilter = t.value;
       document.getElementById("locatorBody").innerHTML = locatorBodyHtml(); break;
     case "rubric-sl": S.ui.rubricFilterSL = t.value; render(); break;
@@ -3068,16 +3815,32 @@ function showStorageNote() {
       "Saving to this browser only. In the shared claude.ai runtime all QA staff see one dataset; here, use Export/Import to sync devices.";
   }
 }
+var appLoaded = false;
+async function enterApp() {
+  hideAuthGate();
+  if (!appLoaded) { await loadAll(); appLoaded = true; }
+  renderUserChip();
+  render();
+}
+function onKeydown(e) {
+  if (e.key !== "Enter" || !gateOpen()) { return; }
+  var btn = document.getElementById("auth-primary");
+  if (btn) { e.preventDefault(); btn.click(); }
+}
 async function boot() {
   try {
     Store.init();
     applyTheme();
     showStorageNote();
-    await loadAll();
     document.addEventListener("click", onClick);
     document.addEventListener("change", onChange);
     document.addEventListener("input", onInput);
-    render();
+    document.addEventListener("keydown", onKeydown);
+    await Auth.load();
+    Auth.restore();
+    var me = Auth.current();
+    if (!me || me.mustChange) { showAuthGate(); return; }
+    await enterApp();
   } catch (err) {
     document.getElementById("view").innerHTML =
       '<div class="empty">Startup error: ' + esc(err && err.message) + "</div>";

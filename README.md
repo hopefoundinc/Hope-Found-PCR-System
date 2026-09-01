@@ -8,7 +8,7 @@ DC waiver providers by swapping configuration.
 **Everything is one file: [`index.html`](index.html).** No build step, no server, no network
 dependencies for core operation. Open it in any modern browser, or host it as a claude.ai artifact.
 
-## The nine screens
+## The ten screens
 
 1. **Readiness Dashboard** — per-service-line total % and critical % against the 70/80/90 tier
    thresholds, projected tier and its consequence, alert/not-met counts, minimum sample size, plus
@@ -68,7 +68,11 @@ dependencies for core operation. Open it in any modern browser, or host it as a 
    config, not code), staff roster with requirement/expiration tracking (expired and ≤60-day
    expirations flagged), and the fire & emergency module (quarterly drill log per site/shift plus a
    recurring safety checklist with due-date logic).
-9. **Rubric Manager** — the editable master rubric. Edit any field, add indicators, retire items
+9. **Users & Activity** — who is allowed in and the running record of who did what: the account
+   list (add people, change roles, reset passwords, deactivate without erasing anyone's history),
+   a **Verifications on record** tally counted straight from the answers themselves, and the
+   **Activity log** (last 400 actions, filterable by person, exportable as CSV).
+10. **Rubric Manager** — the editable master rubric. Edit any field, add indicators, retire items
    (soft delete — history is preserved), export/import the whole rubric as JSON so each audit
    cycle's criteria load without a rebuild.
 
@@ -99,6 +103,37 @@ offline path:
 Calls go directly from the browser to the Anthropic Messages API (default model `claude-opus-5`).
 If the network or key fails, the app falls back to the offline draft and keeps working.
 
+## Sign-in and attribution
+
+The tool is behind a username and password, and the sign-in is what makes the audit trail
+automatic: **click Met / Not Met / N/A and the system stamps your name and the exact moment onto
+that answer** — nobody types a verifier name by hand any more, and when several people split the
+checks it is always clear who did which.
+
+- **First run** — with no accounts yet, the app opens on *Create the first administrator account*.
+  That person then adds the rest of the team under **Users & Activity**.
+- **Roles** — *Administrator* (adds users, resets passwords, deactivates accounts, restores or
+  clears data) and *QA staff* (everything else). New users get a temporary password and are made to
+  choose their own at first sign-in.
+- **Sessions** are browser-local and last 12 hours; the *session* is deliberately never written to
+  the shared dataset, so one person signing in never signs in for everybody. Sign out from the
+  header or from Settings.
+- **Passwords** are salted per account and stretched with PBKDF2-HMAC-SHA256 (150,000 iterations)
+  through the Web Crypto API, falling back to an iterated pure-JS SHA-256 where Web Crypto is
+  unavailable. No password is stored, exported, or recoverable in readable form — an administrator
+  resets a forgotten one rather than looking it up.
+- **What gets stamped** — client indicator ratings and gate answers, org tool items, staff
+  requirement records, fire drills and safety checks, policy acknowledgments (your name is
+  pre-filled), QIDP quarterly confirmations, generated audit-run packs, QA document versions, and
+  person records added or imported. The stamp travels with the record, so the Document Locator and
+  the printed production pack show the verifier without any extra step. *Copy answer to household*
+  stamps the person doing the copying — they are the one asserting it holds for the housemate.
+- **Deactivate, don't delete.** Revoking an account leaves every stamp and log entry it produced
+  intact.
+- Accounts and the activity log ride along in **Settings → Export full backup**, so a restore keeps
+  everyone's sign-in and the record of who verified what. The backup carries password *hashes*
+  only, never passwords — still, keep the file where the agency keeps its other personnel data.
+
 ## Storage
 
 The app adapts to its runtime, in order of preference:
@@ -108,8 +143,11 @@ The app adapts to its runtime, in order of preference:
 2. **Plain browser** — `localStorage` (per browser; use Export/Import to move between devices).
 3. **No storage available** — in-memory with a warning banner; Export/Import still works.
 
-Data is keyed compactly (one key per client bundling all their compliance records). Settings has a
-full JSON backup export/import.
+Data is keyed compactly (one key per client bundling all their compliance records). Accounts live in
+the shared dataset (`pcr:users`) so the same credentials work on every device; the activity log is
+`pcr:audit`. The signed-in *session* is the one thing kept out of shared storage — it lives in this
+browser's `localStorage` under `pcr:session` and expires after 12 hours. Settings has a full JSON
+backup export/import.
 
 ## Cross-system sync (interim, until a second Hope Found build exists)
 

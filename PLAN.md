@@ -49,6 +49,23 @@ Every feature works fully offline with deterministic logic. AI mode is optional 
 - `pcr:fire` — fire/emergency module: drill log entries + recurring checklist item completions.
 - `pcr:census` — per-service-line census numbers for the sampling calculator.
 - `pcr:settings` — AI key/model/mode, misc preferences.
+- `pcr:users` — accounts: `id, name, username, role (admin|staff), active, cred {salt, hash, algo},
+  pwVersion, mustChange, createdAt, lastSignIn`. Shared, so credentials work on every device.
+  `cred.algo` is `pbkdf2` (PBKDF2-HMAC-SHA256, 150k iterations, Web Crypto) or `sha256x` (iterated
+  pure-JS SHA-256) — recorded per account so verification always uses the algorithm the hash was made
+  with. `pwVersion` increments on every password change and is carried in the session, so a reset
+  invalidates sessions still open elsewhere.
+- `pcr:audit` — append-only activity log, capped at the last 400 entries:
+  `{ ts, uid, name, action, detail }`. Persisted debounced (800 ms) so a burst of ratings is one write.
+- `pcr:session` — **never** goes through the storage adapter. Written straight to this browser's
+  `localStorage` as `{ uid, pwv, exp }` with a sliding 12-hour expiry, because in the shared
+  `window.storage` runtime one person's session must never become everyone's.
+
+Attribution: every rating carries `verifiedBy` (display name), `verifiedById` (account id, blank when
+the name was typed by hand or predates sign-in) and `verifiedAt` (ISO timestamp) alongside the existing
+`verifiedDate`. Clicking a rating stamps all four; un-rating clears them. The equivalent fields on other
+records are `gateBy/gateAt`, `loggedBy/loggedAt` (drills), `ackBy/ackById/ackAt` (policy),
+`confirmedBy/confirmedAt` (QIDP quarterlies), `createdBy` (runs, people), `uploadedBy` (QA document).
 
 ## 4. Scoring engine (Qlarant 2022 rules, implemented as pure functions)
 
