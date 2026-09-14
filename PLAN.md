@@ -60,6 +60,10 @@ Every feature works fully offline with deterministic logic. AI mode is optional 
   class that the print stylesheet uses to hide the other `.qidp-block`s.
 - `pcr:users` — accounts: `id, name, role (admin|staff), active, cred {salt, hash, algo},
   pwVersion, mustChange, createdAt, lastSignIn`. Shared, so credentials work on every device.
+  `PROVIDER_CONFIG.meta.requirePassword` gates the password step end to end: when false the gate is a
+  name picker, `cred` is null, `signIn` skips verification, and the password fields disappear from the
+  add/manage-user modal and Settings. Roles, the activity log and every stamp behave identically either
+  way, so turning it on later needs no data migration — only a password set per person.
   There is no username: `name` is the credential and the stamp both, looked up case- and
   whitespace-insensitively, and enforced unique on create and on rename — a duplicate name would make
   the audit trail ambiguous about who did what.

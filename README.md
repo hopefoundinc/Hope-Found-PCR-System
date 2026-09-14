@@ -146,13 +146,21 @@ If the network or key fails, the app falls back to the offline draft and keeps w
 
 ## Sign-in and attribution
 
-The tool is behind a sign-in — **full name and password, no username** — and that sign-in is what
-makes the audit trail automatic: **click Met / Not Met / N/A and the system stamps your name and the exact moment onto
+**Passwords are currently off** (`PROVIDER_CONFIG.meta.requirePassword: false`). The app opens on
+*Who's working today?* — pick your name from the list, or add yourself, and start. Nothing else
+changes: every answer is still stamped with the name of whoever recorded it. Be clear-eyed about
+what this is: with passwords off it is a **record of who did what, not a lock on who gets in** —
+anyone who can open the app can pick any name. Set `requirePassword: true` to turn the password
+screen back on; everyone already on the list keeps their name and role, and an administrator sets
+each password from Users & Activity.
+
+With passwords on, sign-in is **full name and password, no username**. Either way, the sign-in is
+what makes the audit trail automatic: **click Met / Not Met / N/A and the system stamps your name and the exact moment onto
 that answer** — nobody types a verifier name by hand any more, and when several people split the
 checks it is always clear who did which.
 
-- **First run** — with no accounts yet, the app opens on *Create the first administrator account*.
-  That person then adds the rest of the team under **Users & Activity**.
+- **First run** — with no one on the list yet, the first person to add themselves becomes the
+  administrator, and adds the rest of the team under **Users & Activity**.
 - **The full name is the account.** It is what you sign in with and what gets stamped on every
   answer, so no one keeps a separate username in their head and the two can never drift apart.
   Matching ignores capitals and stray spaces. Because a name has to identify one person, the system
@@ -163,9 +171,9 @@ checks it is always clear who did which.
   clears data) and *QA staff* (everything else). New users get a temporary password and are made to
   choose their own at first sign-in.
 - **Sessions** are browser-local and last 12 hours; the *session* is deliberately never written to
-  the shared dataset, so one person signing in never signs in for everybody. Sign out from the
-  header or from Settings.
-- **Passwords** are salted per account and stretched with PBKDF2-HMAC-SHA256 (150,000 iterations)
+  the shared dataset, so one person signing in never signs in for everybody. **Switch person** in
+  the sidebar (**Sign out** when passwords are on) hands the app to the next person.
+- **Passwords**, when required, are salted per account and stretched with PBKDF2-HMAC-SHA256 (150,000 iterations)
   through the Web Crypto API, falling back to an iterated pure-JS SHA-256 where Web Crypto is
   unavailable. No password is stored, exported, or recoverable in readable form — an administrator
   resets a forgotten one rather than looking it up.

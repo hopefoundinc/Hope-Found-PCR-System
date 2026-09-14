@@ -269,6 +269,19 @@ tr.flag-row:hover td{background:#F8ECE9}
 .auth-err.on{display:block}
 .auth-note{font-size:12.5px;color:var(--muted);margin-top:14px;border-top:1px solid var(--hairline);padding-top:10px}
 .auth-actions{margin-top:14px}
+.who-list{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;max-height:44vh;overflow-y:auto}
+.who-btn{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:#fff;color:var(--ink);
+  border:1px solid var(--hairline);border-radius:var(--r-ctl);padding:9px 11px;font-size:14px}
+.who-btn:hover{border-color:var(--teal);background:var(--teal-tint)}
+.who-btn .avatar{width:32px;height:32px;flex-shrink:0;border-radius:10px;background:var(--teal-tint);
+  border:1px solid var(--hairline);display:flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-weight:700;font-size:12.5px;color:var(--teal-dark)}
+.who-btn strong{display:block;font-weight:600;color:var(--teal-dark)}
+.who-btn .small{display:block;font-size:11.5px}
+.who-add{border-top:1px solid var(--hairline);padding-top:13px}
+.who-add-row{display:flex;gap:7px;align-items:stretch}
+.who-add-row input{flex:1;min-width:0}
+.who-add-row .btn{flex-shrink:0;white-space:nowrap}
 .auth-actions .btn{width:100%;padding:11px 14px;font-size:15px;justify-content:center}
 body.locked .app-shell{display:none!important}
 .user-chip{display:flex;align-items:center;gap:9px;padding:7px 11px 9px;color:#9DBBB9;font-size:10.5px;line-height:1.3}
@@ -324,7 +337,7 @@ body.locked .app-shell{display:none!important}
   <div class="side-foot">
     <div class="user-chip" id="userChip"></div>
     <button class="btn-ghost" data-action="open-settings" type="button"><span class="nav-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"></path></svg></span><span class="btn-lbl">Settings</span></button>
-    <button class="btn-ghost" data-action="sign-out" type="button"><span class="nav-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.2 14H3.4c-.8 0-1.4-.6-1.4-1.4V3.4C2 2.6 2.6 2 3.4 2h2.8M10.4 11.2L13.6 8l-3.2-3.2M13.6 8H6.2"></path></svg></span><span class="btn-lbl">Sign out</span></button>
+    <button class="btn-ghost" data-action="sign-out" type="button"><span class="nav-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.2 14H3.4c-.8 0-1.4-.6-1.4-1.4V3.4C2 2.6 2.6 2 3.4 2h2.8M10.4 11.2L13.6 8l-3.2-3.2M13.6 8H6.2"></path></svg></span><span class="btn-lbl" id="signOutLbl">Sign out</span></button>
   </div>
 </aside>
 <div class="app-main">
@@ -350,6 +363,12 @@ var PROVIDER_CONFIG = {
     providerName: "Hope Found, Inc.",
     appTitle: "PCR Audit-Readiness System",
     mark: "HF",
+    /* Passwords are off while the team gets used to the tool: people pick their
+       name and go, and every answer is still stamped with who recorded it. Flip
+       this to true to require a password — nothing else has to change, and the
+       accounts already on file keep their roles. Off, this is attribution, not
+       access control: anyone who can open the app can pick any name. */
+    requirePassword: false,
     subtitle: "Hope Found, Inc. — DC DDA Person-Centered Review preparation",
     reviewName: "Person-Centered Review (PCR)",
     auditor: "Qlarant (DC DDS/DDA)"
@@ -833,6 +852,7 @@ var Hash = (function () {
 var Auth = (function () {
   var SESSION_HOURS = 12;
   var MIN_PW = 8;
+  function pwRequired() { return PROVIDER_CONFIG.meta.requirePassword !== false; }
   var users = [];
   var me = null;
 
@@ -874,8 +894,10 @@ var Auth = (function () {
     try { await load(); } catch (e) {}
     var u = byName(name);
     if (!u || u.active === false) { return { ok: false, error: "No active account under that name." }; }
-    var ok = await Hash.verify(password, u.cred);
-    if (!ok) { return { ok: false, error: "Incorrect password." }; }
+    if (pwRequired()) {
+      var ok = await Hash.verify(password, u.cred);
+      if (!ok) { return { ok: false, error: "Incorrect password." }; }
+    }
     u.lastSignIn = new Date().toISOString();
     me = u;
     writeSession(u);
@@ -891,19 +913,21 @@ var Auth = (function () {
   function validateNew(data) {
     var name = String(data.name || "").trim();
     if (name.length < 2) { return "Enter the person's full name — it is how they sign in and what gets stamped on every answer."; }
-    if (nameTaken(name)) { return "An account already exists under that name. Names have to be unique, or the audit trail cannot say who did what."; }
-    if (String(data.password || "").length < MIN_PW) { return "Password must be at least " + MIN_PW + " characters."; }
-    if (data.password !== data.confirm) { return "The two passwords do not match."; }
+    if (nameTaken(name)) { return "Someone is already on the list under that name. Names have to be unique, or the record cannot say who did what."; }
+    if (pwRequired()) {
+      if (String(data.password || "").length < MIN_PW) { return "Password must be at least " + MIN_PW + " characters."; }
+      if (data.password !== data.confirm) { return "The two passwords do not match."; }
+    }
     return "";
   }
   async function createUser(data) {
     var err = validateNew(data);
     if (err) { return { ok: false, error: err }; }
-    var cred = await Hash.make(data.password);
+    var cred = pwRequired() ? await Hash.make(data.password) : null;
     var u = { id: "u-" + Date.now().toString(36) + "-" + Hash.randomHex(3),
               name: String(data.name).trim().replace(/\s+/g, " "),
               role: data.role === "admin" ? "admin" : "staff", active: true,
-              cred: cred, pwVersion: 1, mustChange: !!data.mustChange,
+              cred: cred, pwVersion: 1, mustChange: pwRequired() && !!data.mustChange,
               createdAt: new Date().toISOString(), lastSignIn: "" };
     users.push(u);
     save();
@@ -949,6 +973,7 @@ var Auth = (function () {
     return await setPassword(me.id, newPw, confirmPw, false);
   }
   return { load: load, save: save, all: all, replaceAll: replaceAll, byId: byId, byName: byName,
+           pwRequired: pwRequired,
            needsSetup: needsSetup, current: current, isAdmin: isAdmin, restore: restore, touch: touch,
            signIn: signIn, signOut: signOut, createUser: createUser, updateUser: updateUser,
            setPassword: setPassword, changeOwnPassword: changeOwnPassword, adminCount: adminCount,
@@ -2202,8 +2227,8 @@ function settingsModal() {
   openModal('<h3>Settings</h3>' +
     '<div class="note-box"><strong>Signed in as:</strong> ' + esc(me ? me.name : "—") +
     (me ? " (" + (admin ? "administrator" : "QA staff") + ")" : "") +
-    ' &nbsp;<button class="intent-toggle" type="button" data-action="change-my-password">Change my password</button>' +
-    ' &nbsp;<button class="intent-toggle" type="button" data-action="sign-out">Sign out</button>' +
+    (Auth.pwRequired() ? ' &nbsp;<button class="intent-toggle" type="button" data-action="change-my-password">Change my password</button>' : "") +
+    ' &nbsp;<button class="intent-toggle" type="button" data-action="sign-out">' + (Auth.pwRequired() ? "Sign out" : "Switch person") + "</button>" +
     '<br><span class="small">Everything you rate is stamped with this name. Manage the team under <strong>Users &amp; Activity</strong>.</span></div>' +
     '<div class="note-box"><strong>Storage:</strong> ' + esc(modeLabel) + "</div>" +
     '<h4 style="margin:10px 0 6px">AI assist (optional — everything works offline without it)</h4>' +
@@ -3568,6 +3593,14 @@ function renderAuthGate() {
     esc(PROVIDER_CONFIG.meta.providerName) + "</div>" +
     '<div class="small muted">' + esc(PROVIDER_CONFIG.meta.subtitle || "") + "</div></div></div>";
   var html;
+  if (!Auth.pwRequired()) {
+    card.innerHTML = mark + pickerHtml(errHtml);
+    setTimeout(function () {
+      var first = card.querySelector("#au-name");
+      if (first && !Auth.all().length) { try { first.focus(); } catch (e) {} }
+    }, 30);
+    return;
+  }
   if (Auth.needsSetup()) {
     html = mark + "<h2>" + title + "</h2>" +
       '<div class="auth-sub">No accounts exist yet. Create the first administrator account. Your full name is how you sign in, and it is what gets stamped on everything you verify.</div>' + errHtml +
@@ -3603,12 +3636,56 @@ function renderAuthGate() {
     if (first) { try { first.focus(); } catch (e) {} }
   }, 30);
 }
+/* No password to ask for, so the gate asks the only question that matters:
+   who is at the keyboard? Whatever is picked here is what gets stamped. */
+function pickerHtml(errHtml) {
+  var people = Auth.all().filter(function (u) { return u.active !== false; })
+    .sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+  var html = "<h2>Who's working today?</h2>" +
+    '<div class="auth-sub">Pick your name. Every Met / Not Met / N/A you record is stamped with it and the moment you clicked.</div>' + errHtml;
+  if (people.length) {
+    html += '<div class="who-list">' + people.map(function (u) {
+      return '<button class="who-btn" type="button" data-action="auth-pick" data-id="' + u.id + '">' +
+        '<span class="avatar">' + esc(initialsOf(u.name)) + "</span>" +
+        "<span><strong>" + esc(u.name) + "</strong>" +
+        '<span class="small muted">' + esc(u.role === "admin" ? "Administrator" : "QA staff") +
+        (u.lastSignIn ? " · last here " + esc(fmtWhen(u.lastSignIn)) : "") + "</span></span></button>";
+    }).join("") + "</div>";
+  }
+  html += '<div class="who-add"><label for="au-name">' +
+    (people.length ? "Not on the list? Add yourself" : "Start by adding yourself") + "</label>" +
+    '<div class="who-add-row"><input type="text" id="au-name" autocomplete="name" placeholder="e.g. Maria Alvarez">' +
+    '<button class="btn" type="button" id="auth-primary" data-action="auth-add">Add and continue</button></div></div>' +
+    '<div class="auth-note">Names are how this tool records who verified what, so each person needs their own. ' +
+    'Passwords are switched off for now — anyone who can open the app can pick any name, so this is a record of who did what, not a lock on who gets in.</div>';
+  return html;
+}
 function authVal(id) {
   var el = document.getElementById(id);
   return el ? el.value : "";
 }
 function authFail(msg) { authErr = msg; renderAuthGate(); }
 
+async function doAuthPick(id) {
+  var u = Auth.byId(id);
+  if (!u) { authFail("That name is no longer on the list."); return; }
+  var res = await Auth.signIn(u.name, "");
+  if (!res.ok) { authFail(res.error); return; }
+  authErr = "";
+  await enterApp();
+  logAct("signin", "Started working");
+}
+async function doAuthAdd() {
+  var name = authVal("au-name");
+  var first = !Auth.all().length;
+  var res = await Auth.createUser({ name: name, role: first ? "admin" : "staff" });
+  if (!res.ok) { authFail(res.error); return; }
+  var signed = await Auth.signIn(res.user.name, "");
+  if (!signed.ok) { authFail(signed.error); return; }
+  authErr = "";
+  await enterApp();
+  logAct("account", "Added " + res.user.name + " to the list" + (first ? " as the first administrator" : ""));
+}
 async function doAuthSetup() {
   var res = await Auth.createUser({ name: authVal("au-name"),
     password: authVal("au-pw"), confirm: authVal("au-pw2"), role: "admin" });
@@ -3741,16 +3818,19 @@ function renderUsers() {
   var me = Auth.current();
   var admin = Auth.isAdmin();
   var html = '<h2 class="view-title">Users &amp; Activity</h2>' +
-    '<p class="view-sub">Everyone who records a Met / Not Met / N/A signs in first, so every answer carries the name of the person who made it and the moment they did — no one types a verifier name by hand.</p>';
+    '<p class="view-sub">Everyone picks their name before recording anything, so every answer carries the name of the person who made it and the moment they did \u2014 no one types a verifier name by hand.</p>' +
+    (Auth.pwRequired() ? "" : '<div class="note-box no-print"><strong>Passwords are off.</strong> People pick their name from a list and start working, which keeps the record of who did what without anyone memorising a password. It is not a lock on the door \u2014 anyone who can open the app can pick any name. To turn passwords on, set <code>requirePassword: true</code> in <code>PROVIDER_CONFIG.meta</code>: everyone listed here keeps their name and role, and an administrator sets each password from this screen.</div>');
 
   html += '<h3 class="section-title">Accounts</h3>';
   if (admin) {
     html += '<div class="toolbar"><button class="btn secondary" type="button" data-action="add-user">+ Add user</button>' +
-      '<div class="small muted" style="align-self:center">You are an administrator: you can add people, change roles, and reset passwords.</div></div>';
+      '<div class="small muted" style="align-self:center">You are an administrator: you can add people, change roles, and ' +
+      (Auth.pwRequired() ? "reset passwords" : "take someone off the list") + ".</div></div>";
   } else {
-    html += '<div class="note-box">Only an administrator can add accounts or reset passwords. Ask one of the administrators listed below.</div>';
+    html += '<div class="note-box">Only an administrator can add people' +
+      (Auth.pwRequired() ? " or reset passwords" : "") + ". Ask one of the administrators listed below.</div>";
   }
-  html += '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Last sign-in</th>' +
+  html += '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Last here</th>' +
     (admin ? "<th></th>" : "") + "</tr></thead><tbody>";
   Auth.all().slice().sort(function (a, b) { return a.name < b.name ? -1 : 1; }).forEach(function (u) {
     var isMe = me && u.id === me.id;
@@ -3759,7 +3839,7 @@ function renderUsers() {
       "<td>" + badge(u.role === "admin" ? "neutral" : "outline", u.role === "admin" ? "Administrator" : "QA staff") + "</td>" +
       "<td>" + (u.active === false ? badge("gap", "Deactivated") : badge("met", "Active")) +
       (u.mustChange ? " " + badge("warn", "must set password") : "") + "</td>" +
-      "<td class='small muted'>" + esc(u.lastSignIn ? fmtWhen(u.lastSignIn) : "never") + "</td>" +
+      "<td class='small muted'>" + esc(u.lastSignIn ? fmtWhen(u.lastSignIn) : "not yet") + "</td>" +
       (admin ? '<td><button class="btn secondary small" type="button" data-action="edit-user" data-id="' + u.id + '">Manage</button></td>' : "") +
       "</tr>";
   });
@@ -3811,6 +3891,7 @@ function renderUsers() {
 function userModal(u) {
   var isNew = !u;
   var min = Auth.minPassword();
+  var pw = Auth.pwRequired();
   openModal("<h3>" + (isNew ? "Add user" : "Manage " + esc(u.name)) + "</h3>" +
     '<div class="auth-err" id="um-err"></div>' +
     '<div class="form-grid">' +
@@ -3818,12 +3899,12 @@ function userModal(u) {
     '<div class="full"><label>Role</label><select id="um-role">' +
     '<option value="staff"' + (!isNew && u.role !== "admin" ? " selected" : "") + '>QA staff</option>' +
     '<option value="admin"' + (!isNew && u.role === "admin" ? " selected" : "") + ">Administrator</option></select></div>" +
-    (isNew ? '<div class="full"><label>Temporary password (at least ' + min + ' characters)</label><input type="password" id="um-pw" autocomplete="new-password"></div>' +
+    (isNew ? (pw ? '<div class="full"><label>Temporary password (at least ' + min + ' characters)</label><input type="password" id="um-pw" autocomplete="new-password"></div>' +
              '<div class="full"><label>Confirm password</label><input type="password" id="um-pw2" autocomplete="new-password"></div>' +
-             '<div class="full"><div class="check-line"><input type="checkbox" id="um-must" checked><label for="um-must" style="text-transform:none;margin:0">Require them to choose their own password at first sign-in</label></div></div>' :
-             '<div class="full"><div class="check-line"><input type="checkbox" id="um-active"' + (u.active !== false ? " checked" : "") + '><label for="um-active" style="text-transform:none;margin:0">Account is active (uncheck to revoke access without deleting the audit trail)</label></div></div>' +
-             '<div class="full"><label>Reset password (leave blank to keep the current one)</label><input type="password" id="um-pw" autocomplete="new-password"></div>' +
-             '<div class="full"><label>Confirm new password</label><input type="password" id="um-pw2" autocomplete="new-password"></div>') +
+             '<div class="full"><div class="check-line"><input type="checkbox" id="um-must" checked><label for="um-must" style="text-transform:none;margin:0">Require them to choose their own password at first sign-in</label></div></div>' : "") :
+             '<div class="full"><div class="check-line"><input type="checkbox" id="um-active"' + (u.active !== false ? " checked" : "") + '><label for="um-active" style="text-transform:none;margin:0">On the list (uncheck to take someone off without deleting what they recorded)</label></div></div>' +
+             (pw ? '<div class="full"><label>Reset password (leave blank to keep the current one)</label><input type="password" id="um-pw" autocomplete="new-password"></div>' +
+             '<div class="full"><label>Confirm new password</label><input type="password" id="um-pw2" autocomplete="new-password"></div>' : "")) +
     "</div>" +
     (isNew ? "" : '<div class="small muted" style="margin-top:8px">Renaming changes how this person signs in. Answers they already verified keep the name they were stamped with, which is what the audit trail is for.</div>') +
     '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
@@ -3838,11 +3919,12 @@ function umErr(msg) {
 async function saveUserFromModal(id, isNew) {
   var name = document.getElementById("um-name").value;
   var role = document.getElementById("um-role").value;
-  var pw = document.getElementById("um-pw").value;
-  var pw2 = document.getElementById("um-pw2").value;
+  var pwEl = document.getElementById("um-pw"), pw2El = document.getElementById("um-pw2");
+  var mustEl = document.getElementById("um-must");
+  var pw = pwEl ? pwEl.value : "", pw2 = pw2El ? pw2El.value : "";
   if (isNew) {
     var res = await Auth.createUser({ name: name, role: role, password: pw, confirm: pw2,
-      mustChange: document.getElementById("um-must").checked });
+      mustChange: !!(mustEl && mustEl.checked) });
     if (!res.ok) { umErr(res.error); return; }
     logAct("account", "Added user " + res.user.name + " (" + (role === "admin" ? "administrator" : "QA staff") + ")");
     toast("User added");
@@ -4047,6 +4129,8 @@ function onClick(e) {
   var a = t.getAttribute("data-action");
   var d = t.dataset;
   switch (a) {
+    case "auth-pick": doAuthPick(d.id); break;
+    case "auth-add": doAuthAdd(); break;
     case "auth-setup": doAuthSetup(); break;
     case "auth-login": doAuthLogin(); break;
     case "auth-change-forced": doAuthForcedChange(); break;
@@ -4535,6 +4619,10 @@ function applyTheme() {
   document.getElementById("brandName").textContent = PROVIDER_CONFIG.meta.appTitle;
   document.getElementById("brandSub").textContent = PROVIDER_CONFIG.meta.subtitle;
   document.getElementById("brandMark").textContent = brandMark();
+  var soLbl = document.getElementById("signOutLbl");
+  if (soLbl) { soLbl.textContent = Auth.pwRequired() ? "Sign out" : "Switch person"; }
+  var soBtn = soLbl && soLbl.closest("button");
+  if (soBtn) { soBtn.setAttribute("title", soLbl.textContent); }
 }
 function showStorageNote() {
   var mode = Store.getMode();
