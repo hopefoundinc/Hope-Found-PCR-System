@@ -336,6 +336,7 @@ body.locked .app-shell{display:none!important}
   <nav class="side-nav"><div id="navTabs"></div></nav>
   <div class="side-foot">
     <div class="user-chip" id="userChip"></div>
+    <button class="btn-ghost" data-action="sync-now" type="button" id="syncBtn" hidden title="Refresh"><span class="nav-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.6 7.2a5.7 5.7 0 10-.7 3.4"></path><path d="M13.9 13.6V10.2h-3.4"></path></svg></span><span class="btn-lbl">Refresh</span></button>
     <button class="btn-ghost" data-action="open-settings" type="button"><span class="nav-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"></path></svg></span><span class="btn-lbl">Settings</span></button>
     <button class="btn-ghost" data-action="sign-out" type="button"><span class="nav-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.2 14H3.4c-.8 0-1.4-.6-1.4-1.4V3.4C2 2.6 2.6 2 3.4 2h2.8M10.4 11.2L13.6 8l-3.2-3.2M13.6 8H6.2"></path></svg></span><span class="btn-lbl" id="signOutLbl">Sign out</span></button>
   </div>
@@ -694,6 +695,109 @@ var SEED_CLIENTS = [
 var SEED_CENSUS = { ihs: 12, hh: 8, sl: 15, ids: 20, comp: 5 };
 
 /* =====================================================================
+   SUPABASE (optional shared backend)
+   One table, key -> JSON, which is exactly the shape the storage adapter
+   already speaks, so nothing downstream changes. Credentials live in THIS
+   browser's localStorage, never in the shared dataset and never in the
+   repo: the anon key is the only thing standing between a stranger and
+   the data, so it is handed to each machine once rather than published.
+   Schema and policy: see supabase-setup.sql.
+   ===================================================================== */
+var Supa = (function () {
+  var CRED_KEY = "pcr:supabase";
+  var TABLE = "pcr_store";
+  var cfg = null;
+
+  function readCred() {
+    try {
+      var raw = window.localStorage.getItem(CRED_KEY);
+      if (raw) { return JSON.parse(raw); }
+    } catch (e) {}
+    var baked = PROVIDER_CONFIG.supabase;
+    if (baked && baked.url && baked.anonKey) { return { url: baked.url, anonKey: baked.anonKey }; }
+    return null;
+  }
+  function writeCred(c) {
+    try {
+      if (c) { window.localStorage.setItem(CRED_KEY, JSON.stringify(c)); }
+      else { window.localStorage.removeItem(CRED_KEY); }
+    } catch (e) {}
+    cfg = c;
+  }
+  function load() { cfg = readCred(); return cfg; }
+  function current() { return cfg; }
+  function configured() { return !!(cfg && cfg.url && cfg.anonKey); }
+  function base() { return String(cfg.url).replace(/\/+$/, "") + "/rest/v1/" + TABLE; }
+  function headers(extra) {
+    var h = { apikey: cfg.anonKey, Authorization: "Bearer " + cfg.anonKey,
+              "Content-Type": "application/json" };
+    if (extra) { Object.keys(extra).forEach(function (k) { h[k] = extra[k]; }); }
+    return h;
+  }
+  async function req(url, opts) {
+    var res = await fetch(url, opts);
+    if (!res.ok) {
+      var detail = "";
+      try { var j = await res.json(); detail = j.message || j.hint || j.error || ""; } catch (e) {}
+      throw new Error("HTTP " + res.status + (detail ? " — " + detail : ""));
+    }
+    return res;
+  }
+  /* Everything in one request: the app reads a dozen-plus keys at boot and
+     one per person, which over the network would be a round trip each. */
+  async function fetchAll() {
+    var res = await req(base() + "?select=key,value", { headers: headers() });
+    var rows = await res.json();
+    var out = {};
+    rows.forEach(function (r) { out[r.key] = r.value; });
+    return out;
+  }
+  async function getOne(key) {
+    var res = await req(base() + "?key=eq." + encodeURIComponent(key) + "&select=value", { headers: headers() });
+    var rows = await res.json();
+    return rows.length ? rows[0].value : null;
+  }
+  async function setOne(key, value) {
+    await req(base() + "?on_conflict=key", {
+      method: "POST",
+      headers: headers({ Prefer: "resolution=merge-duplicates,return=minimal" }),
+      body: JSON.stringify([{ key: key, value: value, updated_at: new Date().toISOString() }])
+    });
+    return true;
+  }
+  async function delOne(key) {
+    await req(base() + "?key=eq." + encodeURIComponent(key), { method: "DELETE", headers: headers() });
+    return true;
+  }
+  /* Prove the table is reachable AND writable before trusting it with the
+     dataset — a read-only policy would otherwise look fine until the first save. */
+  /* One row, one column: cheap enough to ask every minute, which is what
+     lets two people working at once see each other without a reload. */
+  async function latestStamp() {
+    var res = await req(base() + "?select=updated_at&order=updated_at.desc&limit=1", { headers: headers() });
+    var rows = await res.json();
+    return rows.length ? rows[0].updated_at : "";
+  }
+  async function probe() {
+    if (!configured()) { return { ok: false, error: "No Supabase project connected." }; }
+    var k = "__pcr_probe__";
+    try {
+      await setOne(k, { at: new Date().toISOString() });
+      var v = await getOne(k);
+      await delOne(k);
+      if (!v) { return { ok: false, error: "Wrote a test row but could not read it back — check the table's row-level security policy." }; }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
+  return { load: load, current: current, configured: configured, writeCred: writeCred,
+           fetchAll: fetchAll, getOne: getOne, setOne: setOne, delOne: delOne, probe: probe,
+           latestStamp: latestStamp,
+           table: TABLE };
+})();
+
+/* =====================================================================
    STORAGE ADAPTER
    Priority: window.storage (claude.ai artifact runtime, shared dataset)
    -> localStorage (plain browser) -> in-memory (export/import only).
@@ -702,6 +806,7 @@ var SEED_CENSUS = { ihs: 12, hh: 8, sl: 15, ids: 20, comp: 5 };
 var Store = (function () {
   var mode = "memory";
   var mem = {};
+  var cache = null;   /* whole-table snapshot in supabase mode */
 
   function hasWindowStorage() {
     try {
@@ -732,17 +837,37 @@ var Store = (function () {
     } catch (e) { return false; }
   }
   async function init() {
+    Supa.load();
+    if (Supa.configured()) {
+      var probe = await Supa.probe();
+      if (probe.ok) { mode = "supabase"; return mode; }
+      /* Reachable-but-broken is worth saying out loud rather than silently
+         falling back and letting one machine drift off the shared dataset. */
+      supaError = probe.error;
+    }
     if (await windowStorageWorks()) { mode = "shared"; }
     else if (hasLocalStorage()) { mode = "local"; }
     else { mode = "memory"; }
     return mode;
   }
+  var supaError = "";
+  /* One request for the whole table, so boot is not a round trip per key. */
+  async function prefetch() {
+    if (mode !== "supabase") { return true; }
+    try { cache = await Supa.fetchAll(); return true; }
+    catch (e) { cache = null; return false; }
+  }
+  function invalidate() { cache = null; }
   function unwrap(res) {
     if (res && typeof res === "object" && "value" in res) { return res.value; }
     return res;
   }
   async function get(key) {
     try {
+      if (mode === "supabase") {
+        if (cache) { return cache.hasOwnProperty(key) ? cache[key] : null; }
+        return await Supa.getOne(key);
+      }
       if (mode === "shared") {
         var res = await window.storage.get(key, { shared: true });
         var v = unwrap(res);
@@ -758,6 +883,11 @@ var Store = (function () {
   async function set(key, value) {
     var payload = JSON.stringify(value);
     try {
+      if (mode === "supabase") {
+        await Supa.setOne(key, value);
+        if (cache) { cache[key] = value; }
+        return true;
+      }
       if (mode === "shared") { await window.storage.set(key, payload, { shared: true }); return true; }
       if (mode === "local") { window.localStorage.setItem(key, payload); return true; }
       mem[key] = payload; return true;
@@ -768,12 +898,20 @@ var Store = (function () {
   }
   async function del(key) {
     try {
+      if (mode === "supabase") {
+        await Supa.delOne(key);
+        if (cache) { delete cache[key]; }
+        return true;
+      }
       if (mode === "shared") { await window.storage.delete(key, { shared: true }); return true; }
       if (mode === "local") { window.localStorage.removeItem(key); return true; }
       delete mem[key]; return true;
     } catch (e) { return false; }
   }
-  return { init: init, get: get, set: set, del: del, getMode: function () { return mode; } };
+  return { init: init, get: get, set: set, del: del, prefetch: prefetch, invalidate: invalidate,
+           getMode: function () { return mode; },
+           lastError: function () { return supaError; },
+           setMode: function (m) { mode = m; cache = null; } };
 })();
 
 /* =====================================================================
@@ -1074,6 +1212,7 @@ var K = { rubric: "pcr:rubric", clients: "pcr:clients", staff: "pcr:staff", org:
           medreview: "pcr:medreview", users: "pcr:users", audit: "pcr:audit" };
 
 async function loadAll() {
+  await Store.prefetch();
   S.rubric  = (await Store.get(K.rubric))  || [];
   S.clients = (await Store.get(K.clients)) || [];
   S.staff   = (await Store.get(K.staff))   || { roster: [], records: {} };
@@ -2290,8 +2429,9 @@ function saveRubricFromModal(isNew, origId) {
 /* ============================ SETTINGS / AI / EXPORT ============================ */
 function settingsModal() {
   var mode = Store.getMode();
-  var modeLabel = mode === "shared" ? "Shared dataset (window.storage) — all QA staff see the same records" :
-    mode === "local" ? "This browser (localStorage) — use Export to move data between devices" :
+  var modeLabel = mode === "supabase" ? "Supabase — one shared record, every device sees the same data" :
+    mode === "shared" ? "Shared dataset (window.storage) — all QA staff see the same records" :
+    mode === "local" ? "This browser (localStorage) — connect Supabase below, or use Export to move data between devices" :
     "In-memory only — data is LOST on close; use Export to back up";
   var me = Auth.current();
   var admin = Auth.isAdmin();
@@ -2301,7 +2441,10 @@ function settingsModal() {
     (Auth.pwRequired() ? ' &nbsp;<button class="intent-toggle" type="button" data-action="change-my-password">Change my password</button>' : "") +
     ' &nbsp;<button class="intent-toggle" type="button" data-action="sign-out">' + (Auth.pwRequired() ? "Sign out" : "Switch person") + "</button>" +
     '<br><span class="small">Everything you rate is stamped with this name. Manage the team under <strong>Users &amp; Activity</strong>.</span></div>' +
-    '<div class="note-box"><strong>Storage:</strong> ' + esc(modeLabel) + "</div>" +
+    '<div class="note-box"><strong>Storage:</strong> ' + esc(modeLabel) +
+    (Store.lastError() ? '<br><span class="small" style="color:var(--gap)">Supabase is configured but unreachable: ' + esc(Store.lastError()) + "</span>" : "") +
+    "</div>" +
+    supabasePanelHtml(mode) +
     '<h4 style="margin:10px 0 6px">AI assist (optional — everything works offline without it)</h4>' +
     '<div class="small muted" style="margin-bottom:8px">Adds AI-written CAP drafts and readiness briefings via the Anthropic API. Requires network access and an API key from console.anthropic.com. The key is stored in this system\'s storage — use a workspace-scoped key you can revoke.</div>' +
     '<div class="form-grid">' +
@@ -2321,6 +2464,126 @@ function settingsModal() {
     (admin ? "" : '<div class="small muted" style="margin-top:6px">Restoring or clearing data is limited to administrators.</div>') +
     '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Close</button>' +
     '<button class="btn" type="button" data-action="save-settings">Save</button></div>');
+}
+/* Connecting a shared backend is a one-time job per machine, so the panel
+   carries everything needed to do it without leaving the app: where the two
+   values come from, the SQL to paste, and a way to prove it works. */
+function supabasePanelHtml(mode) {
+  var c = Supa.current() || {};
+  var on = mode === "supabase";
+  return '<h4 style="margin:16px 0 6px">Shared records (Supabase)</h4>' +
+    '<div class="small muted" style="margin-bottom:8px">Without this, each browser keeps its own separate copy and two people never see each other\'s work. ' +
+    'Create a free project at supabase.com, run <code>supabase-setup.sql</code> from this repository in its SQL editor, then paste the project URL and the <strong>anon public</strong> key from Project Settings → API.</div>' +
+    '<div class="form-grid">' +
+    '<div class="full"><label>Project URL</label><input type="text" id="sb-url" value="' + esc(c.url || "") + '" placeholder="https://xxxxxxxx.supabase.co"></div>' +
+    '<div class="full"><label>Anon public key</label><input type="password" id="sb-key" value="' + esc(c.anonKey || "") + '" placeholder="eyJhbGciOi…"></div>' +
+    "</div>" +
+    '<div class="toolbar" style="margin:8px 0 0">' +
+    '<button class="btn secondary" type="button" data-action="sb-test">Test connection</button>' +
+    '<button class="btn" type="button" data-action="sb-connect">Save and connect</button>' +
+    (on ? '<button class="btn secondary" type="button" data-action="sb-push">Copy this browser\'s data up</button>' +
+          '<button class="btn danger" type="button" data-action="sb-disconnect">Disconnect</button>' : "") +
+    "</div>" +
+    '<div id="sb-out" class="small" style="margin-top:6px"></div>' +
+    '<div class="small muted" style="margin-top:8px"><strong>Treat the anon key like a password.</strong> Anyone who has it and the URL can read and write every record, ' +
+    'so it is stored in this browser only and is deliberately not committed to the repository — hand it to each machine once. ' +
+    'These records include client names, medication and behaviour-plan flags: if Hope Found needs this to be HIPAA-covered, that requires a paid Supabase plan and a signed BAA with them.</div>';
+}
+function sbOut(msg, bad) {
+  var el = document.getElementById("sb-out");
+  if (el) { el.innerHTML = '<span style="color:' + (bad ? "var(--gap)" : "var(--met)") + '">' + esc(msg) + "</span>"; }
+}
+function sbCredFromForm() {
+  var url = document.getElementById("sb-url").value.trim();
+  var key = document.getElementById("sb-key").value.trim();
+  if (!/^https?:\/\//.test(url)) { return { error: "The project URL should start with https:// — copy it from Project Settings → API." }; }
+  if (key.length < 20) { return { error: "That does not look like the anon key. Copy the long 'anon public' value from Project Settings → API." }; }
+  return { url: url.replace(/\/+$/, ""), anonKey: key };
+}
+async function sbTest() {
+  var c = sbCredFromForm();
+  if (c.error) { sbOut(c.error, true); return null; }
+  sbOut("Testing…");
+  var prev = Supa.current();
+  Supa.writeCred(c);
+  var res = await Supa.probe();
+  if (!res.ok) {
+    Supa.writeCred(prev || null);
+    sbOut("Could not connect: " + res.error, true);
+    return null;
+  }
+  sbOut("Connected — the " + Supa.table + " table is readable and writable.");
+  return c;
+}
+async function sbConnect() {
+  var c = await sbTest();
+  if (!c) { return; }
+  sbOut("Connected. Checking the shared record\u2026");
+  var remote;
+  try { remote = await Supa.fetchAll(); }
+  catch (e) { sbOut("Connected, but could not read the table: " + e.message, true); return; }
+  var empty = !Object.keys(remote).length;
+  if (!empty && !safeConfirm("This project already holds records. Joining it replaces what this browser is showing with the shared copy. " +
+      "Nothing here is deleted \u2014 Export a backup first if you have work that is not in the shared record yet.")) {
+    return;
+  }
+  Store.setMode("supabase");
+  logAct("data", "Connected this browser to the shared Supabase record");
+  if (empty) {
+    /* A fresh project must be seeded from what is here, not loaded over the
+       top of it — loading an empty table first would blank the app. */
+    sbOut("Connected to an empty project \u2014 copying this browser\u2019s records up\u2026");
+    var pushed = await sbPushAll();
+    if (!pushed.ok) { return; }
+    sbOut("Connected, and seeded the project with " + pushed.count + " records.");
+  } else {
+    await refreshFromStore("manual");
+    sbOut("Connected \u2014 now showing the shared record.");
+  }
+  showStorageNote();
+  startSharedPoll();
+  var syncBtn = document.getElementById("syncBtn");
+  if (syncBtn) { syncBtn.hidden = false; }
+  var note = document.querySelectorAll("#modalBox .note-box")[1];
+  if (note) { note.innerHTML = "<strong>Storage:</strong> Supabase \u2014 one shared record, every device sees the same data"; }
+}
+async function sbPush() {
+  if (!safeConfirm("Copy every record this browser is showing up to Supabase? Anything already there under the same key is overwritten.")) { return; }
+  var res = await sbPushAll();
+  if (res.ok) { sbOut("Uploaded " + res.count + " records. Every device on this project now sees them."); }
+}
+/* Seeding or overwriting the project from whatever is in memory right now. */
+async function sbPushAll() {
+  sbOut("Uploading\u2026");
+  var payload = {};
+  payload[K.rubric] = S.rubric; payload[K.clients] = S.clients; payload[K.staff] = S.staff;
+  payload[K.org] = S.org; payload[K.fire] = S.fire; payload[K.census] = S.census;
+  payload[K.policy] = S.policy; payload[K.qadoc] = S.qadoc; payload[K.runs] = S.runs;
+  payload[K.qtr] = S.qtr; payload[K.users] = Auth.all(); payload[K.audit] = S.audit;
+  payload[K.medreview] = S.medreview; payload[K.settings] = S.settings;
+  S.clients.forEach(function (c) { payload[K.rec + c.id] = S.records[c.id] || {}; });
+  var names = Object.keys(payload), done = 0;
+  try {
+    for (var i = 0; i < names.length; i++) {
+      await Supa.setOne(names[i], payload[names[i]]);
+      done++;
+      sbOut("Uploading\u2026 " + done + " of " + names.length);
+    }
+  } catch (e) {
+    sbOut("Stopped after " + done + " of " + names.length + ": " + e.message, true);
+    return { ok: false, count: done };
+  }
+  Store.invalidate();
+  logAct("data", "Copied this browser's records up to Supabase (" + done + " keys)");
+  return { ok: true, count: done };
+}
+function sbDisconnect() {
+  clearInterval(pollTimer);
+  if (!safeConfirm("Disconnect from Supabase? This browser goes back to its own local copy — nothing in Supabase is deleted.")) { return; }
+  Supa.writeCred(null);
+  logAct("data", "Disconnected this browser from Supabase");
+  closeModal();
+  window.location.reload();
 }
 function download(filename, text) {
   var a = document.createElement("a");
@@ -4241,6 +4504,11 @@ function onClick(e) {
                  .catch(function () { out.textContent = "✗ HTTP " + r.status; }); }
       }).catch(function (err) { out.textContent = "✗ Network error (offline?): " + err.message; });
     })(); break;
+    case "sb-test": sbTest(); break;
+    case "sb-connect": sbConnect(); break;
+    case "sb-push": sbPush(); break;
+    case "sb-disconnect": sbDisconnect(); break;
+    case "sync-now": refreshFromStore("manual"); break;
     case "export-all": exportAll(); break;
     case "import-all": pickFile(importAll); break;
     case "clear-all":
@@ -4690,6 +4958,8 @@ function applyTheme() {
   document.getElementById("brandName").textContent = PROVIDER_CONFIG.meta.appTitle;
   document.getElementById("brandSub").textContent = PROVIDER_CONFIG.meta.subtitle;
   document.getElementById("brandMark").textContent = brandMark();
+  var syncBtn = document.getElementById("syncBtn");
+  if (syncBtn) { syncBtn.hidden = Store.getMode() !== "supabase"; }
   var soLbl = document.getElementById("signOutLbl");
   if (soLbl) { soLbl.textContent = Auth.pwRequired() ? "Sign out" : "Switch person"; }
   var soBtn = soLbl && soLbl.closest("button");
@@ -4698,6 +4968,19 @@ function applyTheme() {
 function showStorageNote() {
   var mode = Store.getMode();
   var el = document.getElementById("storageNote");
+  var err = Store.lastError();
+  if (mode === "supabase") {
+    el.classList.remove("on");
+    el.querySelector(".inner").textContent = "";
+    return;
+  }
+  if (err) {
+    el.classList.add("on");
+    el.querySelector(".inner").textContent =
+      "Supabase is configured but unreachable (" + err + ") — working from this browser's own copy instead. " +
+      "Fix it in Settings before entering more, or this machine will drift from the shared record.";
+    return;
+  }
   if (mode === "memory") {
     el.classList.add("on");
     el.querySelector(".inner").textContent =
@@ -4709,9 +4992,46 @@ function showStorageNote() {
   }
 }
 var appLoaded = false;
+var syncing = false;
+/* Two people on one dataset: whoever comes back to the tab picks up what the
+   other one saved while it was in the background. */
+var lastStamp = "";
+async function refreshFromStore(reason) {
+  if (Store.getMode() !== "supabase" || syncing || !appLoaded || !Auth.current()) { return; }
+  syncing = true;
+  try {
+    if (reason !== "manual") {
+      /* Do not redraw the screen under someone's cursor unless the shared
+         record actually moved — a poll that always re-renders would fight
+         whoever is mid-edit. */
+      var stamp = await Supa.latestStamp();
+      if (stamp && stamp === lastStamp) { syncing = false; return; }
+      lastStamp = stamp;
+    }
+    Store.invalidate();
+    await loadAll();
+    try { lastStamp = await Supa.latestStamp(); } catch (e) {}
+    render();
+    if (reason === "manual") { toast("Refreshed from the shared record"); }
+  } catch (e) {
+    if (reason === "manual") { safeAlert("Could not refresh: " + e.message); }
+  }
+  syncing = false;
+}
+var pollTimer = null;
+function startSharedPoll() {
+  clearInterval(pollTimer);
+  if (Store.getMode() !== "supabase") { return; }
+  pollTimer = setInterval(function () {
+    if (!document.hidden) { refreshFromStore("poll"); }
+  }, 45000);
+}
 async function enterApp() {
   hideAuthGate();
+  var syncBtn = document.getElementById("syncBtn");
+  if (syncBtn) { syncBtn.hidden = Store.getMode() !== "supabase"; }
   if (!appLoaded) { await loadAll(); appLoaded = true; }
+  startSharedPoll();
   renderUserChip();
   render();
 }
@@ -4729,6 +5049,9 @@ async function boot() {
     document.addEventListener("change", onChange);
     document.addEventListener("input", onInput);
     document.addEventListener("keydown", onKeydown);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) { refreshFromStore("focus"); }
+    });
     await Auth.load();
     Auth.restore();
     var me = Auth.current();

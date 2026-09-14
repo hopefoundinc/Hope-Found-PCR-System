@@ -58,6 +58,15 @@ Every feature works fully offline with deterministic logic. AI mode is optional 
   badge, since that is the point staff can act, and the second gives each person a computed **book-by**
   date (ISP date − 30). `quarterlyWindowDays` (15) drives the quarterly checklist and its badges. Each list prints alone via a `body.print-only-isp` / `body.print-only-quarterly`
   class that the print stylesheet uses to hide the other `.qidp-block`s.
+- **Supabase (optional, preferred when configured)** — one table, `pcr_store(key text primary key,
+  value jsonb, updated_at timestamptz)`, which is exactly the shape the adapter already speaks, so no
+  call site changes. `Store.init()` probes it with a write/read/delete round trip before adopting it,
+  and `Store.prefetch()` pulls the whole table in one request so boot is not a round trip per key.
+  Credentials live in the browser's own `localStorage` under `pcr:supabase`, never in the shared
+  dataset and never in the repo, because the anon key is a client-side credential and therefore a
+  shared password. Connecting to an empty project seeds it from memory rather than loading nothing
+  over the top of it. A 45s poll asks only for the newest `updated_at` and reloads solely when it has
+  moved, so it never redraws under an active cursor. Schema and policy: `supabase-setup.sql`.
 - `pcr:users` — accounts: `id, name, role (admin|staff), active, cred {salt, hash, algo},
   pwVersion, mustChange, createdAt, lastSignIn`. Shared, so credentials work on every device.
   `PROVIDER_CONFIG.meta.requirePassword` gates the password step end to end: when false the gate is a

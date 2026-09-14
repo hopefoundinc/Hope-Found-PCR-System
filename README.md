@@ -189,10 +189,43 @@ checks it is always clear who did which.
   everyone's sign-in and the record of who verified what. The backup carries password *hashes*
   only, never passwords — still, keep the file where the agency keeps its other personnel data.
 
+## Shared records (Supabase)
+
+Out of the box each browser keeps its own copy, so two people never see each other's work. Connecting
+a free Supabase project turns that into one shared record:
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. Run [`supabase-setup.sql`](supabase-setup.sql) in its SQL editor. It is one key/value table —
+   the app already stores each dataset as one JSON document under a key, so that is the whole schema.
+3. In the app: **Settings → Shared records (Supabase)**, paste the project URL and the **anon public**
+   key from Project Settings → API, and press *Save and connect*.
+
+Connecting to an **empty** project seeds it from whatever that browser is holding. Connecting to one
+that already has records asks first, then replaces what that browser is showing with the shared copy.
+Every machine afterwards only needs the URL and key.
+
+Once connected, a **Refresh** button appears in the sidebar, and the app re-checks the shared record
+when you come back to the tab and every 45 seconds while it is open — but only redraws when the record
+has actually changed, so a poll never yanks the screen out from under someone mid-edit. Writes are
+last-one-wins per key, and records are bundled per person, so two people reviewing different people
+never collide; two people on the *same* person can overwrite each other.
+
+**Treat the anon key like a password.** It is a client-side credential: anyone holding it and the URL
+can read and write every record. That is why the app keeps it in each browser rather than in this
+repository — hand it to each machine once. It is not sufficient if the deployed URL is public, and
+these records hold client names plus medication and behaviour-plan flags. `supabase-setup.sql`
+spells out what tightening it looks like: Supabase Auth with `to authenticated` instead of `to anon`
+(pair that with `requirePassword: true`), and, for HIPAA coverage, a paid Supabase plan and a signed
+BAA with them.
+
+If Supabase is configured but unreachable, the app says so in a banner and falls back to this
+browser's own copy rather than pretending to be in sync.
+
 ## Storage
 
 The app adapts to its runtime, in order of preference:
 
+0. **Supabase** — when connected (above), the shared record every device reads and writes.
 1. **claude.ai artifact runtime** — `window.storage` with `shared: true`: one shared dataset for
    the 1–2 QA staff, same records on every device.
 2. **Plain browser** — `localStorage` (per browser; use Export/Import to move between devices).
