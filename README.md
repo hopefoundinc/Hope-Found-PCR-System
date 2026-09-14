@@ -313,3 +313,22 @@ exclusions, staff roles/requirements, and fire checklist. Then import that agenc
 roster. No engine logic changes.
 
 See [`PLAN.md`](PLAN.md) for the full architecture.
+
+## Deploying
+
+The app is one static file, so there is no build step.
+
+**GitHub Pages** (what this repo is set up for). Switch it on once — repo **Settings → Pages →
+Source: GitHub Actions** — and [`.github/workflows/pages.yml`](.github/workflows/pages.yml) publishes
+on every push to the default branch. The site lands at
+`https://<owner>.github.io/Hope-Found-PCR-System/`. Pages has to be enabled by a person the first
+time: the Actions token is not permitted to create the site itself.
+
+**Anywhere else.** Because it is a single file with no dependencies, `index.html` also works served
+from any static host, dropped on a shared drive, or opened straight from disk. Connect the same
+Supabase project from each and they all read and write the same record.
+
+Note that a public Pages URL makes the app reachable by anyone who finds it. With `requirePassword`
+off that means anyone can open it and pick a name, and if the Supabase key has been entered on that
+machine they can see the records too. For a public URL, turn `requirePassword` on and move Supabase
+to authenticated access — see [`supabase-setup.sql`](supabase-setup.sql).
