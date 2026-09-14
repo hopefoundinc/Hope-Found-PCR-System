@@ -49,6 +49,48 @@ Every feature works fully offline with deterministic logic. AI mode is optional 
 - `pcr:fire` — fire/emergency module: drill log entries + recurring checklist item completions.
 - `pcr:census` — per-service-line census numbers for the sampling calculator.
 - `pcr:settings` — AI key/model/mode, misc preferences.
+- `pcr:qtr` — `qtr["<clientId>|<ispDate>|<periodKey>"] = { done, doneDate, notes, scheduledDate,
+  scheduledBy, scheduledAt, confirmedBy, confirmedById, confirmedAt }`. `scheduledDate` is the annual
+  ISP *meeting* booking (only the `kind: "annual"` period uses it); `done` is the filed/held receipt.
+  Look-ahead windows in `PROVIDER_CONFIG.qidp`: `ispWindowDays` (30) drives the "ISP dates in the next
+  30 days" list; `ispBookingOpensDays` (45) and `ispBookingDeadlineDays` (30) express the rule that the
+  renewal meeting is booked 45–30 days before the ISP date — the first also drives the annual "due soon"
+  badge, since that is the point staff can act, and the second gives each person a computed **book-by**
+  date (ISP date − 30). `quarterlyWindowDays` (15) drives the quarterly checklist and its badges. Each list prints alone via a `body.print-only-isp` / `body.print-only-quarterly`
+  class that the print stylesheet uses to hide the other `.qidp-block`s.
+- **Supabase (optional, preferred when configured)** — one table, `pcr_store(key text primary key,
+  value jsonb, updated_at timestamptz)`, which is exactly the shape the adapter already speaks, so no
+  call site changes. `Store.init()` probes it with a write/read/delete round trip before adopting it,
+  and `Store.prefetch()` pulls the whole table in one request so boot is not a round trip per key.
+  Credentials live in the browser's own `localStorage` under `pcr:supabase`, never in the shared
+  dataset and never in the repo, because the anon key is a client-side credential and therefore a
+  shared password. Connecting to an empty project seeds it from memory rather than loading nothing
+  over the top of it. A 45s poll asks only for the newest `updated_at` and reloads solely when it has
+  moved, so it never redraws under an active cursor. Schema and policy: `supabase-setup.sql`.
+- `pcr:users` — accounts: `id, name, role (admin|staff), active, cred {salt, hash, algo},
+  pwVersion, mustChange, createdAt, lastSignIn`. Shared, so credentials work on every device.
+  `PROVIDER_CONFIG.meta.requirePassword` gates the password step end to end: when false the gate is a
+  name picker, `cred` is null, `signIn` skips verification, and the password fields disappear from the
+  add/manage-user modal and Settings. Roles, the activity log and every stamp behave identically either
+  way, so turning it on later needs no data migration — only a password set per person.
+  There is no username: `name` is the credential and the stamp both, looked up case- and
+  whitespace-insensitively, and enforced unique on create and on rename — a duplicate name would make
+  the audit trail ambiguous about who did what.
+  `cred.algo` is `pbkdf2` (PBKDF2-HMAC-SHA256, 150k iterations, Web Crypto) or `sha256x` (iterated
+  pure-JS SHA-256) — recorded per account so verification always uses the algorithm the hash was made
+  with. `pwVersion` increments on every password change and is carried in the session, so a reset
+  invalidates sessions still open elsewhere.
+- `pcr:audit` — append-only activity log, capped at the last 400 entries:
+  `{ ts, uid, name, action, detail }`. Persisted debounced (800 ms) so a burst of ratings is one write.
+- `pcr:session` — **never** goes through the storage adapter. Written straight to this browser's
+  `localStorage` as `{ uid, pwv, exp }` with a sliding 12-hour expiry, because in the shared
+  `window.storage` runtime one person's session must never become everyone's.
+
+Attribution: every rating carries `verifiedBy` (display name), `verifiedById` (account id, blank when
+the name was typed by hand or predates sign-in) and `verifiedAt` (ISO timestamp) alongside the existing
+`verifiedDate`. Clicking a rating stamps all four; un-rating clears them. The equivalent fields on other
+records are `gateBy/gateAt`, `loggedBy/loggedAt` (drills), `ackBy/ackById/ackAt` (policy),
+`confirmedBy/confirmedAt` (QIDP quarterlies), `createdBy` (runs, people), `uploadedBy` (QA document).
 
 ## 4. Scoring engine (Qlarant 2022 rules, implemented as pure functions)
 

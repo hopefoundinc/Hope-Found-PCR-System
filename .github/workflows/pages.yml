@@ -1,0 +1,50 @@
+# Publishes the app to GitHub Pages on every push to the default branch.
+# The whole app is one static file, so there is nothing to build — the repo
+# root is uploaded as-is and index.html is served at the site root.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [claude/pcr-audit-readiness-system-140anm]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish; queue at most one behind it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # enablement: true turns Pages on the first time this runs, so the
+      # site does not need anyone to flip a switch in repo settings.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Stage the site
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          cp hopefound_pcr_rubric.json rubric.schema.json supabase-setup.sql _site/ 2>/dev/null || true
+          # Pages runs the upload through Jekyll unless told not to; this file
+          # stops it rewriting anything.
+          touch _site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

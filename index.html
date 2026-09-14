@@ -9,137 +9,149 @@
   --teal:#10474A; --teal-dark:#0B3335; --teal-tint:#E8EFEE;
   --ink:#1E2A2B; --muted:#5C6B6A; --hairline:#D5DDDB;
   --met:#2F6B4E; --gap:#A63B2C; --na:#7C8A88; --alert:#7E1C1C; --warn:#9A6A00;
-  --paper:#FFFFFF; --paper-alt:#F6F8F7;
+  --paper:#FFFFFF; --paper-alt:#F4F7F6;
+  --r-card:16px; --r-ctl:10px;
+  --shadow-card:0 1px 2px rgba(11,51,53,.04), 0 14px 34px -18px rgba(11,51,53,.18);
+  --shadow-pop:0 24px 60px -12px rgba(11,51,53,.35);
   --serif:Georgia,'Times New Roman',serif;
   --sans:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
 }
-*{box-sizing:border-box;margin:0;padding:0;border-radius:0}
-html{background:#F6F8F7}
-body{background:#F6F8F7;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
-h1,h2,h3,h4{font-family:var(--serif);font-weight:700;color:var(--teal-dark);line-height:1.2}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#F1F5F4}
+body{background:#F1F5F4;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:700;color:var(--teal-dark);line-height:1.25}
 button{font-family:var(--sans);cursor:pointer}
-input,select,textarea{font-family:var(--sans);font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--hairline);padding:7px 9px;width:100%}
+input,select,textarea{font-family:var(--sans);font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--hairline);border-radius:var(--r-ctl);padding:8px 11px;width:100%}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--teal);outline-offset:-1px}
-label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px}
+label{font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px}
 a{color:var(--teal)}
+a:hover{color:var(--teal-dark)}
 
-/* header */
-.app-header{background:var(--teal);color:#fff;padding:14px 18px;border-bottom:4px solid var(--teal-dark)}
-.app-header h1{color:#fff;font-size:21px;margin:0}
-.app-header .sub{color:#CBDBD9;font-size:12.5px;margin-top:2px}
-.header-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;max-width:1180px;margin:0 auto}
-.header-actions{display:flex;gap:8px;flex-shrink:0}
-.btn-ghost{background:transparent;color:#fff;border:1px solid #3E6D6F;padding:6px 12px;font-size:13px}
-.btn-ghost:hover{background:var(--teal-dark)}
+/* ===== app shell: fixed left sidebar + fluid main ===== */
+.app-shell{display:flex;min-height:100vh}
+.sidebar{width:236px;flex-shrink:0;background:linear-gradient(180deg,var(--teal-dark) 0%,var(--teal) 130%);color:#fff;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;padding:20px 14px 16px}
+.side-brand{display:flex;gap:10px;align-items:center;padding:2px 8px 18px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:16px}
+.brand-mark{width:38px;height:38px;flex-shrink:0;border-radius:12px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;font-size:16px;color:#fff}
+.side-brand h1{color:#fff;font-size:15px;line-height:1.25;margin:0}
+.side-brand .sub{color:#9DBBB9;font-size:11px;margin-top:2px;line-height:1.35}
+.side-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:#7FA3A1;padding:0 10px;margin-bottom:6px}
+.side-nav{flex:1;overflow-y:auto;min-height:0}
+.side-nav #navTabs{display:flex;flex-direction:column;gap:2px}
+.side-nav button{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:transparent;color:#B9CCCA;border:none;border-radius:11px;padding:9px 11px;font-size:13.5px;font-weight:600;letter-spacing:.01em}
+.side-nav button:hover{color:#fff;background:rgba(255,255,255,.07)}
+.side-nav button.active{color:var(--teal-dark);background:#fff;box-shadow:0 6px 18px -8px rgba(0,0,0,.4)}
+.side-nav .nav-ic{display:flex;align-items:center;flex-shrink:0;opacity:.85}
+.side-nav button.active .nav-ic{opacity:1;color:var(--teal)}
+.side-nav .nav-lbl{flex:1;min-width:0}
+.side-nav button{position:relative}
+.side-nav .nav-badge{border-radius:999px;font-size:10.5px;padding:1px 6px;flex-shrink:0}
+.side-foot{border-top:1px solid rgba(255,255,255,.12);padding-top:12px;margin-top:12px}
+.btn-ghost{display:flex;align-items:center;gap:10px;width:100%;background:transparent;color:#B9CCCA;border:none;border-radius:11px;padding:9px 11px;font-size:13.5px;font-weight:600;text-align:left}
+.btn-ghost:hover{color:#fff;background:rgba(255,255,255,.07)}
+.app-main{flex:1;min-width:0;display:flex;flex-direction:column}
 
-/* alert banner */
-#alertBanner{display:none;background:var(--alert);color:#fff;padding:10px 18px;font-size:14px;font-weight:600}
+/* alert + storage banners */
+#alertBanner{display:none;background:var(--alert);color:#fff;padding:8px 15px;font-size:13px;font-weight:600;border-radius:12px;margin:12px 20px 0}
 #alertBanner.on{display:block}
-#alertBanner .inner{max-width:1180px;margin:0 auto}
 #alertBanner a{color:#fff;text-decoration:underline;cursor:pointer}
-#storageNote{display:none;background:var(--warn);color:#fff;padding:7px 18px;font-size:13px}
+#storageNote{display:none;background:var(--warn);color:#fff;padding:5px 14px;font-size:11px;border-radius:10px;margin:10px 20px 0}
 #storageNote.on{display:block}
-#storageNote .inner{max-width:1180px;margin:0 auto}
-
-/* nav */
-.nav-tabs{background:var(--teal-dark);overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
-.nav-tabs .inner{max-width:1180px;margin:0 auto;display:flex}
-.nav-tabs button{background:transparent;color:#B9CCCA;border:none;border-bottom:3px solid transparent;padding:11px 15px;font-size:14px;font-weight:600;flex-shrink:0}
-.nav-tabs button.active{color:#fff;border-bottom-color:#fff}
-.nav-tabs button:hover{color:#fff}
 
 /* layout */
-main{max-width:1180px;margin:0 auto;padding:18px 14px 60px}
-.view-title{font-size:24px;margin-bottom:2px}
-.view-sub{color:var(--muted);font-size:13.5px;margin-bottom:16px;max-width:70em}
-.grid{display:grid;gap:14px}
-.grid-cards{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
-.grid-2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
-.card{background:var(--paper);border:1px solid var(--hairline);padding:14px}
-.card h3{font-size:17px;margin-bottom:8px}
-.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap}
-.section-title{font-size:19px;margin:22px 0 8px}
+main{width:100%;max-width:1400px;padding:18px 20px 36px}
+.view-title{font-size:28px;margin-bottom:4px;letter-spacing:-.01em}
+.view-sub{color:var(--muted);font-size:14px;margin-bottom:24px;max-width:70em}
+.grid{display:grid;gap:18px}
+.grid-cards{grid-template-columns:repeat(auto-fill,minmax(310px,1fr))}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+.card{background:var(--paper);border:1px solid rgba(213,221,219,.7);border-radius:var(--r-card);padding:20px;box-shadow:var(--shadow-card)}
+.card h3{font-size:17px;margin-bottom:10px}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.section-title{font-size:20px;margin:30px 0 12px}
 
 /* buttons */
-.btn{background:var(--teal);color:#fff;border:1px solid var(--teal);padding:8px 14px;font-size:13.5px;font-weight:600}
+.btn{background:var(--teal);color:#fff;border:1px solid var(--teal);border-radius:999px;padding:8px 17px;font-size:13.5px;font-weight:600}
 .btn:hover{background:var(--teal-dark)}
 .btn.secondary{background:#fff;color:var(--teal);border:1px solid var(--teal)}
 .btn.secondary:hover{background:var(--teal-tint)}
 .btn.danger{background:#fff;color:var(--gap);border:1px solid var(--gap)}
-.btn.small{padding:4px 9px;font-size:12.5px}
+.btn.small{padding:4px 12px;font-size:12.5px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 
 /* rating buttons */
 .rate-group{display:flex;gap:0}
-.rate-group button{border:1px solid var(--hairline);background:#fff;color:var(--muted);padding:6px 11px;font-size:12.5px;font-weight:700;border-left-width:0}
-.rate-group button:first-child{border-left-width:1px}
+.rate-group button{border:1px solid var(--hairline);background:#fff;color:var(--muted);padding:6px 13px;font-size:12.5px;font-weight:700;border-left-width:0}
+.rate-group button:first-child{border-left-width:1px;border-radius:999px 0 0 999px;padding-left:15px}
+.rate-group button:nth-child(3){border-radius:0 999px 999px 0;padding-right:15px}
 .rate-group button.on-met{background:var(--met);border-color:var(--met);color:#fff}
 .rate-group button.on-not_met{background:var(--gap);border-color:var(--gap);color:#fff}
 .rate-group button.on-na{background:var(--na);border-color:var(--na);color:#fff}
-.rate-group button.unscored{margin-left:10px;border-left-width:1px;border-style:dashed}
+.rate-group button.unscored{margin-left:10px;border-left-width:1px;border-style:dashed;border-radius:999px}
 .rate-group button.on-none{background:var(--teal-tint);border-color:var(--muted);color:var(--teal-dark);border-style:dashed}
 .rate-group button:disabled{opacity:.4;cursor:not-allowed}
-.cov-note{font-size:12px;color:var(--muted);margin-top:6px;border-left:3px solid var(--hairline);padding-left:8px}
+.cov-note{font-size:12px;color:var(--muted);margin-top:8px;border-left:3px solid var(--hairline);padding-left:9px}
 .cov-note strong{color:var(--teal-dark)}
 .scorebar .fill.partial{background:repeating-linear-gradient(135deg,var(--teal),var(--teal) 6px,#3C6E70 6px,#3C6E70 12px)}
 
-/* badges + status */
-.badge{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;letter-spacing:.03em;text-transform:uppercase}
-.badge.met{background:var(--met);color:#fff}
-.badge.gap{background:var(--gap);color:#fff}
-.badge.na{background:var(--na);color:#fff}
+/* badges — pill, tinted */
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;border:1px solid transparent}
+.badge.met{background:color-mix(in srgb,var(--met) 11%,#fff);color:var(--met);border-color:color-mix(in srgb,var(--met) 35%,#fff)}
+.badge.gap{background:color-mix(in srgb,var(--gap) 10%,#fff);color:var(--gap);border-color:color-mix(in srgb,var(--gap) 35%,#fff)}
+.badge.na{background:color-mix(in srgb,var(--na) 12%,#fff);color:#5F6D6B;border-color:color-mix(in srgb,var(--na) 40%,#fff)}
 .badge.alert{background:var(--alert);color:#fff}
-.badge.warn{background:var(--warn);color:#fff}
+.badge.warn{background:color-mix(in srgb,var(--warn) 12%,#fff);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,#fff)}
 .badge.neutral{background:var(--teal-tint);color:var(--teal-dark)}
 .badge.outline{background:#fff;color:var(--muted);border:1px solid var(--hairline)}
 
 /* score bars */
-.scorebar{position:relative;height:18px;background:var(--teal-tint);border:1px solid var(--hairline);margin:5px 0 3px}
-.scorebar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--teal)}
+.scorebar{position:relative;height:12px;background:var(--teal-tint);border-radius:999px;margin:8px 0 5px;overflow:hidden}
+.scorebar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--teal);border-radius:999px}
 .scorebar .fill.bad{background:var(--gap)}
 .scorebar .fill.warn{background:var(--warn)}
-.scorebar .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--muted);opacity:.75}
+.scorebar .tick{position:absolute;top:0;bottom:0;width:2px;background:var(--muted);opacity:.55}
 .scorebar .tick.t90{background:var(--met)}
 .bar-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
-.pct{font-family:var(--serif);font-size:26px;color:var(--teal-dark);font-weight:700}
-.pct.small{font-size:20px}
+.pct{font-family:var(--serif);font-size:30px;color:var(--teal-dark);font-weight:700;letter-spacing:-.01em}
+.pct.small{font-size:21px}
 
 /* tables */
-.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--hairline);background:#fff}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid rgba(213,221,219,.7);border-radius:var(--r-card);background:#fff;box-shadow:var(--shadow-card)}
 table{border-collapse:collapse;width:100%;min-width:640px;font-size:13.5px}
-th{background:var(--teal-tint);color:var(--teal-dark);text-align:left;padding:8px 10px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--hairline);white-space:nowrap}
-td{padding:8px 10px;border-bottom:1px solid var(--hairline);vertical-align:top}
+th{background:var(--paper-alt);color:var(--muted);text-align:left;padding:10px 14px;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--hairline);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid color-mix(in srgb,var(--hairline) 55%,#fff);vertical-align:top}
 tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:color-mix(in srgb,var(--teal-tint) 40%,#fff)}
 tr.flag-row td{background:#FBF3F1}
+tr.flag-row:hover td{background:#F8ECE9}
 
 /* indicator rows (client review) */
-.domain-block{margin-bottom:14px}
-.domain-head{background:var(--teal-dark);color:#fff;padding:8px 12px;font-family:var(--serif);font-size:15.5px;font-weight:700}
-.ind{background:#fff;border:1px solid var(--hairline);border-top:none;padding:12px}
+.domain-block{margin-bottom:18px;border-radius:var(--r-card);overflow:hidden;box-shadow:var(--shadow-card);border:1px solid rgba(213,221,219,.7)}
+.domain-head{background:var(--teal-dark);color:#fff;padding:11px 16px;font-family:var(--serif);font-size:15.5px;font-weight:700}
+.ind{background:#fff;border-top:1px solid color-mix(in srgb,var(--hairline) 55%,#fff);padding:16px}
 .ind.gated-off{background:var(--paper-alt)}
 .ind-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
 .ind-id{font-weight:700;color:var(--teal);font-size:12.5px;white-space:nowrap}
-.ind-q{font-size:14.5px;margin:3px 0 8px;max-width:62em}
+.ind-q{font-size:14.5px;margin:4px 0 10px;max-width:62em}
 .ind-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
 .intent-toggle{background:none;border:none;color:var(--teal);font-size:12.5px;font-weight:600;padding:0;text-decoration:underline}
-.intent-body{display:none;background:var(--teal-tint);border-left:3px solid var(--teal);padding:9px 11px;font-size:13px;margin:7px 0;max-width:70em}
+.intent-body{display:none;background:var(--teal-tint);border-radius:10px;padding:10px 13px;font-size:13px;margin:8px 0;max-width:70em}
 .intent-body.open{display:block}
-.ind-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:9px}
-.gate-note{font-size:12.5px;color:var(--muted);font-style:italic;margin-top:5px}
+.ind-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:11px}
+.gate-note{font-size:12.5px;color:var(--muted);font-style:italic;margin-top:6px}
 
-/* sticky summary */
-.sticky-score{position:sticky;top:0;z-index:40;background:var(--teal-dark);color:#fff;padding:9px 14px;display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-.sticky-score .num{font-family:var(--serif);font-size:20px;font-weight:700}
-.sticky-score .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#B9CCCA}
+/* sticky summary — dark hero band */
+.sticky-score{position:sticky;top:10px;z-index:40;background:linear-gradient(120deg,var(--teal-dark),var(--teal));color:#fff;padding:14px 20px;display:flex;gap:22px;flex-wrap:wrap;align-items:center;margin-bottom:18px;border-radius:var(--r-card);box-shadow:0 16px 36px -14px rgba(11,51,53,.45)}
+.sticky-score .num{font-family:var(--serif);font-size:22px;font-weight:700}
+.sticky-score .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:#9DBBB9}
 .sticky-score .cell{min-width:70px}
 
 /* modal */
-.modal-back{display:none;position:fixed;inset:0;background:rgba(11,51,53,.55);z-index:100;padding:20px;overflow-y:auto}
+.modal-back{display:none;position:fixed;inset:0;background:rgba(11,51,53,.5);backdrop-filter:blur(2px);z-index:100;padding:20px;overflow-y:auto}
 .modal-back.open{display:block}
-.modal{background:#fff;border:1px solid var(--hairline);max-width:680px;margin:30px auto;padding:18px}
-.modal h3{font-size:19px;margin-bottom:12px}
-.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.modal{background:#fff;border-radius:20px;max-width:680px;margin:36px auto;padding:24px;box-shadow:var(--shadow-pop)}
+.modal h3{font-size:20px;margin-bottom:14px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .form-grid .full{grid-column:1 / -1}
 .check-line{display:flex;align-items:center;gap:7px;font-size:14px;padding:4px 0}
 .check-line input{width:auto}
@@ -149,46 +161,145 @@ tr.flag-row td{background:#FBF3F1}
 .domain-head .dh-left{display:flex;align-items:center;gap:8px}
 .domain-head .caret{font-size:11px;width:12px;display:inline-block;flex-shrink:0}
 .domain-head .dh-right{display:flex;gap:8px;align-items:center;font-family:var(--sans);font-size:12px;font-weight:400;flex-wrap:wrap}
-.dh-prog{width:84px;height:8px;background:rgba(255,255,255,.28);position:relative;flex-shrink:0}
-.dh-prog .fill{position:absolute;left:0;top:0;bottom:0;background:#fff}
-.resident-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-.resident-chips button{border:1px solid var(--hairline);background:#fff;color:var(--ink);padding:6px 11px;font-size:13px;text-align:left}
+.dh-prog{width:84px;height:7px;background:rgba(255,255,255,.28);border-radius:999px;position:relative;flex-shrink:0;overflow:hidden}
+.dh-prog .fill{position:absolute;left:0;top:0;bottom:0;background:#fff;border-radius:999px}
+.resident-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.resident-chips button{border:1px solid var(--hairline);background:#fff;color:var(--ink);border-radius:14px;padding:8px 14px;font-size:13px;text-align:left;box-shadow:0 1px 2px rgba(11,51,53,.04)}
 .resident-chips button .sub{display:block;font-size:11px;color:var(--muted)}
 .resident-chips button.active{background:var(--teal);border-color:var(--teal);color:#fff}
 .resident-chips button.active .sub{color:#CBDBD9}
-.house-btn{background:none;border:none;color:var(--teal);font-size:12px;font-weight:600;text-decoration:underline;padding:0;margin-top:7px;display:inline-block}
+.house-btn{background:none;border:none;color:var(--teal);font-size:12px;font-weight:600;text-decoration:underline;padding:0;margin-top:8px;display:inline-block}
 .sticky-actions{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.sticky-actions .btn.secondary{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.35)}
+.sticky-actions .btn.secondary:hover{background:rgba(255,255,255,.22)}
 
 /* misc */
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px}
 .toolbar .field{min-width:150px;flex:1;max-width:260px}
 .muted{color:var(--muted)}
 .small{font-size:12.5px}
-.note-box{background:var(--teal-tint);border-left:3px solid var(--teal);padding:10px 13px;font-size:13.5px;margin-bottom:14px;max-width:72em}
-.rule-box{background:#fff;border:1px solid var(--alert);border-left:5px solid var(--alert);padding:11px 14px;margin-bottom:14px}
+.note-box{background:var(--teal-tint);border-radius:14px;padding:13px 17px;font-size:13.5px;margin-bottom:18px;max-width:72em}
+.rule-box{background:color-mix(in srgb,var(--alert) 5%,#fff);border:1px solid color-mix(in srgb,var(--alert) 30%,#fff);border-radius:14px;padding:14px 17px;margin-bottom:18px}
 .rule-box h4{color:var(--alert);font-size:15px;margin-bottom:4px}
-.ai-out{background:var(--paper-alt);border:1px solid var(--hairline);padding:12px;font-size:13.5px;white-space:pre-wrap;margin-top:10px;max-height:420px;overflow-y:auto}
-#saveStatus{position:fixed;bottom:14px;right:14px;background:var(--teal-dark);color:#fff;padding:6px 12px;font-size:12.5px;display:none;z-index:200}
+.ai-out{background:var(--paper-alt);border:1px solid var(--hairline);border-radius:12px;padding:14px;font-size:13.5px;white-space:pre-wrap;margin-top:10px;max-height:420px;overflow-y:auto}
+#saveStatus{position:fixed;bottom:16px;right:16px;background:var(--teal-dark);color:#fff;padding:7px 16px;font-size:12.5px;border-radius:999px;box-shadow:0 8px 20px -6px rgba(11,51,53,.5);display:none;z-index:200}
 #saveStatus.on{display:block}
-.empty{padding:26px;text-align:center;color:var(--muted);background:#fff;border:1px solid var(--hairline)}
+.empty{padding:34px;text-align:center;color:var(--muted);background:#fff;border:1px dashed var(--hairline);border-radius:var(--r-card)}
 .stat-row{display:flex;gap:14px;flex-wrap:wrap}
-.stat{background:#fff;border:1px solid var(--hairline);padding:10px 14px;min-width:150px;flex:1}
-.stat .lbl{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.stat{background:#fff;border:1px solid rgba(213,221,219,.7);border-radius:14px;padding:13px 17px;min-width:150px;flex:1;box-shadow:var(--shadow-card)}
+.stat .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .tier-line{font-size:13px;margin-top:6px}
-@media (max-width:640px){
-  .app-header h1{font-size:18px}
-  main{padding:12px 8px 60px}
+
+/* dashboard: compact one-screen density */
+.dash h2.view-title{display:inline;font-size:19px;margin:0 10px 0 0;vertical-align:baseline}
+.dash .view-sub{display:inline;font-size:11.5px;margin:0}
+.dash .rule-box{display:flex;gap:12px;align-items:baseline;padding:6px 13px;margin:10px 0 9px;border-radius:10px}
+.dash .rule-box h4{font-size:12px;white-space:nowrap;margin:0}
+.dash .rule-box .small{font-size:10px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dash .grid-cards{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.dash .card{padding:8px 10px;border-radius:11px;overflow:hidden}
+.dash .card h3{font-size:12px;margin-bottom:0;line-height:1.2}
+.dash .card-head{margin-bottom:4px;gap:4px}
+.dash .badge{font-size:7.5px;padding:1px 5px;letter-spacing:.02em}
+.dash .mrow{display:flex;align-items:center;gap:6px;margin:2px 0}
+.dash .mrow .ml{font-size:9px;color:var(--muted);width:74px;flex-shrink:0;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash .mrow .scorebar{flex:1;height:5px;margin:0}
+.dash .mrow .pct.small{font-size:10.5px;width:34px;text-align:right;flex-shrink:0}
+.dash .cov-note{font-size:9px;margin-top:3px;line-height:1.25;padding-left:6px;border-left-width:2px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.dash .tier-line{font-size:9px;margin-top:2px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash .ind-meta{gap:2px;margin-top:4px}
+.dash .card .btn.small{padding:0 7px;font-size:9.5px}
+.dash .section-title{font-size:12.5px;margin:9px 0 5px}
+.dash .stat-row{gap:8px;flex-wrap:wrap}
+.dash .stat{padding:5px 10px;min-width:104px;border-radius:10px}
+.dash .stat .lbl{font-size:9px;letter-spacing:.04em;line-height:1.3}
+.dash .stat .pct{font-size:15px}
+.dash .stat .small{font-size:9.5px;line-height:1.25}
+.dash .note-box{font-size:10.5px!important;padding:6px 12px!important;line-height:1.35}
+.dash .btn{padding:6px 14px;font-size:12.5px}
+/* Narrower, but still a left rail with readable labels. */
+@media (max-width:1040px){
+  .dash .stat-row{flex-wrap:wrap}
+  .sidebar{width:186px;padding:16px 9px 13px}
+  .brand-mark{width:32px;height:32px;border-radius:10px;font-size:13.5px}
+  .side-brand{gap:8px;padding:0 4px 13px;margin-bottom:12px}
+  .side-brand h1{font-size:13px}
+  .side-brand .sub{font-size:9.5px}
+  .side-label{padding:0 6px}
+  .side-nav button{padding:8px 9px;font-size:12.5px;gap:9px}
+  .btn-ghost{padding:8px 9px;font-size:12.5px;gap:9px}
+  .user-chip{padding:6px 8px 8px;gap:8px}
+  main{padding:18px 14px 70px}
+  #alertBanner,#storageNote{margin:12px 14px 0}
+}
+/* Too narrow to carry labels: an icon rail. Still vertical, still on the left. */
+@media (max-width:760px){
+  .sidebar{width:56px;padding:14px 6px 12px;align-items:center}
+  .side-brand{justify-content:center;padding:0 0 12px;margin-bottom:10px;width:100%}
+  .side-brand .who,.side-brand > div:last-child{display:none}
+  .side-label{display:none}
+  .side-nav{width:100%}
+  .side-nav button{justify-content:center;padding:10px 0;gap:0;border-radius:12px}
+  .side-nav .nav-lbl{display:none}
+  .side-nav .nav-badge{position:absolute;top:2px;right:2px;font-size:8.5px;padding:0 4px;line-height:1.5}
+  .side-foot{width:100%}
+  .btn-ghost{justify-content:center;padding:10px 0;gap:0}
+  .btn-ghost .btn-lbl{display:none}
+  .user-chip{justify-content:center;padding:6px 0 8px;gap:0}
+  .user-chip .who{display:none}
+  .user-chip .avatar{width:30px;height:30px}
+  main{padding:16px 12px 70px}
+  #alertBanner,#storageNote{margin:12px 12px 0}
   .ind-fields{grid-template-columns:1fr 1fr}
 }
 .print-only{display:none}
 .pack-cover h2{font-size:22px}
 .pack-person{margin-top:14px}
+/* sign-in gate + identity */
+#authGate{display:none;position:fixed;inset:0;z-index:300;overflow-y:auto;padding:24px 14px;
+  background:linear-gradient(160deg,var(--teal-dark) 0%,var(--teal) 120%)}
+#authGate.on{display:block}
+.auth-card{background:#fff;border:1px solid var(--hairline);border-radius:var(--r-card);box-shadow:var(--shadow-pop);max-width:430px;margin:5vh auto;padding:24px}
+.auth-brand{display:flex;gap:11px;align-items:center;margin-bottom:14px}
+.auth-brand .brand-mark{background:var(--teal-tint);border:1px solid var(--hairline);color:var(--teal-dark)}
+.auth-card h2{font-size:21px;margin-bottom:3px}
+.auth-card .auth-sub{color:var(--muted);font-size:13.5px;margin-bottom:16px}
+.auth-card .form-grid{grid-template-columns:1fr}
+.auth-err{background:#FBF3F1;border-left:3px solid var(--gap);border-radius:var(--r-ctl);color:var(--gap);padding:9px 12px;font-size:13px;margin-bottom:12px;display:none}
+.auth-err.on{display:block}
+.auth-note{font-size:12.5px;color:var(--muted);margin-top:14px;border-top:1px solid var(--hairline);padding-top:10px}
+.auth-actions{margin-top:14px}
+.who-list{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;max-height:44vh;overflow-y:auto}
+.who-btn{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:#fff;color:var(--ink);
+  border:1px solid var(--hairline);border-radius:var(--r-ctl);padding:9px 11px;font-size:14px}
+.who-btn:hover{border-color:var(--teal);background:var(--teal-tint)}
+.who-btn .avatar{width:32px;height:32px;flex-shrink:0;border-radius:10px;background:var(--teal-tint);
+  border:1px solid var(--hairline);display:flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-weight:700;font-size:12.5px;color:var(--teal-dark)}
+.who-btn strong{display:block;font-weight:600;color:var(--teal-dark)}
+.who-btn .small{display:block;font-size:11.5px}
+.who-add{border-top:1px solid var(--hairline);padding-top:13px}
+.who-add-row{display:flex;gap:7px;align-items:stretch}
+.who-add-row input{flex:1;min-width:0}
+.who-add-row .btn{flex-shrink:0;white-space:nowrap}
+.auth-actions .btn{width:100%;padding:11px 14px;font-size:15px;justify-content:center}
+body.locked .app-shell{display:none!important}
+.user-chip{display:flex;align-items:center;gap:9px;padding:7px 11px 9px;color:#9DBBB9;font-size:10.5px;line-height:1.3}
+.user-chip .avatar{width:28px;height:28px;flex-shrink:0;border-radius:9px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;font-size:11.5px;color:#fff}
+.user-chip .who{min-width:0}
+.user-chip strong{color:#fff;font-size:12.5px;display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stamp{font-size:11.5px;color:var(--muted);margin-top:6px}
+.stamp strong{color:var(--teal-dark);font-weight:600}
+.act-filter{max-width:240px}
+
 @media print {
-  .app-header, .nav-tabs, #storageNote, #alertBanner, .no-print, #saveStatus, .modal-back, button { display: none !important; }
+  .sidebar, #storageNote, #alertBanner, .no-print, #saveStatus, .modal-back, #authGate, button { display: none !important; }
   .print-only { display: block !important; }
   html, body { background: #fff; font-size: 11.5px; }
+  .app-shell { display: block; }
   main { max-width: none; padding: 0; }
-  .card { border: 1px solid #999; box-shadow: none; margin-bottom: 8px; }
+  .card, .table-wrap, .domain-block, .stat { border-radius: 0; box-shadow: none; }
+  .card { border: 1px solid #999; margin-bottom: 8px; }
   .pack-person { page-break-before: always; margin-top: 0; }
   .pack-cover + .pack-person { page-break-before: always; }
   .table-wrap { border: none; overflow: visible; }
@@ -200,28 +311,45 @@ tr.flag-row td{background:#FBF3F1}
   .rule-box { border: 2px solid #000; }
   .rule-box h4 { color: #000; }
   .pct { color: #000 !important; }
+  .qidp-print-head { display: block !important; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 6px; }
+  .qidp-print-head h2 { font-size: 17px; }
+  body.print-only-isp .qidp-block:not(.qidp-isp) { display: none !important; }
+  body.print-only-quarterly .qidp-block:not(.qidp-quarterly) { display: none !important; }
+  body.print-only-isp .view-title, body.print-only-isp .view-sub, body.print-only-isp .note-box,
+  body.print-only-quarterly .view-title, body.print-only-quarterly .view-sub, body.print-only-quarterly .note-box { display: none !important; }
+  input[type="checkbox"] { -webkit-appearance: checkbox; appearance: checkbox;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
-
 </style>
 </head>
 <body>
-<header class="app-header">
-  <div class="header-row">
+<div class="app-shell">
+<aside class="sidebar">
+  <div class="side-brand">
+    <div class="brand-mark" id="brandMark"></div>
     <div>
       <h1 id="brandName">PCR Audit-Readiness System</h1>
       <div class="sub" id="brandSub"></div>
     </div>
-    <div class="header-actions">
-      <button class="btn-ghost" data-action="open-settings" type="button">Settings</button>
-    </div>
   </div>
-</header>
+  <div class="side-label">Workspace</div>
+  <nav class="side-nav"><div id="navTabs"></div></nav>
+  <div class="side-foot">
+    <div class="user-chip" id="userChip"></div>
+    <button class="btn-ghost" data-action="sync-now" type="button" id="syncBtn" hidden title="Refresh"><span class="nav-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.6 7.2a5.7 5.7 0 10-.7 3.4"></path><path d="M13.9 13.6V10.2h-3.4"></path></svg></span><span class="btn-lbl">Refresh</span></button>
+    <button class="btn-ghost" data-action="open-settings" type="button"><span class="nav-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"></path></svg></span><span class="btn-lbl">Settings</span></button>
+    <button class="btn-ghost" data-action="sign-out" type="button"><span class="nav-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.2 14H3.4c-.8 0-1.4-.6-1.4-1.4V3.4C2 2.6 2.6 2 3.4 2h2.8M10.4 11.2L13.6 8l-3.2-3.2M13.6 8H6.2"></path></svg></span><span class="btn-lbl" id="signOutLbl">Sign out</span></button>
+  </div>
+</aside>
+<div class="app-main">
 <div id="alertBanner"><div class="inner"></div></div>
 <div id="storageNote"><div class="inner"></div></div>
-<nav class="nav-tabs"><div class="inner" id="navTabs"></div></nav>
 <main id="view"></main>
+</div>
+</div>
 <div class="modal-back" id="modalBack"><div class="modal" id="modalBox"></div></div>
 <div id="saveStatus"></div>
+<div id="authGate"><div class="auth-card" id="authCard"></div></div>
 <script>
 (function(){"use strict";
 
@@ -235,6 +363,13 @@ var PROVIDER_CONFIG = {
   meta: {
     providerName: "Hope Found, Inc.",
     appTitle: "PCR Audit-Readiness System",
+    mark: "HF",
+    /* Passwords are off while the team gets used to the tool: people pick their
+       name and go, and every answer is still stamped with who recorded it. Flip
+       this to true to require a password — nothing else has to change, and the
+       accounts already on file keep their roles. Off, this is attribution, not
+       access control: anyone who can open the app can pick any name. */
+    requirePassword: false,
     subtitle: "Hope Found, Inc. — DC DDA Person-Centered Review preparation",
     reviewName: "Person-Centered Review (PCR)",
     auditor: "Qlarant (DC DDS/DDA)"
@@ -350,12 +485,92 @@ var PROVIDER_CONFIG = {
      (DC DDA's system of record), not authored here. This only computes due dates from the
      ISP date and tracks receipt. */
   qidp: {
-    dueSoonDays: 21,
+    /* The ISP date is the annual date the current plan concludes. The
+       meeting that renews it has to be on the calendar well before then:
+       staff start booking at ispBookingOpensDays out and it must be
+       scheduled by ispBookingDeadlineDays out. A quarterly report needs no
+       booking — it is written from notes already in MCIS — so it gets a
+       single, shorter window. */
+    ispWindowDays: 30,
+    ispBookingOpensDays: 45,
+    ispBookingDeadlineDays: 30,
+    quarterlyWindowDays: 15,
     periods: [
       { key: "q1", months: 3,  label: "Quarterly Report 1", kind: "quarterly" },
       { key: "q2", months: 6,  label: "Quarterly Report 2", kind: "quarterly" },
       { key: "q3", months: 9,  label: "Quarterly Report 3", kind: "quarterly" },
-      { key: "renewal", months: 12, label: "Annual ISP Renewal", kind: "annual" }
+      { key: "renewal", months: 12, label: "Annual ISP Date", kind: "annual" }
+    ]
+  },
+  /* Residential Medical Review — a nurse-administered per-client medical-records completeness
+     checklist Hope Found already runs on paper for medically complex residents (Host Home /
+     Supported Living). Deliberately separate from the weighted rubric: a Satisfactory/Concern/N/A
+     completeness check, not a weighted-tier score. Domains/items are Hope Found's own inventory. */
+  medicalReview: {
+    serviceLines: ["hh", "sl"],
+    domains: [
+      { name: "Medical Records Review", items: [
+        { key: "annualPhysical", label: "Annual Physical" },
+        { key: "labWork", label: "LAB Work and results" }
+      ]},
+      { name: "Immunization Records", items: [
+        { key: "immCovid", label: "COVID" },
+        { key: "immPpd", label: "PPD (every year) / Chest X-ray (every 5 years)" },
+        { key: "immFlu", label: "Flu Shot" },
+        { key: "immHepB", label: "Hepatitis B Vaccine" },
+        { key: "immTetanus", label: "Tetanus (every 10 years)" },
+        { key: "immMmr", label: "MMR / Varicella / Pneumococcal" }
+      ]},
+      { name: "Health Forms", items: [
+        { key: "healthPassport", label: "Health Passport (medical info and doctor information/diagnosis current)" },
+        { key: "hcmp", label: "HCMP (every quarter)" }
+      ]},
+      { name: "Physician / Specialist", items: [
+        { key: "mdFollowUp", label: "Medical Doctor follow up" }
+      ]},
+      { name: "Professional Services", items: [
+        { key: "specialistFollowUp", label: "Specialist appointment completed and follow up (Pulmonary, ENT, Audiology, Podiatry, GI, Endocrinology, Neurology, Dermatology)" },
+        { key: "dentalService", label: "Dental" },
+        { key: "vision", label: "Vision" },
+        { key: "colonoscopy", label: "Colonoscopy (50 years & older)" },
+        { key: "prostate", label: "Prostate Screening (male, 40 years & older)" },
+        { key: "mammogram", label: "Mammogram (female, 50 years & older)" },
+        { key: "pap", label: "PAP smear (female)" }
+      ]},
+      { name: "Dental Services", items: [
+        { key: "dentalEval", label: "Annual Dental Evaluation" },
+        { key: "dentalConsult", label: "Dental consultation" }
+      ]},
+      { name: "Nursing Assessments", items: [
+        { key: "nursingAssessment", label: "Nursing Assessment" },
+        { key: "preventiveScreening", label: "Annual Preventive Health Screening" },
+        { key: "selfAdminMed", label: "Self-Administration Medication Form" },
+        { key: "bradenScale", label: "Braden Scale (skin/pressure-ulcer risk)" }
+      ]},
+      { name: "Nursing Notes", items: [
+        { key: "nursingNotes", label: "Nursing Notes" },
+        { key: "vitalSigns", label: "Vital Signs" }
+      ]},
+      { name: "Psychiatry", items: [
+        { key: "psychMedReview", label: "Psychotropic Med Reviews" },
+        { key: "aims", label: "AIMS (every 6 months)" }
+      ]},
+      { name: "Medications / MARs", items: [
+        { key: "marMatch", label: "MAR (matches Physician Order Sheet and Health Passport)" },
+        { key: "medSideEffects", label: "Medication and side effects" },
+        { key: "physicianOrders", label: "Current Physician Orders, signed by doctor (diet, allergies, adaptive equipment)" }
+      ]},
+      { name: "Screenings & Logs", items: [
+        { key: "glasgowDepression", label: "Glasgow Depression Scale" },
+        { key: "fallRisk", label: "Fall Risk Assessment / Fall Risk Protocol (if needed)" },
+        { key: "dementiaScreening", label: "Dementia Screening" },
+        { key: "refusalProtocol", label: "Protocol for Refusal Form" },
+        { key: "sleepingLog", label: "Sleeping Log" }
+      ]},
+      { name: "Consents", items: [
+        { key: "medicalConsent", label: "Medical Consents" },
+        { key: "psychConsent", label: "Psychotropic Medication Consents" }
+      ]}
     ]
   },
   /* Residential Medical Review — a nurse-administered per-client medical-records completeness
@@ -480,6 +695,109 @@ var SEED_CLIENTS = [
 var SEED_CENSUS = { ihs: 12, hh: 8, sl: 15, ids: 20, comp: 5 };
 
 /* =====================================================================
+   SUPABASE (optional shared backend)
+   One table, key -> JSON, which is exactly the shape the storage adapter
+   already speaks, so nothing downstream changes. Credentials live in THIS
+   browser's localStorage, never in the shared dataset and never in the
+   repo: the anon key is the only thing standing between a stranger and
+   the data, so it is handed to each machine once rather than published.
+   Schema and policy: see supabase-setup.sql.
+   ===================================================================== */
+var Supa = (function () {
+  var CRED_KEY = "pcr:supabase";
+  var TABLE = "pcr_store";
+  var cfg = null;
+
+  function readCred() {
+    try {
+      var raw = window.localStorage.getItem(CRED_KEY);
+      if (raw) { return JSON.parse(raw); }
+    } catch (e) {}
+    var baked = PROVIDER_CONFIG.supabase;
+    if (baked && baked.url && baked.anonKey) { return { url: baked.url, anonKey: baked.anonKey }; }
+    return null;
+  }
+  function writeCred(c) {
+    try {
+      if (c) { window.localStorage.setItem(CRED_KEY, JSON.stringify(c)); }
+      else { window.localStorage.removeItem(CRED_KEY); }
+    } catch (e) {}
+    cfg = c;
+  }
+  function load() { cfg = readCred(); return cfg; }
+  function current() { return cfg; }
+  function configured() { return !!(cfg && cfg.url && cfg.anonKey); }
+  function base() { return String(cfg.url).replace(/\/+$/, "") + "/rest/v1/" + TABLE; }
+  function headers(extra) {
+    var h = { apikey: cfg.anonKey, Authorization: "Bearer " + cfg.anonKey,
+              "Content-Type": "application/json" };
+    if (extra) { Object.keys(extra).forEach(function (k) { h[k] = extra[k]; }); }
+    return h;
+  }
+  async function req(url, opts) {
+    var res = await fetch(url, opts);
+    if (!res.ok) {
+      var detail = "";
+      try { var j = await res.json(); detail = j.message || j.hint || j.error || ""; } catch (e) {}
+      throw new Error("HTTP " + res.status + (detail ? " — " + detail : ""));
+    }
+    return res;
+  }
+  /* Everything in one request: the app reads a dozen-plus keys at boot and
+     one per person, which over the network would be a round trip each. */
+  async function fetchAll() {
+    var res = await req(base() + "?select=key,value", { headers: headers() });
+    var rows = await res.json();
+    var out = {};
+    rows.forEach(function (r) { out[r.key] = r.value; });
+    return out;
+  }
+  async function getOne(key) {
+    var res = await req(base() + "?key=eq." + encodeURIComponent(key) + "&select=value", { headers: headers() });
+    var rows = await res.json();
+    return rows.length ? rows[0].value : null;
+  }
+  async function setOne(key, value) {
+    await req(base() + "?on_conflict=key", {
+      method: "POST",
+      headers: headers({ Prefer: "resolution=merge-duplicates,return=minimal" }),
+      body: JSON.stringify([{ key: key, value: value, updated_at: new Date().toISOString() }])
+    });
+    return true;
+  }
+  async function delOne(key) {
+    await req(base() + "?key=eq." + encodeURIComponent(key), { method: "DELETE", headers: headers() });
+    return true;
+  }
+  /* Prove the table is reachable AND writable before trusting it with the
+     dataset — a read-only policy would otherwise look fine until the first save. */
+  /* One row, one column: cheap enough to ask every minute, which is what
+     lets two people working at once see each other without a reload. */
+  async function latestStamp() {
+    var res = await req(base() + "?select=updated_at&order=updated_at.desc&limit=1", { headers: headers() });
+    var rows = await res.json();
+    return rows.length ? rows[0].updated_at : "";
+  }
+  async function probe() {
+    if (!configured()) { return { ok: false, error: "No Supabase project connected." }; }
+    var k = "__pcr_probe__";
+    try {
+      await setOne(k, { at: new Date().toISOString() });
+      var v = await getOne(k);
+      await delOne(k);
+      if (!v) { return { ok: false, error: "Wrote a test row but could not read it back — check the table's row-level security policy." }; }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
+  return { load: load, current: current, configured: configured, writeCred: writeCred,
+           fetchAll: fetchAll, getOne: getOne, setOne: setOne, delOne: delOne, probe: probe,
+           latestStamp: latestStamp,
+           table: TABLE };
+})();
+
+/* =====================================================================
    STORAGE ADAPTER
    Priority: window.storage (claude.ai artifact runtime, shared dataset)
    -> localStorage (plain browser) -> in-memory (export/import only).
@@ -488,6 +806,7 @@ var SEED_CENSUS = { ihs: 12, hh: 8, sl: 15, ids: 20, comp: 5 };
 var Store = (function () {
   var mode = "memory";
   var mem = {};
+  var cache = null;   /* whole-table snapshot in supabase mode */
 
   function hasWindowStorage() {
     try {
@@ -503,18 +822,52 @@ var Store = (function () {
       return true;
     } catch (e) { return false; }
   }
-  function init() {
-    if (hasWindowStorage()) { mode = "shared"; }
+  /* Presence is not proof: window.storage can exist and still reject every
+     call (an artifact runtime that was never granted shared storage). Prove
+     it round-trips before trusting the whole dataset to it, the same way
+     localStorage is proven with a test key. */
+  async function windowStorageWorks() {
+    if (!hasWindowStorage()) { return false; }
+    var k = "__pcr_probe__";
+    try {
+      await window.storage.set(k, "1", { shared: true });
+      var v = unwrap(await window.storage.get(k, { shared: true }));
+      try { await window.storage.delete(k, { shared: true }); } catch (e) {}
+      return v === "1" || v === 1;
+    } catch (e) { return false; }
+  }
+  async function init() {
+    Supa.load();
+    if (Supa.configured()) {
+      var probe = await Supa.probe();
+      if (probe.ok) { mode = "supabase"; return mode; }
+      /* Reachable-but-broken is worth saying out loud rather than silently
+         falling back and letting one machine drift off the shared dataset. */
+      supaError = probe.error;
+    }
+    if (await windowStorageWorks()) { mode = "shared"; }
     else if (hasLocalStorage()) { mode = "local"; }
     else { mode = "memory"; }
     return mode;
   }
+  var supaError = "";
+  /* One request for the whole table, so boot is not a round trip per key. */
+  async function prefetch() {
+    if (mode !== "supabase") { return true; }
+    try { cache = await Supa.fetchAll(); return true; }
+    catch (e) { cache = null; return false; }
+  }
+  function invalidate() { cache = null; }
   function unwrap(res) {
     if (res && typeof res === "object" && "value" in res) { return res.value; }
     return res;
   }
   async function get(key) {
     try {
+      if (mode === "supabase") {
+        if (cache) { return cache.hasOwnProperty(key) ? cache[key] : null; }
+        return await Supa.getOne(key);
+      }
       if (mode === "shared") {
         var res = await window.storage.get(key, { shared: true });
         var v = unwrap(res);
@@ -530,6 +883,11 @@ var Store = (function () {
   async function set(key, value) {
     var payload = JSON.stringify(value);
     try {
+      if (mode === "supabase") {
+        await Supa.setOne(key, value);
+        if (cache) { cache[key] = value; }
+        return true;
+      }
       if (mode === "shared") { await window.storage.set(key, payload, { shared: true }); return true; }
       if (mode === "local") { window.localStorage.setItem(key, payload); return true; }
       mem[key] = payload; return true;
@@ -540,12 +898,295 @@ var Store = (function () {
   }
   async function del(key) {
     try {
+      if (mode === "supabase") {
+        await Supa.delOne(key);
+        if (cache) { delete cache[key]; }
+        return true;
+      }
       if (mode === "shared") { await window.storage.delete(key, { shared: true }); return true; }
       if (mode === "local") { window.localStorage.removeItem(key); return true; }
       delete mem[key]; return true;
     } catch (e) { return false; }
   }
-  return { init: init, get: get, set: set, del: del, getMode: function () { return mode; } };
+  return { init: init, get: get, set: set, del: del, prefetch: prefetch, invalidate: invalidate,
+           getMode: function () { return mode; },
+           lastError: function () { return supaError; },
+           setMode: function (m) { mode = m; cache = null; } };
+})();
+
+/* =====================================================================
+   IDENTITY — SIGN-IN, ACCOUNTS, ATTRIBUTION
+   Accounts live in the shared dataset (pcr:users) so the same
+   credentials work on every device the team opens the system on.
+   The *session* is deliberately browser-local (localStorage, never
+   Store) — in the shared claude.ai runtime one person's sign-in must
+   never become everyone's. Passwords are salted per account and
+   stretched with PBKDF2-HMAC-SHA256 (Web Crypto) where available, and
+   with an iterated pure-JS SHA-256 otherwise, so no password is ever
+   stored or exported in readable form.
+   ===================================================================== */
+var LocalSess = (function () {
+  var KEY = "pcr:session";
+  var mem = null;
+  function read() {
+    try {
+      var raw = window.localStorage.getItem(KEY);
+      return raw ? JSON.parse(raw) : mem;
+    } catch (e) { return mem; }
+  }
+  function write(v) {
+    mem = v;
+    try {
+      if (v) { window.localStorage.setItem(KEY, JSON.stringify(v)); }
+      else { window.localStorage.removeItem(KEY); }
+    } catch (e) {}
+  }
+  return { read: read, write: write };
+})();
+
+var Hash = (function () {
+  var PBKDF2_ITERS = 150000;
+  var FALLBACK_ITERS = 12000;
+  var SHA_K = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+
+  function toUtf8(str) {
+    var out = "", i, c;
+    for (i = 0; i < str.length; i++) {
+      c = str.charCodeAt(i);
+      if (c < 128) { out += String.fromCharCode(c); }
+      else if (c < 2048) { out += String.fromCharCode(192 | (c >> 6), 128 | (c & 63)); }
+      else { out += String.fromCharCode(224 | (c >> 12), 128 | ((c >> 6) & 63), 128 | (c & 63)); }
+    }
+    return out;
+  }
+  function rotr(x, n) { return (x >>> n) | (x << (32 - n)); }
+  function sha256Hex(input) {
+    var msg = toUtf8(String(input));
+    var bitHi = Math.floor(msg.length / 536870912);
+    var bitLo = (msg.length * 8) >>> 0;
+    msg += "\x80";
+    while (msg.length % 64 !== 56) { msg += "\x00"; }
+    var H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+    var words = [], w = new Array(64), i, j, t1, t2, s0, s1, a, b, c, dd, e, f, g, h;
+    for (i = 0; i < msg.length; i += 4) {
+      words.push(((msg.charCodeAt(i) & 255) << 24) | ((msg.charCodeAt(i + 1) & 255) << 16) |
+                 ((msg.charCodeAt(i + 2) & 255) << 8) | (msg.charCodeAt(i + 3) & 255));
+    }
+    words.push(bitHi | 0); words.push(bitLo | 0);
+    for (j = 0; j < words.length; j += 16) {
+      for (i = 0; i < 16; i++) { w[i] = words[j + i] | 0; }
+      for (i = 16; i < 64; i++) {
+        s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+        s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+        w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+      }
+      a = H[0]; b = H[1]; c = H[2]; dd = H[3]; e = H[4]; f = H[5]; g = H[6]; h = H[7];
+      for (i = 0; i < 64; i++) {
+        t1 = (h + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + SHA_K[i] + w[i]) | 0;
+        t2 = ((rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+        h = g; g = f; f = e; e = (dd + t1) | 0; dd = c; c = b; b = a; a = (t1 + t2) | 0;
+      }
+      H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + dd) | 0;
+      H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
+    }
+    var out = "";
+    for (i = 0; i < 8; i++) { out += ("00000000" + (H[i] >>> 0).toString(16)).slice(-8); }
+    return out;
+  }
+  function randomHex(bytes) {
+    var out = "", i;
+    try {
+      var arr = new Uint8Array(bytes);
+      window.crypto.getRandomValues(arr);
+      for (i = 0; i < bytes; i++) { out += ("0" + arr[i].toString(16)).slice(-2); }
+      return out;
+    } catch (e) {}
+    for (i = 0; i < bytes; i++) { out += ("0" + Math.floor(Math.random() * 256).toString(16)).slice(-2); }
+    return out;
+  }
+  function subtleOk() {
+    try {
+      return !!(window.crypto && window.crypto.subtle && window.crypto.subtle.importKey &&
+                window.crypto.subtle.deriveBits && window.TextEncoder);
+    } catch (e) { return false; }
+  }
+  function hexOf(buf) {
+    var v = new Uint8Array(buf), out = "", i;
+    for (i = 0; i < v.length; i++) { out += ("0" + v[i].toString(16)).slice(-2); }
+    return out;
+  }
+  async function pbkdf2Hex(password, saltHex) {
+    var key = await window.crypto.subtle.importKey("raw", new TextEncoder().encode(password),
+      { name: "PBKDF2" }, false, ["deriveBits"]);
+    var salt = new Uint8Array(saltHex.length / 2);
+    for (var i = 0; i < salt.length; i++) { salt[i] = parseInt(saltHex.substr(i * 2, 2), 16); }
+    var bits = await window.crypto.subtle.deriveBits(
+      { name: "PBKDF2", salt: salt, iterations: PBKDF2_ITERS, hash: "SHA-256" }, key, 256);
+    return hexOf(bits);
+  }
+  function fallbackHex(password, saltHex) {
+    var h = sha256Hex(saltHex + password);
+    for (var i = 0; i < FALLBACK_ITERS; i++) { h = sha256Hex(h + saltHex); }
+    return h;
+  }
+  async function derive(password, saltHex, algo) {
+    if (algo === "pbkdf2") { return await pbkdf2Hex(password, saltHex); }
+    return fallbackHex(password, saltHex);
+  }
+  async function make(password) {
+    var salt = randomHex(16);
+    var algo = subtleOk() ? "pbkdf2" : "sha256x";
+    var hash;
+    try { hash = await derive(password, salt, algo); }
+    catch (e) { algo = "sha256x"; hash = fallbackHex(password, salt); }
+    return { salt: salt, hash: hash, algo: algo };
+  }
+  async function verify(password, cred) {
+    if (!cred || !cred.salt || !cred.hash) { return false; }
+    var h;
+    try { h = await derive(password, cred.salt, cred.algo); } catch (e) { return false; }
+    return h === cred.hash;
+  }
+  return { make: make, verify: verify, randomHex: randomHex, strong: subtleOk };
+})();
+
+var Auth = (function () {
+  var SESSION_HOURS = 12;
+  var MIN_PW = 8;
+  function pwRequired() { return PROVIDER_CONFIG.meta.requirePassword !== false; }
+  var users = [];
+  var me = null;
+
+  /* The full name is the account: it is what people sign in with and what
+     gets stamped on every answer, so it has to be unique. Match forgivingly
+     — case and stray spaces should never lock someone out. */
+  function norm(u) { return String(u == null ? "" : u).trim().replace(/\s+/g, " ").toLowerCase(); }
+  async function load() { users = (await Store.get(K.users)) || []; return users; }
+  function save() { persist(K.users, users); }
+  function all() { return users; }
+  function replaceAll(arr) { users = Array.isArray(arr) ? arr : []; save(); }
+  function activeUsers() { return users.filter(function (u) { return u.active !== false; }); }
+  function adminCount() { return users.filter(function (u) { return u.active !== false && u.role === "admin"; }).length; }
+  function byId(id) { return users.filter(function (u) { return u.id === id; })[0] || null; }
+  function byName(n) { var k = norm(n); return users.filter(function (u) { return norm(u.name) === k; })[0] || null; }
+  function needsSetup() { return !activeUsers().length; }
+  function current() { return me; }
+  function isAdmin() { return !!(me && me.role === "admin" && me.active !== false); }
+  function minPassword() { return MIN_PW; }
+  function sessionHours() { return SESSION_HOURS; }
+
+  function writeSession(u) {
+    LocalSess.write({ uid: u.id, pwv: u.pwVersion || 1, exp: Date.now() + SESSION_HOURS * 3600000 });
+  }
+  function touch() { if (me) { writeSession(me); } }
+  function restore() {
+    var sess = LocalSess.read();
+    if (!sess || !sess.uid) { return null; }
+    if (!sess.exp || sess.exp < Date.now()) { LocalSess.write(null); return null; }
+    var u = byId(sess.uid);
+    if (!u || u.active === false || (u.pwVersion || 1) !== sess.pwv) { LocalSess.write(null); return null; }
+    me = u;
+    writeSession(u);
+    return me;
+  }
+  async function signIn(name, password) {
+    /* re-read accounts first: an admin may have just added or reset this
+       one from another device while this sign-in screen sat open */
+    try { await load(); } catch (e) {}
+    var u = byName(name);
+    if (!u || u.active === false) { return { ok: false, error: "No active account under that name." }; }
+    if (pwRequired()) {
+      var ok = await Hash.verify(password, u.cred);
+      if (!ok) { return { ok: false, error: "Incorrect password." }; }
+    }
+    u.lastSignIn = new Date().toISOString();
+    me = u;
+    writeSession(u);
+    save();
+    return { ok: true, user: u };
+  }
+  function signOut() { me = null; LocalSess.write(null); }
+
+  function nameTaken(name, exceptId) {
+    var existing = byName(name);
+    return !!(existing && existing.id !== exceptId);
+  }
+  function validateNew(data) {
+    var name = String(data.name || "").trim();
+    if (name.length < 2) { return "Enter the person's full name — it is how they sign in and what gets stamped on every answer."; }
+    if (nameTaken(name)) { return "Someone is already on the list under that name. Names have to be unique, or the record cannot say who did what."; }
+    if (pwRequired()) {
+      if (String(data.password || "").length < MIN_PW) { return "Password must be at least " + MIN_PW + " characters."; }
+      if (data.password !== data.confirm) { return "The two passwords do not match."; }
+    }
+    return "";
+  }
+  async function createUser(data) {
+    var err = validateNew(data);
+    if (err) { return { ok: false, error: err }; }
+    var cred = pwRequired() ? await Hash.make(data.password) : null;
+    var u = { id: "u-" + Date.now().toString(36) + "-" + Hash.randomHex(3),
+              name: String(data.name).trim().replace(/\s+/g, " "),
+              role: data.role === "admin" ? "admin" : "staff", active: true,
+              cred: cred, pwVersion: 1, mustChange: pwRequired() && !!data.mustChange,
+              createdAt: new Date().toISOString(), lastSignIn: "" };
+    users.push(u);
+    save();
+    return { ok: true, user: u };
+  }
+  function updateUser(id, patch) {
+    var u = byId(id);
+    if (!u) { return { ok: false, error: "Account not found." }; }
+    var stillAdmin = patch.role !== undefined ? patch.role === "admin" : u.role === "admin";
+    var stillActive = patch.active !== undefined ? !!patch.active : u.active !== false;
+    if (u.role === "admin" && u.active !== false && !(stillAdmin && stillActive) && adminCount() <= 1) {
+      return { ok: false, error: "This is the only active administrator — make someone else an administrator first." };
+    }
+    if (patch.name !== undefined && String(patch.name).trim()) {
+      var newName = String(patch.name).trim().replace(/\s+/g, " ");
+      if (nameTaken(newName, u.id)) {
+        return { ok: false, error: "Another account already uses that name." };
+      }
+      u.name = newName;
+    }
+    if (patch.role !== undefined) { u.role = patch.role === "admin" ? "admin" : "staff"; }
+    if (patch.active !== undefined) { u.active = !!patch.active; }
+    save();
+    if (me && me.id === u.id && u.active === false) { signOut(); }
+    return { ok: true, user: u };
+  }
+  async function setPassword(id, password, confirm, mustChange) {
+    var u = byId(id);
+    if (!u) { return { ok: false, error: "Account not found." }; }
+    if (String(password || "").length < MIN_PW) { return { ok: false, error: "Password must be at least " + MIN_PW + " characters." }; }
+    if (confirm !== undefined && password !== confirm) { return { ok: false, error: "The two passwords do not match." }; }
+    u.cred = await Hash.make(password);
+    u.pwVersion = (u.pwVersion || 1) + 1;
+    u.mustChange = !!mustChange;
+    save();
+    if (me && me.id === u.id) { writeSession(u); }
+    return { ok: true, user: u };
+  }
+  async function changeOwnPassword(currentPw, newPw, confirmPw) {
+    if (!me) { return { ok: false, error: "Not signed in." }; }
+    var ok = await Hash.verify(currentPw, me.cred);
+    if (!ok) { return { ok: false, error: "Current password is incorrect." }; }
+    return await setPassword(me.id, newPw, confirmPw, false);
+  }
+  return { load: load, save: save, all: all, replaceAll: replaceAll, byId: byId, byName: byName,
+           pwRequired: pwRequired,
+           needsSetup: needsSetup, current: current, isAdmin: isAdmin, restore: restore, touch: touch,
+           signIn: signIn, signOut: signOut, createUser: createUser, updateUser: updateUser,
+           setPassword: setPassword, changeOwnPassword: changeOwnPassword, adminCount: adminCount,
+           minPassword: minPassword, sessionHours: sessionHours };
 })();
 
 /* ============================ APP STATE ============================ */
@@ -559,16 +1200,19 @@ var S = {
   runs: [],
   qtr: {},                               /* qtr["clientId|ispDate|periodKey"] = { done, doneDate, notes } */
   medreview: {},                         /* medreview["clientId|itemKey"] = { status, comments, correctionDeadline, correctionCompleted } */
-  census: {}, settings: {},
+  census: {}, settings: {}, audit: [],
   ui: { tab: "dashboard", reviewClient: null, locatorQuery: "", locatorFilter: "all",
-        rubricFilterSL: "all", rubricFilterType: "all", rubricShowRetired: false, saveFails: 0 }
+        rubricFilterSL: "all", rubricFilterType: "all", rubricShowRetired: false, saveFails: 0,
+        actUser: "all" }
 };
 
 var K = { rubric: "pcr:rubric", clients: "pcr:clients", staff: "pcr:staff", org: "pcr:org",
           fire: "pcr:fire", census: "pcr:census", settings: "pcr:settings", rec: "pcr:rec:",
-          policy: "pcr:policy", qadoc: "pcr:qadoc", runs: "pcr:runs", qtr: "pcr:qtr", medreview: "pcr:medreview" };
+          policy: "pcr:policy", qadoc: "pcr:qadoc", runs: "pcr:runs", qtr: "pcr:qtr",
+          medreview: "pcr:medreview", users: "pcr:users", audit: "pcr:audit" };
 
 async function loadAll() {
+  await Store.prefetch();
   S.rubric  = (await Store.get(K.rubric))  || [];
   S.clients = (await Store.get(K.clients)) || [];
   S.staff   = (await Store.get(K.staff))   || { roster: [], records: {} };
@@ -580,6 +1224,7 @@ async function loadAll() {
   S.runs    = (await Store.get(K.runs))    || [];
   S.qtr     = (await Store.get(K.qtr))     || {};
   S.medreview = (await Store.get(K.medreview)) || {};
+  S.audit   = (await Store.get(K.audit))   || [];
   S.settings= (await Store.get(K.settings))|| {};
   if (!S.rubric.length) { S.rubric = buildSeedRubric(); await Store.set(K.rubric, S.rubric); }
   if (!S.clients.length && !S.settings.seeded) {
@@ -1023,6 +1668,7 @@ function slOptions(selected, includeAll) {
 }
 function openModal(html) {
   document.getElementById("modalBox").innerHTML = html;
+  formatDatesIn(document.getElementById("modalBox"));
   document.getElementById("modalBack").classList.add("open");
 }
 function closeModal() {
@@ -1032,6 +1678,20 @@ function closeModal() {
   box.style.maxWidth = "";
 }
 function todayStr() { return new Date().toISOString().slice(0, 10); }
+/* Display-only date formatting: rewrite visible ISO dates to MM-DD-YYYY. Stored data,
+   <input type="date"> values, and JSON/text exports (textarea) are untouched. */
+function formatDatesIn(root) {
+  if (!root) { return; }
+  var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  var n;
+  while ((n = w.nextNode())) {
+    var p = n.parentNode && n.parentNode.nodeName;
+    if (p === "TEXTAREA" || p === "SCRIPT" || p === "STYLE") { continue; }
+    if (/\d{4}-\d{2}-\d{2}/.test(n.nodeValue)) {
+      n.nodeValue = n.nodeValue.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, "$2-$3-$1");
+    }
+  }
+}
 function safeConfirm(msg) { try { return window.confirm(msg); } catch (e) { return false; } }
 function safeAlert(msg) { try { window.alert(msg); } catch (e) { console.log(msg); } }
 function toast(msg) {
@@ -1069,7 +1729,7 @@ function renderAlertBanner() {
 /* ============================ DASHBOARD ============================ */
 function renderDashboard() {
   var th = PROVIDER_CONFIG.scoring.thresholds;
-  var html = '<h2 class="view-title">Readiness Dashboard</h2>' +
+  var html = '<div class="dash"><h2 class="view-title">Readiness Dashboard</h2>' +
     '<p class="view-sub">Projected standing for the next ' + esc(PROVIDER_CONFIG.meta.reviewName) +
     ', computed live from entered reviews. Thresholds: ' + th.needsImprovement + ' / ' + th.satisfactory + ' / ' + th.excellent + '%.</p>';
 
@@ -1095,10 +1755,10 @@ function renderDashboard() {
     html += '<div class="card"><div class="card-head"><h3>' + esc(sl.name) + "</h3>" +
       badge(tierBadgeCls(sc.tier.key), sc.tier.label) +
       (sc.provisional ? badge("outline", "provisional") : "") + "</div>";
-    html += '<div class="bar-label"><span>' + scoreLbl + '</span><span class="pct small">' + fmtPct(sc.totalPct) + "</span></div>" + barHtml(sc.totalPct, sc.provisional);
-    html += '<div class="bar-label"><span>Critical (weight-' + PROVIDER_CONFIG.scoring.criticalWeight + ')</span><span class="pct small">' + fmtPct(sc.critPct) + "</span></div>" + barHtml(sc.critPct, sc.provisional);
+    html += '<div class="mrow"><span class="ml">' + scoreLbl + '</span>' + barHtml(sc.totalPct, sc.provisional) + '<span class="pct small">' + fmtPct(sc.totalPct) + "</span></div>";
+    html += '<div class="mrow"><span class="ml">Critical (weight-' + PROVIDER_CONFIG.scoring.criticalWeight + ')</span>' + barHtml(sc.critPct, sc.provisional) + '<span class="pct small">' + fmtPct(sc.critPct) + "</span></div>";
     /* Review coverage — the honest denominator. A 100% score over 1 of 20 people is not a 100% service line. */
-    html += '<div class="bar-label"><span>People reviewed</span><span class="pct small">' + fmtPct(sc.peoplePct) + "</span></div>" + barHtml(sc.peoplePct);
+    html += '<div class="mrow"><span class="ml">People reviewed</span>' + barHtml(sc.peoplePct) + '<span class="pct small">' + fmtPct(sc.peoplePct) + "</span></div>";
     if (sc.people === 0) {
       html += '<div class="cov-note">No active people are assigned to this service line yet.</div>';
     } else if (sc.peopleScored === 0) {
@@ -1109,7 +1769,7 @@ function renderDashboard() {
         (sc.itemPct !== null ? ". " + sc.ratedCount + " of " + sc.applicableQA + " applicable questions answered (" + sc.itemPct + "%)." : ".") +
         (sc.provisional ? " The percentages above cover only the people scored so far and will move as the rest are reviewed." : "") + "</div>";
     }
-    if (sc.tier.consequence) { html += '<div class="tier-line muted">' + esc(sc.tier.consequence) + "</div>"; }
+    if (sc.tier.consequence) { html += '<div class="tier-line muted" title="' + esc(sc.tier.consequence) + '">' + esc(sc.tier.consequence) + "</div>"; }
     html += '<div class="ind-meta" style="margin-top:8px">' +
       (sc.alerts ? badge("alert", sc.alerts + " alert") : "") +
       (sc.notMet ? badge("gap", sc.notMet + " not met") : "") +
@@ -1118,8 +1778,7 @@ function renderDashboard() {
       badge("outline", "min sample " + samp.size + (S.census[sl.id] ? " of " + S.census[sl.id] : "")) +
       (sc.hcbs100 === false ? badge("warn", "HCBS < 100%") : "") +
       (sc.satPct !== null ? badge(sc.satPct >= PROVIDER_CONFIG.scoring.satisfactionMin ? "neutral" : "warn", "satisfaction " + sc.satPct + "%") : "") +
-      "</div>";
-    html += '<div style="margin-top:10px"><button class="btn secondary small" type="button" data-action="cap-draft" data-sl="' + sl.id + '">CAP draft</button></div>';
+      ' <button class="btn secondary small" type="button" data-action="cap-draft" data-sl="' + sl.id + '">CAP draft</button></div>';
     html += "</div>";
   });
   html += "</div>";
@@ -1143,9 +1802,9 @@ function renderDashboard() {
   html += '<div class="stat"><div class="lbl">QIDP quarterly / ISP</div><div class="pct" style="color:' + (qCounts.overdue ? "var(--gap)" : (qCounts.soon ? "var(--warn)" : "var(--met)")) + '">' + qCounts.overdue + '</div><div class="small muted">overdue' + (qCounts.soon ? ", " + qCounts.soon + " due soon" : "") + '</div></div>';
   html += "</div>";
 
-  html += '<div style="margin-top:16px"><button class="btn" type="button" data-action="ai-briefing">Readiness briefing</button></div>';
-  html += '<div class="note-box" style="margin-top:14px"><strong>CAP &amp; appeals timing.</strong> ' + esc(PROVIDER_CONFIG.capRules.text) + "</div>";
-  return html;
+  html += '<div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap"><button class="btn" type="button" data-action="ai-briefing" style="flex-shrink:0">Readiness briefing</button>' +
+    '<div class="note-box" style="flex:1;min-width:280px;margin:0;padding:8px 13px;font-size:11.5px"><strong>CAP &amp; appeals timing.</strong> ' + esc(PROVIDER_CONFIG.capRules.text) + "</div></div>";
+  return html + "</div>";
 }
 
 /* ============================ CLIENT REVIEW ============================ */
@@ -1304,6 +1963,8 @@ function indicatorHtml(it, c) {
       "</div></div>" +
       '<div class="gate-note">Defaults to <strong>' + flagDefault.toUpperCase() + "</strong> from the person's attribute flags" +
       (overridden ? " — overridden by QA" : "") + ". No = the dependent indicators below are auto-N/A.</div>" +
+      (rec.gateBy ? '<div class="stamp">Answered by <strong>' + esc(rec.gateBy) + "</strong>" +
+        (rec.gateAt ? " · " + esc(fmtWhen(rec.gateAt)) : "") + "</div>" : "") +
       intentBlock(it, intentOpen) + houseBtn + "</div>";
   }
 
@@ -1333,7 +1994,7 @@ function indicatorHtml(it, c) {
       (current === "not_met" ?
         '<div><label>Corrections deadline</label><input type="date" value="' + esc(rec.correctionDeadline || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="correctionDeadline"></div>' +
         '<div><label>Corrections completed</label><input type="date" value="' + esc(rec.correctionCompleted || "") + '" data-bind="rec-field" data-client="' + c.id + '" data-ind="' + it.id + '" data-field="correctionCompleted"></div>' : "") +
-      "</div>" : "") +
+      "</div>" + stampLine(rec) : "") +
     (!disabled && current ? houseBtn : "") +
     "</div>";
 }
@@ -1393,8 +2054,17 @@ function saveClientFromModal(id, isNew) {
     sampled: document.getElementById("cm-sampled").checked,
     activeStatus: document.getElementById("cm-active").checked
   };
-  if (c) { Object.assign(c, data); } else { S.clients.push(data); S.records[id] = S.records[id] || {}; }
+  data.updatedBy = actorName();
+  data.updatedAt = new Date().toISOString();
+  if (c) { Object.assign(c, data); }
+  else {
+    data.createdBy = actorName();
+    data.createdAt = new Date().toISOString();
+    S.clients.push(data);
+    S.records[id] = S.records[id] || {};
+  }
   persist(K.clients, S.clients);
+  logAct("person", (isNew ? "Added " : "Edited ") + name + " (" + Engine.slName(data.serviceLine) + ")");
   if (isNew) { S.ui.reviewClient = id; }
   closeModal(); render();
 }
@@ -1543,13 +2213,15 @@ function renderOrgStaff() {
       var btns = ["met", "not_met", "na"].map(function (v) {
         var lbl = v === "met" ? "Met" : (v === "not_met" ? "Not Met" : "N/A");
         return '<button type="button" data-action="org-rate" data-tool="' + tool.id + '" data-item="' + item.id + '" data-val="' + v + '" class="' + (rec.rating === v ? "on-" + v : "") + '">' + lbl + "</button>";
-      }).join("");
+      }).join("") +
+      '<button type="button" data-action="org-rate" data-tool="' + tool.id + '" data-item="' + item.id + '" data-val="none" class="unscored ' + (!rec.rating ? "on-none" : "") + '">Not Yet Scored</button>';
       html += '<div style="border-top:1px solid var(--hairline);padding:9px 0">' +
         '<div class="ind-top"><div style="flex:1"><span class="ind-id">' + esc(item.id) + "</span> " + badge("outline", "w" + item.weight) +
         '<div class="ind-q" style="font-size:13.5px">' + esc(item.text) + "</div></div>" +
         '<div class="rate-group">' + btns + "</div></div>" +
         '<div class="ind-fields" style="margin-top:6px"><div><label>Evidence location</label><input type="text" value="' + esc(rec.evidenceLocation || "") + '" data-bind="org-field" data-tool="' + tool.id + '" data-item="' + item.id + '" data-field="evidenceLocation"></div>' +
-        '<div><label>Open item / notes</label><input type="text" value="' + esc(rec.notes || "") + '" data-bind="org-field" data-tool="' + tool.id + '" data-item="' + item.id + '" data-field="notes"></div></div></div>';
+        '<div><label>Open item / notes</label><input type="text" value="' + esc(rec.notes || "") + '" data-bind="org-field" data-tool="' + tool.id + '" data-item="' + item.id + '" data-field="notes"></div></div>' +
+        stampLine(rec) + "</div>";
     });
     html += "</div>";
   });
@@ -1587,7 +2259,10 @@ function renderOrgStaff() {
     var rec = S.fire.checks[item.id] || {};
     var st = Engine.fireCheckStatus(item);
     var cls = { ok: "met", soon: "warn", overdue: "alert", missing: "gap" }[st.key];
-    html += "<tr><td>" + esc(item.label) + "</td><td class='small muted'>" + item.frequencyDays + "d</td>" +
+    html += "<tr><td>" + esc(item.label) +
+      (rec.verifiedBy ? "<div class='stamp'>by <strong>" + esc(rec.verifiedBy) + "</strong>" +
+        (rec.verifiedAt ? " · " + esc(fmtWhen(rec.verifiedAt)) : "") + "</div>" : "") + "</td>" +
+      "<td class='small muted'>" + item.frequencyDays + "d</td>" +
       '<td style="max-width:130px"><input type="date" value="' + esc(rec.lastDone || "") + '" data-bind="fire-date" data-item="' + item.id + '"></td>' +
       "<td>" + badge(cls, st.label) + "</td>" +
       '<td><button class="btn secondary small" type="button" data-action="fire-done" data-item="' + item.id + '">Today</button></td></tr>';
@@ -1598,10 +2273,11 @@ function renderOrgStaff() {
   if (!S.fire.drills.length) {
     html += '<div class="muted small">No drills logged.</div>';
   } else {
-    html += '<div class="table-wrap" style="border:none"><table style="min-width:520px"><thead><tr><th>Date</th><th>Site</th><th>Shift</th><th>Type</th><th>Evac (min)</th><th>Result</th><th></th></tr></thead><tbody>';
+    html += '<div class="table-wrap" style="border:none"><table style="min-width:600px"><thead><tr><th>Date</th><th>Site</th><th>Shift</th><th>Type</th><th>Evac (min)</th><th>Result</th><th>Logged by</th><th></th></tr></thead><tbody>';
     S.fire.drills.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).forEach(function (d) {
       html += "<tr><td>" + esc(d.date) + "</td><td>" + esc(d.site) + "</td><td>" + esc(d.shift) + "</td><td>" + esc(d.type) + "</td><td>" + esc(d.evacMinutes || "—") + "</td>" +
         "<td>" + (d.passed ? badge("met", "Pass") : badge("gap", "Issues")) + (d.issues ? "<div class='small muted'>" + esc(d.issues) + "</div>" : "") + "</td>" +
+        "<td class='small'>" + esc(d.loggedBy || "—") + (d.loggedAt ? "<div class='stamp'>" + esc(fmtWhen(d.loggedAt)) + "</div>" : "") + "</td>" +
         '<td><button class="btn danger small" type="button" data-action="del-drill" data-id="' + d.id + '">✕</button></td></tr>';
     });
     html += "</tbody></table></div>";
@@ -1635,7 +2311,7 @@ function streqModal(staffId, reqId) {
     '<div><label>Completed</label><input type="date" id="sq-completed" value="' + esc(rec.completed || "") + '"></div>' +
     (req.expires ? '<div><label>Expires</label><input type="date" id="sq-expires" value="' + esc(rec.expires || "") + '"></div>' : "") +
     '<div class="full"><label>Evidence location</label><input type="text" id="sq-loc" value="' + esc(rec.evidenceLocation || "") + '" placeholder="Personnel file, HR drive path…"></div>' +
-    "</div>" +
+    "</div>" + stampLine(rec, "Last recorded by") +
     '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
     '<button class="btn" type="button" data-action="save-streq" data-staff="' + staffId + '" data-req="' + reqId + '">Save</button></div>');
 }
@@ -1753,11 +2429,22 @@ function saveRubricFromModal(isNew, origId) {
 /* ============================ SETTINGS / AI / EXPORT ============================ */
 function settingsModal() {
   var mode = Store.getMode();
-  var modeLabel = mode === "shared" ? "Shared dataset (window.storage) — all QA staff see the same records" :
-    mode === "local" ? "This browser (localStorage) — use Export to move data between devices" :
+  var modeLabel = mode === "supabase" ? "Supabase — one shared record, every device sees the same data" :
+    mode === "shared" ? "Shared dataset (window.storage) — all QA staff see the same records" :
+    mode === "local" ? "This browser (localStorage) — connect Supabase below, or use Export to move data between devices" :
     "In-memory only — data is LOST on close; use Export to back up";
+  var me = Auth.current();
+  var admin = Auth.isAdmin();
   openModal('<h3>Settings</h3>' +
-    '<div class="note-box"><strong>Storage:</strong> ' + esc(modeLabel) + "</div>" +
+    '<div class="note-box"><strong>Signed in as:</strong> ' + esc(me ? me.name : "—") +
+    (me ? " (" + (admin ? "administrator" : "QA staff") + ")" : "") +
+    (Auth.pwRequired() ? ' &nbsp;<button class="intent-toggle" type="button" data-action="change-my-password">Change my password</button>' : "") +
+    ' &nbsp;<button class="intent-toggle" type="button" data-action="sign-out">' + (Auth.pwRequired() ? "Sign out" : "Switch person") + "</button>" +
+    '<br><span class="small">Everything you rate is stamped with this name. Manage the team under <strong>Users &amp; Activity</strong>.</span></div>' +
+    '<div class="note-box"><strong>Storage:</strong> ' + esc(modeLabel) +
+    (Store.lastError() ? '<br><span class="small" style="color:var(--gap)">Supabase is configured but unreachable: ' + esc(Store.lastError()) + "</span>" : "") +
+    "</div>" +
+    supabasePanelHtml(mode) +
     '<h4 style="margin:10px 0 6px">AI assist (optional — everything works offline without it)</h4>' +
     '<div class="small muted" style="margin-bottom:8px">Adds AI-written CAP drafts and readiness briefings via the Anthropic API. Requires network access and an API key from console.anthropic.com. The key is stored in this system\'s storage — use a workspace-scoped key you can revoke.</div>' +
     '<div class="form-grid">' +
@@ -1768,13 +2455,135 @@ function settingsModal() {
     '<div style="align-self:end"><button class="btn secondary" type="button" data-action="test-ai">Test connection</button></div>' +
     "</div><div id="+'"ai-test-out"'+" class='small' style='margin-top:6px'></div>" +
     '<h4 style="margin:16px 0 6px">Data</h4>' +
+    '<div class="small muted" style="margin-bottom:8px">The backup includes user accounts and the activity log so a restore keeps everyone\'s sign-in and the record of who verified what. Passwords are only ever stored as salted hashes, never in readable form — but treat the backup file as confidential and keep it where the agency keeps its other personnel data.</div>' +
     '<div class="toolbar" style="margin:0">' +
     '<button class="btn secondary" type="button" data-action="export-all">Export full backup (JSON)</button>' +
-    '<button class="btn secondary" type="button" data-action="import-all">Import backup</button>' +
-    '<button class="btn danger" type="button" data-action="clear-all">Clear ALL data</button>' +
+    (admin ? '<button class="btn secondary" type="button" data-action="import-all">Import backup</button>' +
+             '<button class="btn danger" type="button" data-action="clear-all">Clear ALL data</button>' : "") +
     "</div>" +
+    (admin ? "" : '<div class="small muted" style="margin-top:6px">Restoring or clearing data is limited to administrators.</div>') +
     '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Close</button>' +
     '<button class="btn" type="button" data-action="save-settings">Save</button></div>');
+}
+/* Connecting a shared backend is a one-time job per machine, so the panel
+   carries everything needed to do it without leaving the app: where the two
+   values come from, the SQL to paste, and a way to prove it works. */
+function supabasePanelHtml(mode) {
+  var c = Supa.current() || {};
+  var on = mode === "supabase";
+  return '<h4 style="margin:16px 0 6px">Shared records (Supabase)</h4>' +
+    '<div class="small muted" style="margin-bottom:8px">Without this, each browser keeps its own separate copy and two people never see each other\'s work. ' +
+    'Create a free project at supabase.com, run <code>supabase-setup.sql</code> from this repository in its SQL editor, then paste the project URL and the <strong>anon public</strong> key from Project Settings → API.</div>' +
+    '<div class="form-grid">' +
+    '<div class="full"><label>Project URL</label><input type="text" id="sb-url" value="' + esc(c.url || "") + '" placeholder="https://xxxxxxxx.supabase.co"></div>' +
+    '<div class="full"><label>Anon public key</label><input type="password" id="sb-key" value="' + esc(c.anonKey || "") + '" placeholder="eyJhbGciOi…"></div>' +
+    "</div>" +
+    '<div class="toolbar" style="margin:8px 0 0">' +
+    '<button class="btn secondary" type="button" data-action="sb-test">Test connection</button>' +
+    '<button class="btn" type="button" data-action="sb-connect">Save and connect</button>' +
+    (on ? '<button class="btn secondary" type="button" data-action="sb-push">Copy this browser\'s data up</button>' +
+          '<button class="btn danger" type="button" data-action="sb-disconnect">Disconnect</button>' : "") +
+    "</div>" +
+    '<div id="sb-out" class="small" style="margin-top:6px"></div>' +
+    '<div class="small muted" style="margin-top:8px"><strong>Treat the anon key like a password.</strong> Anyone who has it and the URL can read and write every record, ' +
+    'so it is stored in this browser only and is deliberately not committed to the repository — hand it to each machine once. ' +
+    'These records include client names, medication and behaviour-plan flags: if Hope Found needs this to be HIPAA-covered, that requires a paid Supabase plan and a signed BAA with them.</div>';
+}
+function sbOut(msg, bad) {
+  var el = document.getElementById("sb-out");
+  if (el) { el.innerHTML = '<span style="color:' + (bad ? "var(--gap)" : "var(--met)") + '">' + esc(msg) + "</span>"; }
+}
+function sbCredFromForm() {
+  var url = document.getElementById("sb-url").value.trim();
+  var key = document.getElementById("sb-key").value.trim();
+  if (!/^https?:\/\//.test(url)) { return { error: "The project URL should start with https:// — copy it from Project Settings → API." }; }
+  if (key.length < 20) { return { error: "That does not look like the anon key. Copy the long 'anon public' value from Project Settings → API." }; }
+  return { url: url.replace(/\/+$/, ""), anonKey: key };
+}
+async function sbTest() {
+  var c = sbCredFromForm();
+  if (c.error) { sbOut(c.error, true); return null; }
+  sbOut("Testing…");
+  var prev = Supa.current();
+  Supa.writeCred(c);
+  var res = await Supa.probe();
+  if (!res.ok) {
+    Supa.writeCred(prev || null);
+    sbOut("Could not connect: " + res.error, true);
+    return null;
+  }
+  sbOut("Connected — the " + Supa.table + " table is readable and writable.");
+  return c;
+}
+async function sbConnect() {
+  var c = await sbTest();
+  if (!c) { return; }
+  sbOut("Connected. Checking the shared record\u2026");
+  var remote;
+  try { remote = await Supa.fetchAll(); }
+  catch (e) { sbOut("Connected, but could not read the table: " + e.message, true); return; }
+  var empty = !Object.keys(remote).length;
+  if (!empty && !safeConfirm("This project already holds records. Joining it replaces what this browser is showing with the shared copy. " +
+      "Nothing here is deleted \u2014 Export a backup first if you have work that is not in the shared record yet.")) {
+    return;
+  }
+  Store.setMode("supabase");
+  logAct("data", "Connected this browser to the shared Supabase record");
+  if (empty) {
+    /* A fresh project must be seeded from what is here, not loaded over the
+       top of it — loading an empty table first would blank the app. */
+    sbOut("Connected to an empty project \u2014 copying this browser\u2019s records up\u2026");
+    var pushed = await sbPushAll();
+    if (!pushed.ok) { return; }
+    sbOut("Connected, and seeded the project with " + pushed.count + " records.");
+  } else {
+    await refreshFromStore("manual");
+    sbOut("Connected \u2014 now showing the shared record.");
+  }
+  showStorageNote();
+  startSharedPoll();
+  var syncBtn = document.getElementById("syncBtn");
+  if (syncBtn) { syncBtn.hidden = false; }
+  var note = document.querySelectorAll("#modalBox .note-box")[1];
+  if (note) { note.innerHTML = "<strong>Storage:</strong> Supabase \u2014 one shared record, every device sees the same data"; }
+}
+async function sbPush() {
+  if (!safeConfirm("Copy every record this browser is showing up to Supabase? Anything already there under the same key is overwritten.")) { return; }
+  var res = await sbPushAll();
+  if (res.ok) { sbOut("Uploaded " + res.count + " records. Every device on this project now sees them."); }
+}
+/* Seeding or overwriting the project from whatever is in memory right now. */
+async function sbPushAll() {
+  sbOut("Uploading\u2026");
+  var payload = {};
+  payload[K.rubric] = S.rubric; payload[K.clients] = S.clients; payload[K.staff] = S.staff;
+  payload[K.org] = S.org; payload[K.fire] = S.fire; payload[K.census] = S.census;
+  payload[K.policy] = S.policy; payload[K.qadoc] = S.qadoc; payload[K.runs] = S.runs;
+  payload[K.qtr] = S.qtr; payload[K.users] = Auth.all(); payload[K.audit] = S.audit;
+  payload[K.medreview] = S.medreview; payload[K.settings] = S.settings;
+  S.clients.forEach(function (c) { payload[K.rec + c.id] = S.records[c.id] || {}; });
+  var names = Object.keys(payload), done = 0;
+  try {
+    for (var i = 0; i < names.length; i++) {
+      await Supa.setOne(names[i], payload[names[i]]);
+      done++;
+      sbOut("Uploading\u2026 " + done + " of " + names.length);
+    }
+  } catch (e) {
+    sbOut("Stopped after " + done + " of " + names.length + ": " + e.message, true);
+    return { ok: false, count: done };
+  }
+  Store.invalidate();
+  logAct("data", "Copied this browser's records up to Supabase (" + done + " keys)");
+  return { ok: true, count: done };
+}
+function sbDisconnect() {
+  clearInterval(pollTimer);
+  if (!safeConfirm("Disconnect from Supabase? This browser goes back to its own local copy — nothing in Supabase is deleted.")) { return; }
+  Supa.writeCred(null);
+  logAct("data", "Disconnected this browser from Supabase");
+  closeModal();
+  window.location.reload();
 }
 function download(filename, text) {
   var a = document.createElement("a");
@@ -1795,8 +2604,11 @@ function pickFile(cb) {
   inp.click();
 }
 async function exportAll() {
-  var out = { exportedAt: new Date().toISOString(), rubric: S.rubric, clients: S.clients, records: S.records,
-              staff: S.staff, org: S.org, fire: S.fire, census: S.census, policy: S.policy, qadoc: S.qadoc, runs: S.runs, qtr: S.qtr };
+  var out = { exportedAt: new Date().toISOString(), exportedBy: actorName(),
+              rubric: S.rubric, clients: S.clients, records: S.records,
+              staff: S.staff, org: S.org, fire: S.fire, census: S.census, policy: S.policy, qadoc: S.qadoc,
+              runs: S.runs, qtr: S.qtr, users: Auth.all(), audit: S.audit };
+  logAct("data", "Exported a full backup");
   var text = JSON.stringify(out, null, 1);
   download("pcr-backup-" + todayStr() + ".json", text);
   showTextModal("Full backup", text, "pcr-backup-" + todayStr() + ".json");
@@ -1805,7 +2617,9 @@ function importAll(text) {
   var data;
   try { data = JSON.parse(text); } catch (e) { safeAlert("Not valid JSON."); return; }
   if (!data || !Array.isArray(data.rubric) || !Array.isArray(data.clients)) { safeAlert("Not a recognized backup file."); return; }
-  if (!safeConfirm("Replace ALL current data with this backup?")) { return; }
+  if (!Auth.isAdmin()) { safeAlert("Only an administrator can restore a backup."); return; }
+  if (!safeConfirm("Replace ALL current data with this backup?" +
+      (Array.isArray(data.users) && data.users.length ? " User accounts in this backup replace the current ones — you may have to sign in again." : ""))) { return; }
   S.rubric = data.rubric; S.clients = data.clients; S.records = data.records || {};
   S.staff = data.staff || { roster: [], records: {} }; S.org = data.org || {};
   S.fire = data.fire || { drills: [], checks: {} }; S.census = data.census || {};
@@ -1817,6 +2631,18 @@ function importAll(text) {
   persist(K.org, S.org); persist(K.fire, S.fire); persist(K.census, S.census);
   persist(K.policy, S.policy); persist(K.qadoc, S.qadoc); persist(K.runs, S.runs); persist(K.qtr, S.qtr);
   S.clients.forEach(function (c) { persist(K.rec + c.id, S.records[c.id] || {}); });
+  S.audit = Array.isArray(data.audit) ? data.audit : S.audit;
+  Store.set(K.audit, S.audit);
+  if (Array.isArray(data.users) && data.users.length) {
+    Auth.replaceAll(data.users);
+    Auth.signOut();
+    logAct("data", "Restored a full backup, including user accounts");
+    closeModal();
+    renderUserChip();
+    showAuthGate();
+    return;
+  }
+  logAct("data", "Restored a full backup");
   closeModal(); render();
 }
 function importRubric(text) {
@@ -1832,6 +2658,7 @@ function importRubric(text) {
                            hcbsSettings: false, effectiveDate: todayStr(), active: true, domain: "General" }, r);
   });
   persist(K.rubric, S.rubric);
+  logAct("rubric", "Imported a master rubric of " + arr.length + " indicators");
   render();
 }
 function aiModal(title, offlineFn, promptFn) {
@@ -2139,13 +2966,15 @@ function riConfirm() {
       location: (d.location || "").trim(),
       qidpName: (d.qidpName || "").trim(), ispDate: (d.ispDate || "").trim(),
       flags: { hasBSP: d.hasBSP, hasRestrictiveComponents: d.hasRestrictiveComponents, takesMedications: d.takesMedications },
-      priorPCRParticipant: d.priorPCRParticipant, sampled: d.sampled, activeStatus: true
+      priorPCRParticipant: d.priorPCRParticipant, sampled: d.sampled, activeStatus: true,
+      createdBy: actorName(), createdById: actorId(), createdAt: new Date().toISOString()
     });
     S.records[id] = {};
     added++;
   });
   if (!added) { return; }
   persist(K.clients, S.clients);
+  logAct("person", "Imported " + added + " person record(s) from a roster");
   rosterDraft = [];
   closeModal();
   render();
@@ -2266,14 +3095,17 @@ function renderPolicy() {
       "</div>" +
       (cur.note ? '<div class="small" style="margin-bottom:6px">' + esc(cur.note) + "</div>" : "") +
       (cur.location ? '<div class="small muted">Location: ' + esc(cur.location) + "</div>" : "") +
+      (cur.uploadedBy ? '<div class="stamp">Uploaded by <strong>' + esc(cur.uploadedBy) + "</strong>" +
+        (cur.uploadedAt ? " · " + esc(fmtWhen(cur.uploadedAt)) : "") + "</div>" : "") +
       (cur.content ? '<div style="margin-top:8px"><button class="btn secondary small" type="button" data-action="qa-download" data-id="' + cur.id + '">Download stored copy</button></div>' : "");
   }
   html += "</div>";
   if (qaVersions().length > 1) {
-    html += '<div class="table-wrap"><table><thead><tr><th>Version</th><th>Date</th><th>What changed</th><th>Addresses</th><th>File</th></tr></thead><tbody>';
+    html += '<div class="table-wrap"><table><thead><tr><th>Version</th><th>Date</th><th>What changed</th><th>Uploaded by</th><th>Addresses</th><th>File</th></tr></thead><tbody>';
     qaVersions().slice().reverse().forEach(function (ver, idx) {
       html += "<tr><td><strong>" + esc(ver.name) + "</strong>" + (idx === 0 ? " " + badge("met", "current") : "") + "</td><td>" + esc(ver.date) + "</td>" +
         '<td class="small" style="max-width:340px">' + esc(ver.note || "") + "</td>" +
+        '<td class="small">' + esc(ver.uploadedBy || "—") + "</td>" +
         '<td class="small">' + ((ver.addresses || []).length ? (ver.addresses || []).length + " update(s)" : "—") + "</td>" +
         "<td>" + (ver.content ? '<button class="btn secondary small" type="button" data-action="qa-download" data-id="' + ver.id + '">Download</button>' :
           '<span class="small muted">' + (ver.contentDropped ? "no longer stored in-app" : (ver.location ? esc(ver.location) : "external")) + "</span>") + "</td></tr>";
@@ -2304,8 +3136,8 @@ function ackModal(id) {
   if (!u) { return; }
   openModal("<h3>Acknowledge policy update</h3>" +
     '<div class="note-box"><strong>' + esc(u.title) + "</strong>" + (u.summary ? "<br>" + esc(u.summary) : "") + "</div>" +
-    '<div class="small muted" style="margin-bottom:8px">Acknowledging records, by name and date, that the agency has seen this change and is acting on it. This is your audit trail.</div>' +
-    '<div class="field"><label>Acknowledged by (name / title)</label><input type="text" id="ack-name" placeholder="e.g. Z. Malya, QA Director"></div>' +
+    '<div class="small muted" style="margin-bottom:8px">Acknowledging records, by name and date, that the agency has seen this change and is acting on it. This is your audit trail. Your signed-in name is filled in — change it only if you are acknowledging on someone else\'s behalf.</div>' +
+    '<div class="field"><label>Acknowledged by (name / title)</label><input type="text" id="ack-name" value="' + esc(actorName()) + '" placeholder="e.g. Z. Malya, QA Director"></div>' +
     '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
     '<button class="btn" type="button" data-action="save-ack" data-id="' + id + '">Acknowledge</button></div>');
 }
@@ -2347,7 +3179,10 @@ function saveQaDoc() {
     size: qaDraftFile ? qaDraftFile.size : 0,
     mime: qaDraftFile ? qaDraftFile.mime : "",
     content: qaDraftFile ? qaDraftFile.content : null,
-    contentKind: qaDraftFile ? qaDraftFile.kind : null
+    contentKind: qaDraftFile ? qaDraftFile.kind : null,
+    uploadedBy: actorName(),
+    uploadedById: actorId(),
+    uploadedAt: new Date().toISOString()
   };
   S.qadoc.versions = S.qadoc.versions || [];
   S.qadoc.versions.push(ver);
@@ -2364,6 +3199,8 @@ function saveQaDoc() {
   });
   persist(K.qadoc, S.qadoc);
   persist(K.policy, S.policy);
+  logAct("qadoc", "Saved QA document version \"" + name + "\"" +
+    (addresses.length ? " addressing " + addresses.length + " policy update(s)" : ""));
   qaDraftFile = null;
   closeModal();
   render();
@@ -2622,6 +3459,7 @@ function runPackView(run) {
     '<div class="ind-meta" style="margin:6px 0">' +
     (run.type === "live" ? badge("alert", "LIVE PCR AUDIT") : badge("neutral", "PREPARATION DRILL")) +
     badge("outline", esc(run.label)) + badge("outline", run.date + " · started " + fmtTime(run.startedAt)) +
+    (run.createdBy ? badge("outline", "generated by " + run.createdBy) : "") +
     "</div>" +
     '<div class="rule-box" style="margin:10px 0"><h4>Records due by ' + runDueTime(run) + "</h4>" +
     '<div class="small">All records for the people, staff training, and personnel files below must be produced within ' +
@@ -2721,6 +3559,43 @@ function qtrDaysUntil(dateStr) {
 }
 function qtrKey(clientId, ispDate, periodKey) { return clientId + "|" + ispDate + "|" + periodKey; }
 function qtrEntry(clientId, ispDate, periodKey) { return S.qtr[qtrKey(clientId, ispDate, periodKey)] || null; }
+function qidpWindow(period) {
+  /* an ISP date counts as "due soon" from the moment its booking window
+     opens, which is the point staff can actually act on it */
+  return (period && period.kind === "annual")
+    ? PROVIDER_CONFIG.qidp.ispBookingOpensDays
+    : PROVIDER_CONFIG.qidp.quarterlyWindowDays;
+}
+function ispBookBy(ispDateStr) {
+  var p = String(ispDateStr || "").split("-").map(Number);
+  if (p.length !== 3 || !p[0]) { return ""; }
+  var d = new Date(p[0], p[1] - 1, p[2]);
+  d.setDate(d.getDate() - PROVIDER_CONFIG.qidp.ispBookingDeadlineDays);
+  var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+}
+/* Where a person stands against the "book it 45-30 days out" rule. */
+function ispBookingStatus(row) {
+  var deadline = PROVIDER_CONFIG.qidp.ispBookingDeadlineDays;
+  if (row.held) {
+    return { cls: "met", label: "Held / confirmed" + (row.entry.doneDate ? " " + row.entry.doneDate : ""), note: "" };
+  }
+  if (row.scheduled) {
+    return { cls: "met", label: "Scheduled " + row.scheduled, note: "" };
+  }
+  if (row.days < 0) {
+    return { cls: "alert", label: "NOT SCHEDULED", note: "ISP date has passed" };
+  }
+  if (row.days < deadline) {
+    return { cls: "alert", label: "NOT SCHEDULED",
+             note: "past the booking deadline of " + row.bookBy };
+  }
+  return { cls: "warn", label: "NOT YET SCHEDULED",
+           note: "book by " + row.bookBy + " (" + (row.days - deadline) + "d left)" };
+}
+function annualPeriod() {
+  return qtrPeriods().filter(function (p) { return p.kind === "annual"; })[0] || null;
+}
 function qtrStatusFor(c, period) {
   if (!(c.ispDate || "").trim()) { return { key: "no-isp", label: "No ISP date on file", dueDate: null }; }
   var due = addMonths(c.ispDate, period.months);
@@ -2731,7 +3606,7 @@ function qtrStatusFor(c, period) {
   }
   var days = qtrDaysUntil(due);
   if (days < 0) { return { key: "overdue", label: "OVERDUE — due " + due, dueDate: due, entry: entry }; }
-  if (days <= PROVIDER_CONFIG.qidp.dueSoonDays) { return { key: "soon", label: "Due " + due + " (" + days + "d)", dueDate: due, entry: entry }; }
+  if (days <= qidpWindow(period)) { return { key: "soon", label: "Due " + due + " (" + days + "d)", dueDate: due, entry: entry }; }
   return { key: "upcoming", label: "Due " + due, dueDate: due, entry: entry };
 }
 function qtrCounts() {
@@ -2748,28 +3623,107 @@ function qtrCounts() {
 }
 function qtrAttention() { return qtrCounts().overdue; }
 
+/* Everyone whose annual ISP meeting is already due or falls inside the
+   look-ahead window, with whether the meeting is actually on the calendar.
+   People with no ISP date come back separately: their renewal cannot be
+   computed at all, which is its own thing to chase before a PCR. */
+function ispDueList() {
+  var cfg = PROVIDER_CONFIG.qidp;
+  var win = cfg.ispWindowDays;
+  var opens = cfg.ispBookingOpensDays;
+  var period = annualPeriod();
+  var rows = [], booking = [], missing = [];
+  S.clients.forEach(function (c) {
+    if (!c.activeStatus) { return; }
+    if (!(c.ispDate || "").trim()) { missing.push(c); return; }
+    if (!period) { return; }
+    var st = qtrStatusFor(c, period);
+    if (!st.dueDate) { missing.push(c); return; }
+    var days = qtrDaysUntil(st.dueDate);
+    if (days === null || days > opens) { return; }
+    var entry = st.entry || {};
+    var row = { client: c, due: st.dueDate, days: days, entry: entry,
+                bookBy: ispBookBy(st.dueDate),
+                scheduled: String(entry.scheduledDate || "").trim(), held: !!entry.done };
+    (days <= win ? rows : booking).push(row);
+  });
+  var byDate = function (a, b) { return a.due < b.due ? -1 : (a.due > b.due ? 1 : 0); };
+  rows.sort(byDate);
+  booking.sort(byDate);
+  missing.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+  var open = function (r) { return !r.scheduled && !r.held; };
+  return { rows: rows, booking: booking, missing: missing, period: period,
+           window: win, opensDays: opens, deadlineDays: cfg.ispBookingDeadlineDays,
+           unscheduled: rows.filter(open).length, toBook: booking.filter(open).length };
+}
+
+/* Quarterly reports coming due inside the shorter window. An item already
+   filed and past its date is finished, so it drops off the checklist. */
+function quarterlyDueList() {
+  var win = PROVIDER_CONFIG.qidp.quarterlyWindowDays;
+  var rows = [];
+  S.clients.forEach(function (c) {
+    if (!c.activeStatus || !(c.ispDate || "").trim()) { return; }
+    qtrPeriods().forEach(function (p) {
+      if (p.kind === "annual") { return; }
+      var st = qtrStatusFor(c, p);
+      if (!st.dueDate) { return; }
+      var days = qtrDaysUntil(st.dueDate);
+      if (days === null || days > win) { return; }
+      var entry = st.entry || {};
+      if (entry.done && days < 0) { return; }
+      rows.push({ client: c, period: p, due: st.dueDate, days: days, entry: entry, done: !!entry.done });
+    });
+  });
+  rows.sort(function (a, b) {
+    if (a.due !== b.due) { return a.due < b.due ? -1 : 1; }
+    return a.client.name < b.client.name ? -1 : 1;
+  });
+  return { rows: rows, window: win, outstanding: rows.filter(function (r) { return !r.done; }).length };
+}
+function dueDaysLabel(days) {
+  if (days < 0) { return Math.abs(days) + "d overdue"; }
+  if (days === 0) { return "today"; }
+  return "in " + days + "d";
+}
+function qidpPrintHead(title, sub) {
+  return '<div class="print-only qidp-print-head">' +
+    "<h2>" + esc(PROVIDER_CONFIG.meta.providerName) + " — " + esc(title) + "</h2>" +
+    '<div class="small">' + esc(sub) + " · Generated " + esc(new Date().toLocaleString()) +
+    (actorName() ? " by " + esc(actorName()) : "") + "</div></div>";
+}
+
 var QTR_BADGE = { done: "met", overdue: "alert", soon: "warn", upcoming: "outline", "no-isp": "outline" };
 
 function renderQidp() {
   var counts = qtrCounts();
   var html = '<h2 class="view-title">QIDP &amp; ISP Tracking</h2>' +
-    '<p class="view-sub">Quarterly progress reports are written by the QIDP and filed in MCIS (DC DDA\'s system of record), drawn from direct-care staff\'s daily notes — this system does not author or store that review. It only tracks whether each person\'s quarterly report and annual ISP renewal are coming due, computed from the ISP date, so nothing lapses unnoticed before a PCR. Set each person\'s QIDP (case manager) and ISP date via Edit person; quarterly dates recompute automatically.</p>';
+    '<p class="view-sub">Quarterly progress reports are written by the QIDP and filed in MCIS (DC DDA\'s system of record), drawn from direct-care staff\'s daily notes — this system does not author or store that review. It only tracks whether each person\'s quarterly report and annual ISP renewal are coming due, computed from the ISP date, so nothing lapses unnoticed before a PCR. Set each person\'s QIDP (case manager) and ISP date via Edit person; quarterly dates recompute automatically. Two working lists sit at the top and each prints on its own: <strong>ISP dates in the next ' + PROVIDER_CONFIG.qidp.ispWindowDays + ' days</strong> — plus the booking window behind it, because the renewal meeting has to be scheduled ' + PROVIDER_CONFIG.qidp.ispBookingOpensDays + '–' + PROVIDER_CONFIG.qidp.ispBookingDeadlineDays + ' days before that date — and the <strong>quarterly report checklist for the next ' + PROVIDER_CONFIG.qidp.quarterlyWindowDays + ' days</strong>.</p>';
 
-  html += '<div class="note-box">Set once per person, on Edit person: <strong>QIDP name</strong> (case manager) and <strong>ISP date</strong> (the annual Medicaid-services planning meeting). Quarterly reports are expected 3, 6, and 9 months after that date; the next ISP renewal is expected at 12 months. Marking a period "filed" here records that it was confirmed in MCIS — it will later sync automatically once the admin dashboard is connected.</div>';
+  html += '<div class="note-box no-print">Set once per person, on Edit person: <strong>QIDP name</strong> (case manager) and <strong>ISP date</strong> (the annual Medicaid-services planning meeting). Quarterly reports are expected 3, 6, and 9 months after that date; the next ISP renewal is expected at 12 months. The ISP date is the annual date the plan concludes; the meeting that renews it must be scheduled ' + PROVIDER_CONFIG.qidp.ispBookingOpensDays + '–' + PROVIDER_CONFIG.qidp.ispBookingDeadlineDays + ' days before it, so each person carries a <strong>book-by</strong> date. A quarterly report needs no booking — it is written from notes already in MCIS — so it gets a single ' + PROVIDER_CONFIG.qidp.quarterlyWindowDays + '-day window. Marking a period done here records that it was confirmed in MCIS — it will later sync automatically once the admin dashboard is connected.</div>';
 
-  html += '<div class="toolbar no-print"><button class="btn secondary" type="button" data-action="run-print">Print due-dates list</button></div>';
+  var isp = ispDueList();
+  var qtrDue = quarterlyDueList();
 
-  html += '<div class="stat-row" style="margin-bottom:12px">' +
+  html += '<div class="stat-row no-print" style="margin-bottom:12px">' +
     '<div class="stat"><div class="lbl">Overdue</div><div class="pct" style="color:' + (counts.overdue ? "var(--gap)" : "var(--met)") + '">' + counts.overdue + "</div></div>" +
-    '<div class="stat"><div class="lbl">Due soon (≤' + PROVIDER_CONFIG.qidp.dueSoonDays + "d)</div><div class=\"pct\" style=\"color:" + (counts.soon ? "var(--warn)" : "var(--met)") + '">' + counts.soon + "</div></div>" +
-    '<div class="stat"><div class="lbl">On track</div><div class="pct">' + (counts.upcoming + counts.done) + "</div></div>" +
-    '<div class="stat"><div class="lbl">No ISP date on file</div><div class="pct" style="color:' + (counts.noIsp ? "var(--warn)" : "var(--met)") + '">' + counts.noIsp + "</div></div>" +
+    '<div class="stat"><div class="lbl">ISP dates ≤' + isp.window + 'd</div><div class="pct" style="color:' + (isp.unscheduled ? "var(--gap)" : "var(--met)") + '">' + isp.rows.length + "</div>" +
+    '<div class="small muted">' + (isp.unscheduled ? isp.unscheduled + " past the booking deadline" : "all scheduled or held") + "</div></div>" +
+    '<div class="stat"><div class="lbl">Booking window ' + isp.window + "–" + isp.opensDays + 'd</div><div class="pct" style="color:' + (isp.toBook ? "var(--warn)" : "var(--met)") + '">' + isp.booking.length + "</div>" +
+    '<div class="small muted">' + (isp.toBook ? isp.toBook + " still to book" : "all booked") + "</div></div>" +
+    '<div class="stat"><div class="lbl">Quarterly reports ≤' + qtrDue.window + 'd</div><div class="pct" style="color:' + (qtrDue.outstanding ? "var(--warn)" : "var(--met)") + '">' + qtrDue.rows.length + "</div>" +
+    '<div class="small muted">' + (qtrDue.outstanding ? qtrDue.outstanding + " still to file" : "all filed") + "</div></div>" +
+    '<div class="stat"><div class="lbl">No ISP date on file</div><div class="pct" style="color:' + (counts.noIsp ? "var(--warn)" : "var(--met)") + '">' + isp.missing.length + "</div></div>" +
     "</div>";
 
   var active = S.clients.filter(function (c) { return c.activeStatus; });
   if (!active.length) { return html + '<div class="empty">Add people on the Client Review tab first.</div>'; }
 
-  html += '<div class="table-wrap"><table><thead><tr><th>Person</th><th>Service line</th><th>QIDP (case manager)</th><th>ISP date</th>' +
+  html += ispListHtml(isp) + quarterlyChecklistHtml(qtrDue);
+
+  html += '<div class="qidp-block qidp-grid"><h3 class="section-title">All people — every due date</h3>' +
+    '<div class="toolbar no-print"><button class="btn secondary" type="button" data-action="run-print">Print this page as shown</button></div>' +
+    '<div class="table-wrap"><table><thead><tr><th>Person</th><th>Service line</th><th>QIDP (case manager)</th><th>ISP date</th>' +
     qtrPeriods().map(function (p) { return "<th>" + esc(p.label) + "</th>"; }).join("") + "<th></th></tr></thead><tbody>";
   active.forEach(function (c) {
     var noIsp = !(c.ispDate || "").trim();
@@ -2782,14 +3736,122 @@ function renderQidp() {
     } else {
       qtrPeriods().forEach(function (p) {
         var st = qtrStatusFor(c, p);
-        html += "<td><button type=\"button\" style=\"background:none;border:none;padding:0;cursor:pointer\" data-action=\"qtr-mark\" data-client=\"" +
-          c.id + "\" data-period=\"" + p.key + "\">" + badge(QTR_BADGE[st.key], st.label) + "</button></td>";
+        html += "<td><button type=\"button\" style=\"background:none;border:none;padding:0;cursor:pointer;text-align:left\" data-action=\"qtr-mark\" data-client=\"" +
+          c.id + "\" data-period=\"" + p.key + "\">" + badge(QTR_BADGE[st.key], st.label) +
+          ispSchedNote(p, st) + "</button></td>";
       });
     }
     html += '<td><button class="btn secondary small" type="button" data-action="edit-client" data-id="' + c.id + '">Edit</button></td></tr>';
   });
-  html += "</tbody></table></div>";
+  html += "</tbody></table></div></div>";
   return html;
+}
+
+/* ---- ISP dates and their booking status, printable on their own ---- */
+function ispRowHtml(r, periodKey) {
+  var bs = ispBookingStatus(r);
+  return "<tr" + (bs.cls === "alert" ? ' class="flag-row"' : "") + ">" +
+    "<td><strong>" + esc(r.client.name) + "</strong></td>" +
+    "<td class='small'>" + esc(Engine.slName(r.client.serviceLine)) + "</td>" +
+    "<td class='small'>" + esc(r.client.qidpName || "\u2014") + "</td>" +
+    "<td class='small' style='white-space:nowrap'>" + esc(r.due) + " " +
+    badge(r.days < 0 ? "alert" : "warn", dueDaysLabel(r.days)) + "</td>" +
+    "<td class='small' style='white-space:nowrap'>" + esc(r.bookBy) + "</td>" +
+    "<td>" + badge(bs.cls, bs.label) +
+    (bs.note ? '<div class="stamp">' + esc(bs.note) + "</div>" : "") +
+    '<div class="no-print" style="margin-top:5px;max-width:150px"><input type="date" value="' + esc(r.scheduled) +
+    '" data-bind="isp-sched" data-client="' + r.client.id + '"></div></td>' +
+    '<td class="no-print"><button class="btn secondary small" type="button" data-action="qtr-mark" data-client="' +
+    r.client.id + '" data-period="' + esc(periodKey) + '">Open</button></td></tr>';
+}
+function ispTableHtml(rows, periodKey) {
+  return '<div class="table-wrap"><table><thead><tr><th>Person</th><th>Service line</th><th>QIDP (case manager)</th>' +
+    "<th>ISP date</th><th>Book by</th><th>Meeting scheduled?</th><th class='no-print'></th></tr></thead><tbody>" +
+    rows.map(function (r) { return ispRowHtml(r, periodKey); }).join("") +
+    "</tbody></table></div>";
+}
+function ispListHtml(isp) {
+  var pk = isp.period ? isp.period.key : "renewal";
+  var html = '<div class="qidp-block qidp-isp">' +
+    qidpPrintHead("ISP dates and meeting booking status",
+      "The annual date each person's ISP concludes, and whether the meeting that renews it is on the calendar. " +
+      "It has to be scheduled between " + isp.opensDays + " and " + isp.deadlineDays + " days before that date.") +
+    '<h3 class="section-title">ISP dates in the next ' + isp.window + " days</h3>" +
+    '<div class="note-box no-print">The ISP date is the annual date a person\'s plan concludes. The meeting that renews it has to be booked <strong>' +
+    isp.opensDays + "\u2013" + isp.deadlineDays + ' days beforehand</strong>, so anything still unscheduled in this list is already past its booking deadline. Set the meeting date right in the table; print to take the list into a QIDP meeting.</div>' +
+    '<div class="toolbar no-print"><button class="btn" type="button" data-action="qidp-print" data-which="isp">Print ISP date list</button></div>';
+
+  if (!isp.rows.length) {
+    html += '<div class="empty">No ISP dates fall in the next ' + isp.window + " days.</div>";
+  } else {
+    html += ispTableHtml(isp.rows, pk);
+  }
+
+  html += '<h3 class="section-title">Booking window open \u2014 ISP dates ' + isp.window + "\u2013" + isp.opensDays + " days out</h3>" +
+    '<div class="note-box no-print">These are the ones to schedule <em>now</em>: their ISP date is close enough that the meeting can be booked, and each must be on the calendar by its <strong>book-by</strong> date.</div>';
+  if (!isp.booking.length) {
+    html += '<div class="empty">No ISP dates fall inside the booking window right now.</div>';
+  } else {
+    html += ispTableHtml(isp.booking, pk);
+  }
+
+  if (isp.missing.length) {
+    html += '<h4 style="margin:16px 0 6px">No ISP date on file \u2014 nothing can be computed (' + isp.missing.length + ")</h4>" +
+      '<div class="table-wrap"><table><thead><tr><th>Person</th><th>Service line</th><th>QIDP (case manager)</th><th>Status</th><th class="no-print"></th></tr></thead><tbody>';
+    isp.missing.forEach(function (c) {
+      html += '<tr class="flag-row"><td><strong>' + esc(c.name) + "</strong></td>" +
+        "<td class='small'>" + esc(Engine.slName(c.serviceLine)) + "</td>" +
+        "<td class='small'>" + esc(c.qidpName || "\u2014") + "</td>" +
+        "<td>" + badge("alert", "NO ISP DATE ON FILE") + "</td>" +
+        '<td class="no-print"><button class="btn secondary small" type="button" data-action="edit-client" data-id="' + c.id + '">Add date</button></td></tr>';
+    });
+    html += "</tbody></table></div>";
+  }
+  return html + "</div>";
+}
+
+/* ---- quarterly reports inside the 15-day window, as a tickable checklist ---- */
+function quarterlyChecklistHtml(q) {
+  var html = '<div class="qidp-block qidp-quarterly">' +
+    qidpPrintHead("Quarterly reports due in the next " + q.window + " days",
+      "Every quarterly progress report falling due within " + q.window + " days, or already past due and not yet filed") +
+    '<h3 class="section-title">Quarterly report checklist — due in the next ' + q.window + " days</h3>" +
+    '<div class="note-box no-print">The reports the QIDP has to have in MCIS within ' + q.window +
+    ' days, plus anything already past due and unfiled. Tick one off here once you have confirmed it is filed — your name and the time are recorded with it. Reports filed before their due date drop off the list.</div>' +
+    '<div class="toolbar no-print"><button class="btn" type="button" data-action="qidp-print" data-which="quarterly">Print quarterly checklist (' + q.window + ' days)</button></div>';
+  if (!q.rows.length) {
+    html += '<div class="empty">No quarterly reports fall due in the next ' + q.window + " days.</div>";
+    return html + "</div>";
+  }
+  html += '<div class="table-wrap"><table><thead><tr><th style="width:38px">Filed</th><th>Person</th><th>Report</th>' +
+    "<th>Service line</th><th>QIDP (case manager)</th><th>Due</th><th>Confirmed by</th></tr></thead><tbody>";
+  q.rows.forEach(function (r) {
+    html += "<tr" + (!r.done && r.days < 0 ? ' class="flag-row"' : "") + ">" +
+      '<td style="text-align:center"><input type="checkbox" style="width:auto"' + (r.done ? " checked" : "") +
+      ' data-bind="qtr-filed" data-client="' + r.client.id + '" data-period="' + esc(r.period.key) + '"></td>' +
+      "<td><strong>" + esc(r.client.name) + "</strong></td>" +
+      "<td class='small'>" + esc(r.period.label) + "</td>" +
+      "<td class='small'>" + esc(Engine.slName(r.client.serviceLine)) + "</td>" +
+      "<td class='small'>" + esc(r.client.qidpName || "—") + "</td>" +
+      "<td class='small' style='white-space:nowrap'>" + esc(r.due) + " " +
+      badge(r.done ? "met" : (r.days < 0 ? "alert" : "warn"), r.done ? "filed" : dueDaysLabel(r.days)) + "</td>" +
+      "<td class='small'>" + esc(r.entry.confirmedBy || (r.done ? "—" : "")) +
+      (r.entry.confirmedAt ? "<div class='stamp'>" + esc(fmtWhen(r.entry.confirmedAt)) + "</div>" : "") + "</td></tr>";
+  });
+  html += "</tbody></table></div></div>";
+  return html;
+}
+
+/* only worth saying inside the action window: a renewal a year out is not
+   "not yet scheduled", it is simply not yet due */
+function ispSchedNote(period, st) {
+  if (period.kind !== "annual" || !st.dueDate) { return ""; }
+  var entry = st.entry || {};
+  if (entry.done) { return ""; }
+  var sched = String(entry.scheduledDate || "").trim();
+  if (sched) { return '<div class="stamp">meeting scheduled ' + esc(sched) + "</div>"; }
+  if (st.key !== "overdue" && st.key !== "soon") { return ""; }
+  return '<div class="stamp">not scheduled \u2014 book by ' + esc(ispBookBy(st.dueDate)) + "</div>";
 }
 
 function qtrModal(clientId, periodKey) {
@@ -2798,13 +3860,20 @@ function qtrModal(clientId, periodKey) {
   if (!c || !period || !(c.ispDate || "").trim()) { return; }
   var due = addMonths(c.ispDate, period.months);
   var entry = qtrEntry(c.id, c.ispDate, periodKey) || {};
+  var annual = period.kind === "annual";
   openModal("<h3>" + esc(period.label) + " — " + esc(c.name) + '</h3>' +
-    '<div class="note-box">Due ' + esc(due) + '. Authored by the QIDP and filed in MCIS — this only records that it was confirmed done.</div>' +
+    '<div class="note-box">Due ' + esc(due) + ". " + (annual ?
+      "The annual planning meeting: record when it is booked, then tick it once it has been held." :
+      "Authored by the QIDP and filed in MCIS — this only records that it was confirmed done.") + "</div>" +
     '<div class="form-grid">' +
-    '<div class="full"><div class="check-line"><input type="checkbox" id="qm-done"' + (entry.done ? " checked" : "") + '><label for="qm-done" style="text-transform:none;margin:0">Confirmed filed in MCIS</label></div></div>' +
-    '<div><label>Date filed</label><input type="date" id="qm-date" value="' + esc(entry.doneDate || "") + '"></div>' +
+    (annual ? '<div class="full"><label>Meeting scheduled for (leave blank if not yet booked)</label><input type="date" id="qm-sched" value="' + esc(entry.scheduledDate || "") + '"></div>' : "") +
+    '<div class="full"><div class="check-line"><input type="checkbox" id="qm-done"' + (entry.done ? " checked" : "") + '><label for="qm-done" style="text-transform:none;margin:0">' +
+    (annual ? "Meeting held and confirmed" : "Confirmed filed in MCIS") + "</label></div></div>" +
+    '<div><label>' + (annual ? "Date held" : "Date filed") + '</label><input type="date" id="qm-date" value="' + esc(entry.doneDate || "") + '"></div>' +
     '<div class="full"><label>Notes</label><input type="text" id="qm-notes" value="' + esc(entry.notes || "") + '" placeholder="optional"></div>' +
     "</div>" +
+    (entry.confirmedBy ? '<div class="stamp">Confirmed by <strong>' + esc(entry.confirmedBy) + "</strong>" +
+      (entry.confirmedAt ? " · " + esc(fmtWhen(entry.confirmedAt)) : "") + "</div>" : "") +
     '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
     '<button class="btn" type="button" data-action="save-qtr" data-client="' + c.id + '" data-period="' + periodKey + '">Save</button></div>');
 }
@@ -2813,12 +3882,439 @@ function saveQtrFromModal(clientId, periodKey) {
   if (!c || !(c.ispDate || "").trim()) { return; }
   var done = document.getElementById("qm-done").checked;
   var dateVal = document.getElementById("qm-date").value || (done ? todayStr() : "");
+  var schedEl = document.getElementById("qm-sched");
+  var prev = qtrEntry(clientId, c.ispDate, periodKey) || {};
+  var sched = schedEl ? schedEl.value : (prev.scheduledDate || "");
   S.qtr[qtrKey(clientId, c.ispDate, periodKey)] = {
-    done: done, doneDate: dateVal, notes: document.getElementById("qm-notes").value.trim()
+    done: done, doneDate: dateVal, notes: document.getElementById("qm-notes").value.trim(),
+    scheduledDate: sched,
+    scheduledBy: sched ? (sched === prev.scheduledDate ? (prev.scheduledBy || actorName()) : actorName()) : "",
+    scheduledAt: sched ? (sched === prev.scheduledDate ? (prev.scheduledAt || new Date().toISOString()) : new Date().toISOString()) : "",
+    confirmedBy: done ? actorName() : "", confirmedById: done ? actorId() : "",
+    confirmedAt: done ? new Date().toISOString() : ""
   };
   persist(K.qtr, S.qtr);
+  logAct("qidp", c.name + " · " + periodKey + " → " +
+    (done ? "confirmed done" : (sched ? "meeting scheduled for " + sched : "not filed")));
   closeModal(); render();
-  toast(done ? "Marked filed" : "Updated");
+  toast(done ? "Marked done" : (sched ? "Meeting scheduled" : "Updated"));
+}
+
+/* ============================ SIGN-IN GATE ============================ */
+var authErr = "";
+function authGateEl() { return document.getElementById("authGate"); }
+function gateOpen() { return authGateEl().classList.contains("on"); }
+function showAuthGate() {
+  document.body.classList.add("locked");
+  authGateEl().classList.add("on");
+  renderAuthGate();
+}
+function hideAuthGate() {
+  document.body.classList.remove("locked");
+  authGateEl().classList.remove("on");
+  document.getElementById("authCard").innerHTML = "";
+  authErr = "";
+}
+function authField(id, label, type, extra) {
+  return '<div><label for="' + id + '">' + esc(label) + '</label><input type="' + type + '" id="' + id + '"' + (extra || "") + "></div>";
+}
+function renderAuthGate() {
+  var card = document.getElementById("authCard");
+  var errHtml = '<div class="auth-err' + (authErr ? " on" : "") + '">' + esc(authErr) + "</div>";
+  var title = esc(PROVIDER_CONFIG.meta.appTitle);
+  var mark = '<div class="auth-brand"><div class="brand-mark">' + esc(brandMark()) + "</div><div>" +
+    '<div style="font-family:var(--serif);font-weight:700;color:var(--teal-dark);font-size:15px">' +
+    esc(PROVIDER_CONFIG.meta.providerName) + "</div>" +
+    '<div class="small muted">' + esc(PROVIDER_CONFIG.meta.subtitle || "") + "</div></div></div>";
+  var html;
+  if (!Auth.pwRequired()) {
+    card.innerHTML = mark + pickerHtml(errHtml);
+    setTimeout(function () {
+      var first = card.querySelector("#au-name");
+      if (first && !Auth.all().length) { try { first.focus(); } catch (e) {} }
+    }, 30);
+    return;
+  }
+  if (Auth.needsSetup()) {
+    html = mark + "<h2>" + title + "</h2>" +
+      '<div class="auth-sub">No accounts exist yet. Create the first administrator account. Your full name is how you sign in, and it is what gets stamped on everything you verify.</div>' + errHtml +
+      '<div class="form-grid">' +
+      authField("au-name", "Full name", "text", ' autocomplete="username" placeholder="e.g. Maria Alvarez"') +
+      authField("au-pw", "Password (at least " + Auth.minPassword() + " characters)", "password", ' autocomplete="new-password"') +
+      authField("au-pw2", "Confirm password", "password", ' autocomplete="new-password"') +
+      "</div>" +
+      '<div class="auth-actions"><button class="btn" type="button" id="auth-primary" data-action="auth-setup">Create administrator account</button></div>' +
+      '<div class="auth-note">Administrators add the rest of the team under <strong>Users &amp; Activity</strong>. Passwords are salted and hashed — no one, including an administrator, can read them back.</div>';
+  } else if (!Auth.current()) {
+    html = mark + "<h2>" + title + "</h2>" +
+      '<div class="auth-sub">Sign in. Every Met / Not Met / N/A you record is stamped with your name and the moment you clicked it.</div>' + errHtml +
+      '<div class="form-grid">' +
+      authField("au-name", "Full name", "text", ' autocomplete="username" placeholder="e.g. Maria Alvarez"') +
+      authField("au-pw", "Password", "password", ' autocomplete="current-password"') +
+      "</div>" +
+      '<div class="auth-actions"><button class="btn" type="button" id="auth-primary" data-action="auth-login">Sign in</button></div>' +
+      '<div class="auth-note">Sign in with the full name your account was created under — capitals and extra spaces do not matter. Forgot your password? An administrator can reset it under Users &amp; Activity. Sessions stay signed in on this browser for ' + Auth.sessionHours() + " hours.</div>";
+  } else {
+    html = mark + "<h2>Choose a password</h2>" +
+      '<div class="auth-sub">Signed in as <strong>' + esc(Auth.current().name) + "</strong>. Your password was set by an administrator — replace it with one only you know before continuing.</div>" + errHtml +
+      '<div class="form-grid">' +
+      authField("au-pw", "New password (at least " + Auth.minPassword() + " characters)", "password", ' autocomplete="new-password"') +
+      authField("au-pw2", "Confirm new password", "password", ' autocomplete="new-password"') +
+      "</div>" +
+      '<div class="auth-actions"><button class="btn" type="button" id="auth-primary" data-action="auth-change-forced">Save password and continue</button></div>' +
+      '<div class="auth-note"><button class="intent-toggle" type="button" data-action="sign-out">Sign out instead</button></div>';
+  }
+  card.innerHTML = html;
+  setTimeout(function () {
+    var first = card.querySelector("input");
+    if (first) { try { first.focus(); } catch (e) {} }
+  }, 30);
+}
+/* No password to ask for, so the gate asks the only question that matters:
+   who is at the keyboard? Whatever is picked here is what gets stamped. */
+function pickerHtml(errHtml) {
+  var people = Auth.all().filter(function (u) { return u.active !== false; })
+    .sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+  var html = "<h2>Who's working today?</h2>" +
+    '<div class="auth-sub">Pick your name. Every Met / Not Met / N/A you record is stamped with it and the moment you clicked.</div>' + errHtml;
+  if (people.length) {
+    html += '<div class="who-list">' + people.map(function (u) {
+      return '<button class="who-btn" type="button" data-action="auth-pick" data-id="' + u.id + '">' +
+        '<span class="avatar">' + esc(initialsOf(u.name)) + "</span>" +
+        "<span><strong>" + esc(u.name) + "</strong>" +
+        '<span class="small muted">' + esc(u.role === "admin" ? "Administrator" : "QA staff") +
+        (u.lastSignIn ? " · last here " + esc(fmtWhen(u.lastSignIn)) : "") + "</span></span></button>";
+    }).join("") + "</div>";
+  }
+  html += '<div class="who-add"><label for="au-name">' +
+    (people.length ? "Not on the list? Add yourself" : "Start by adding yourself") + "</label>" +
+    '<div class="who-add-row"><input type="text" id="au-name" autocomplete="name" placeholder="e.g. Maria Alvarez">' +
+    '<button class="btn" type="button" id="auth-primary" data-action="auth-add">Add and continue</button></div></div>' +
+    '<div class="auth-note">Names are how this tool records who verified what, so each person needs their own. ' +
+    'Passwords are switched off for now — anyone who can open the app can pick any name, so this is a record of who did what, not a lock on who gets in.</div>';
+  return html;
+}
+function authVal(id) {
+  var el = document.getElementById(id);
+  return el ? el.value : "";
+}
+function authFail(msg) { authErr = msg; renderAuthGate(); }
+
+async function doAuthPick(id) {
+  var u = Auth.byId(id);
+  if (!u) { authFail("That name is no longer on the list."); return; }
+  var res = await Auth.signIn(u.name, "");
+  if (!res.ok) { authFail(res.error); return; }
+  authErr = "";
+  await enterApp();
+  logAct("signin", "Started working");
+}
+async function doAuthAdd() {
+  var name = authVal("au-name");
+  var first = !Auth.all().length;
+  var res = await Auth.createUser({ name: name, role: first ? "admin" : "staff" });
+  if (!res.ok) { authFail(res.error); return; }
+  var signed = await Auth.signIn(res.user.name, "");
+  if (!signed.ok) { authFail(signed.error); return; }
+  authErr = "";
+  await enterApp();
+  logAct("account", "Added " + res.user.name + " to the list" + (first ? " as the first administrator" : ""));
+}
+async function doAuthSetup() {
+  var res = await Auth.createUser({ name: authVal("au-name"),
+    password: authVal("au-pw"), confirm: authVal("au-pw2"), role: "admin" });
+  if (!res.ok) { authFail(res.error); return; }
+  var signed = await Auth.signIn(res.user.name, authVal("au-pw"));
+  if (!signed.ok) { authFail(signed.error); return; }
+  authErr = "";
+  await enterApp();
+  logAct("account", "Created the first administrator account (" + res.user.name + ")");
+}
+async function doAuthLogin() {
+  var res = await Auth.signIn(authVal("au-name"), authVal("au-pw"));
+  if (!res.ok) { authFail(res.error); return; }
+  authErr = "";
+  if (res.user.mustChange) { renderAuthGate(); return; }
+  await enterApp();
+  logAct("signin", "Signed in");
+}
+async function doAuthForcedChange() {
+  var me = Auth.current();
+  if (!me) { showAuthGate(); return; }
+  var res = await Auth.setPassword(me.id, authVal("au-pw"), authVal("au-pw2"), false);
+  if (!res.ok) { authFail(res.error); return; }
+  authErr = "";
+  await enterApp();
+  logAct("account", "Set a new password after an administrator reset");
+}
+function doSignOut() {
+  var me = Auth.current();
+  if (me) { logAct("signin", "Signed out"); }
+  Auth.signOut();
+  closeModal();
+  document.getElementById("view").innerHTML = "";
+  renderUserChip();
+  showAuthGate();
+}
+/* the two-letter mark on the sidebar and the sign-in card, always the same */
+function brandMark() {
+  return PROVIDER_CONFIG.meta.mark || initialsOf(PROVIDER_CONFIG.meta.providerName);
+}
+function initialsOf(name) {
+  var parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) { return "?"; }
+  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+}
+function renderUserChip() {
+  var el = document.getElementById("userChip");
+  var me = Auth.current();
+  el.innerHTML = me
+    ? '<div class="avatar">' + esc(initialsOf(me.name)) + "</div>" +
+      '<div class="who"><strong>' + esc(me.name) + "</strong>" +
+      esc(me.role === "admin" ? "Administrator" : "QA staff") + "</div>"
+    : "";
+}
+
+/* ============================ ATTRIBUTION ============================
+   One helper stamps the signed-in person and the exact moment onto
+   whatever they just recorded, so nobody types their own name again. */
+function actorName() { var u = Auth.current(); return u ? u.name : ""; }
+function actorId() { var u = Auth.current(); return u ? u.id : ""; }
+function actorStamp() {
+  return { verifiedBy: actorName(), verifiedById: actorId(),
+           verifiedAt: new Date().toISOString(), verifiedDate: todayStr() };
+}
+function clearedStamp() {
+  return { verifiedBy: "", verifiedById: "", verifiedAt: "", verifiedDate: "" };
+}
+function fmtWhen(iso) {
+  if (!iso) { return ""; }
+  try {
+    return new Date(iso).toLocaleString([], { year: "numeric", month: "short", day: "numeric",
+                                              hour: "numeric", minute: "2-digit" });
+  } catch (e) { return String(iso).slice(0, 16).replace("T", " "); }
+}
+function stampLine(rec, verb) {
+  if (!rec || !rec.verifiedBy) { return ""; }
+  var when = rec.verifiedAt ? fmtWhen(rec.verifiedAt) : (rec.verifiedDate || "");
+  return '<div class="stamp">' + esc(verb || "Verified by") + " <strong>" + esc(rec.verifiedBy) + "</strong>" +
+    (when ? " · " + esc(when) : "") + "</div>";
+}
+
+/* ---- activity log: append-only, capped, browser-silent ---- */
+var auditTimer = null;
+function logAct(action, detail) {
+  var u = Auth.current();
+  S.audit.push({ ts: new Date().toISOString(), uid: u ? u.id : "", name: u ? u.name : "(not signed in)",
+                 action: action, detail: String(detail || "") });
+  while (S.audit.length > 400) { S.audit.shift(); }
+  clearTimeout(auditTimer);
+  auditTimer = setTimeout(function () { Store.set(K.audit, S.audit); }, 800);
+}
+
+/* ============================ USERS & ACTIVITY ============================
+   Who is allowed in, and the running record of who did what. */
+function verificationTally() {
+  var byKey = {};
+  function bump(id, name, at) {
+    if (!name) { return; }
+    var key = id || ("name:" + name);
+    var e = byKey[key] || (byKey[key] = { id: id, name: name, client: 0, org: 0, last: "" });
+    if (at && at > e.last) { e.last = at; }
+    return e;
+  }
+  Object.keys(S.records).forEach(function (cid) {
+    var recs = S.records[cid] || {};
+    Object.keys(recs).forEach(function (iid) {
+      var r = recs[iid];
+      if (!r || !r.rating || !r.verifiedBy) { return; }
+      var e = bump(r.verifiedById || "", r.verifiedBy, r.verifiedAt || "");
+      if (e) { e.client++; }
+    });
+  });
+  Object.keys(S.org).forEach(function (tid) {
+    var tool = S.org[tid] || {};
+    Object.keys(tool).forEach(function (iid) {
+      var r = tool[iid];
+      if (!r || !r.rating || !r.verifiedBy) { return; }
+      var e = bump(r.verifiedById || "", r.verifiedBy, r.verifiedAt || "");
+      if (e) { e.org++; }
+    });
+  });
+  return Object.keys(byKey).map(function (k) { return byKey[k]; })
+    .sort(function (a, b) { return (b.client + b.org) - (a.client + a.org); });
+}
+var ACT_LABEL = { rating: "Rating", gate: "Gate question", org: "Org tool", staff: "Staff record",
+                  fire: "Fire & emergency", policy: "Policy update", qadoc: "QA document",
+                  qidp: "QIDP / ISP", run: "Audit run", person: "Person record", rubric: "Rubric",
+                  account: "Account", signin: "Sign-in", data: "Data" };
+function renderUsers() {
+  var me = Auth.current();
+  var admin = Auth.isAdmin();
+  var html = '<h2 class="view-title">Users &amp; Activity</h2>' +
+    '<p class="view-sub">Everyone picks their name before recording anything, so every answer carries the name of the person who made it and the moment they did \u2014 no one types a verifier name by hand.</p>' +
+    (Auth.pwRequired() ? "" : '<div class="note-box no-print"><strong>Passwords are off.</strong> People pick their name from a list and start working, which keeps the record of who did what without anyone memorising a password. It is not a lock on the door \u2014 anyone who can open the app can pick any name. To turn passwords on, set <code>requirePassword: true</code> in <code>PROVIDER_CONFIG.meta</code>: everyone listed here keeps their name and role, and an administrator sets each password from this screen.</div>');
+
+  html += '<h3 class="section-title">Accounts</h3>';
+  if (admin) {
+    html += '<div class="toolbar"><button class="btn secondary" type="button" data-action="add-user">+ Add user</button>' +
+      '<div class="small muted" style="align-self:center">You are an administrator: you can add people, change roles, and ' +
+      (Auth.pwRequired() ? "reset passwords" : "take someone off the list") + ".</div></div>";
+  } else {
+    html += '<div class="note-box">Only an administrator can add people' +
+      (Auth.pwRequired() ? " or reset passwords" : "") + ". Ask one of the administrators listed below.</div>";
+  }
+  html += '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Last here</th>' +
+    (admin ? "<th></th>" : "") + "</tr></thead><tbody>";
+  Auth.all().slice().sort(function (a, b) { return a.name < b.name ? -1 : 1; }).forEach(function (u) {
+    var isMe = me && u.id === me.id;
+    html += "<tr" + (u.active === false ? ' class="flag-row"' : "") + "><td><strong>" + esc(u.name) + "</strong>" +
+      (isMe ? " " + badge("neutral", "you") : "") + "</td>" +
+      "<td>" + badge(u.role === "admin" ? "neutral" : "outline", u.role === "admin" ? "Administrator" : "QA staff") + "</td>" +
+      "<td>" + (u.active === false ? badge("gap", "Deactivated") : badge("met", "Active")) +
+      (u.mustChange ? " " + badge("warn", "must set password") : "") + "</td>" +
+      "<td class='small muted'>" + esc(u.lastSignIn ? fmtWhen(u.lastSignIn) : "not yet") + "</td>" +
+      (admin ? '<td><button class="btn secondary small" type="button" data-action="edit-user" data-id="' + u.id + '">Manage</button></td>' : "") +
+      "</tr>";
+  });
+  html += "</tbody></table></div>";
+
+  var tally = verificationTally();
+  html += '<h3 class="section-title">Verifications on record</h3>' +
+    '<div class="note-box">Counted from the answers themselves, so it survives beyond the activity log below. Names carried over from before sign-in was introduced appear here without an account.</div>';
+  if (!tally.length) {
+    html += '<div class="empty">Nothing verified yet.</div>';
+  } else {
+    html += '<div class="table-wrap"><table><thead><tr><th>Verifier</th><th>Client indicators</th><th>Org tool items</th><th>Most recent</th></tr></thead><tbody>';
+    tally.forEach(function (t) {
+      html += "<tr><td><strong>" + esc(t.name) + "</strong>" +
+        (t.id ? "" : " " + badge("outline", "no account")) + "</td>" +
+        "<td>" + t.client + "</td><td>" + t.org + "</td>" +
+        "<td class='small muted'>" + esc(t.last ? fmtWhen(t.last) : "—") + "</td></tr>";
+    });
+    html += "</tbody></table></div>";
+  }
+
+  var filter = S.ui.actUser || "all";
+  var entries = S.audit.slice().reverse().filter(function (a) {
+    return filter === "all" || a.uid === filter || a.name === filter;
+  });
+  html += '<h3 class="section-title">Activity log</h3>' +
+    '<div class="toolbar"><div class="field act-filter"><label>Filter by person</label><select data-bind="act-user">' +
+    '<option value="all">Everyone</option>' +
+    Auth.all().map(function (u) {
+      return '<option value="' + esc(u.id) + '"' + (filter === u.id ? " selected" : "") + ">" + esc(u.name) + "</option>";
+    }).join("") + "</select></div>" +
+    '<button class="btn secondary" type="button" data-action="export-activity">Export activity (CSV)</button></div>';
+  if (!entries.length) {
+    html += '<div class="empty">No activity recorded yet.</div>';
+  } else {
+    html += '<div class="small muted" style="margin-bottom:6px">Most recent first — the last ' + S.audit.length +
+      " actions are kept (older entries roll off; the verifier stamped on each answer never does).</div>" +
+      '<div class="table-wrap"><table><thead><tr><th>When</th><th>Who</th><th>What</th><th>Detail</th></tr></thead><tbody>';
+    entries.slice(0, 250).forEach(function (a) {
+      html += "<tr><td class='small' style='white-space:nowrap'>" + esc(fmtWhen(a.ts)) + "</td>" +
+        "<td class='small'><strong>" + esc(a.name) + "</strong></td>" +
+        "<td>" + badge("outline", ACT_LABEL[a.action] || a.action) + "</td>" +
+        "<td class='small'>" + esc(a.detail) + "</td></tr>";
+    });
+    html += "</tbody></table></div>";
+  }
+  return html;
+}
+function userModal(u) {
+  var isNew = !u;
+  var min = Auth.minPassword();
+  var pw = Auth.pwRequired();
+  openModal("<h3>" + (isNew ? "Add user" : "Manage " + esc(u.name)) + "</h3>" +
+    '<div class="auth-err" id="um-err"></div>' +
+    '<div class="form-grid">' +
+    '<div class="full"><label>Full name — how they sign in, and what is stamped as the verifier</label><input type="text" id="um-name" value="' + esc(isNew ? "" : u.name) + '" autocomplete="off"></div>' +
+    '<div class="full"><label>Role</label><select id="um-role">' +
+    '<option value="staff"' + (!isNew && u.role !== "admin" ? " selected" : "") + '>QA staff</option>' +
+    '<option value="admin"' + (!isNew && u.role === "admin" ? " selected" : "") + ">Administrator</option></select></div>" +
+    (isNew ? (pw ? '<div class="full"><label>Temporary password (at least ' + min + ' characters)</label><input type="password" id="um-pw" autocomplete="new-password"></div>' +
+             '<div class="full"><label>Confirm password</label><input type="password" id="um-pw2" autocomplete="new-password"></div>' +
+             '<div class="full"><div class="check-line"><input type="checkbox" id="um-must" checked><label for="um-must" style="text-transform:none;margin:0">Require them to choose their own password at first sign-in</label></div></div>' : "") :
+             '<div class="full"><div class="check-line"><input type="checkbox" id="um-active"' + (u.active !== false ? " checked" : "") + '><label for="um-active" style="text-transform:none;margin:0">On the list (uncheck to take someone off without deleting what they recorded)</label></div></div>' +
+             (pw ? '<div class="full"><label>Reset password (leave blank to keep the current one)</label><input type="password" id="um-pw" autocomplete="new-password"></div>' +
+             '<div class="full"><label>Confirm new password</label><input type="password" id="um-pw2" autocomplete="new-password"></div>' : "")) +
+    "</div>" +
+    (isNew ? "" : '<div class="small muted" style="margin-top:8px">Renaming changes how this person signs in. Answers they already verified keep the name they were stamped with, which is what the audit trail is for.</div>') +
+    '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
+    '<button class="btn" type="button" data-action="save-user" data-id="' + (isNew ? "" : u.id) + '" data-new="' + isNew + '">Save</button></div>');
+}
+function umErr(msg) {
+  var el = document.getElementById("um-err");
+  if (!el) { return; }
+  el.textContent = msg;
+  el.className = msg ? "auth-err on" : "auth-err";
+}
+async function saveUserFromModal(id, isNew) {
+  var name = document.getElementById("um-name").value;
+  var role = document.getElementById("um-role").value;
+  var pwEl = document.getElementById("um-pw"), pw2El = document.getElementById("um-pw2");
+  var mustEl = document.getElementById("um-must");
+  var pw = pwEl ? pwEl.value : "", pw2 = pw2El ? pw2El.value : "";
+  if (isNew) {
+    var res = await Auth.createUser({ name: name, role: role, password: pw, confirm: pw2,
+      mustChange: !!(mustEl && mustEl.checked) });
+    if (!res.ok) { umErr(res.error); return; }
+    logAct("account", "Added user " + res.user.name + " (" + (role === "admin" ? "administrator" : "QA staff") + ")");
+    toast("User added");
+  } else {
+    var target = Auth.byId(id);
+    if (!target) { umErr("Account not found."); return; }
+    var wasActive = target.active !== false;
+    var upd = Auth.updateUser(id, { name: name, role: role, active: document.getElementById("um-active").checked });
+    if (!upd.ok) { umErr(upd.error); return; }
+    if (pw) {
+      var pres = await Auth.setPassword(id, pw, pw2, true);
+      if (!pres.ok) { umErr(pres.error); return; }
+      logAct("account", "Reset the password for " + target.name);
+    }
+    logAct("account", "Updated " + target.name + " — " + (role === "admin" ? "administrator" : "QA staff") +
+      ", " + (target.active === false ? "deactivated" : "active") + (wasActive && target.active === false ? " (access revoked)" : ""));
+    toast("Account updated");
+  }
+  closeModal();
+  if (!Auth.current()) { renderUserChip(); showAuthGate(); return; }
+  renderUserChip();
+  render();
+}
+function changePasswordModal() {
+  var min = Auth.minPassword();
+  openModal("<h3>Change my password</h3>" +
+    '<div class="auth-err" id="um-err"></div>' +
+    '<div class="form-grid">' +
+    '<div class="full"><label>Current password</label><input type="password" id="cp-old" autocomplete="current-password"></div>' +
+    '<div class="full"><label>New password (at least ' + min + ' characters)</label><input type="password" id="cp-new" autocomplete="new-password"></div>' +
+    '<div class="full"><label>Confirm new password</label><input type="password" id="cp-new2" autocomplete="new-password"></div>' +
+    "</div>" +
+    '<div class="modal-actions"><button class="btn secondary" type="button" data-action="close-modal">Cancel</button>' +
+    '<button class="btn" type="button" data-action="save-my-password">Change password</button></div>');
+}
+async function saveOwnPassword() {
+  var res = await Auth.changeOwnPassword(document.getElementById("cp-old").value,
+    document.getElementById("cp-new").value, document.getElementById("cp-new2").value);
+  if (!res.ok) { umErr(res.error); return; }
+  logAct("account", "Changed their own password");
+  closeModal();
+  toast("Password changed");
+}
+function exportActivityCsv() {
+  var rows = [["Timestamp", "Person", "Action", "Detail"]];
+  S.audit.slice().reverse().forEach(function (a) {
+    rows.push([a.ts, a.name, ACT_LABEL[a.action] || a.action, a.detail]);
+  });
+  var csv = rows.map(function (r) {
+    return r.map(function (cell) { return '"' + String(cell == null ? "" : cell).replace(/"/g, '""') + '"'; }).join(",");
+  }).join("\n");
+  var a = document.createElement("a");
+  a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+  a.download = "pcr-activity-" + todayStr() + ".csv";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  showTextModal("Activity log", csv, "pcr-activity-" + todayStr() + ".csv");
 }
 
 /* ============================ NAV / RENDER / EVENTS ============================ */
@@ -2908,20 +4404,34 @@ function renderMedReview() {
   return html;
 }
 
+var NAV_ICONS = {
+  dashboard: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.8" y="1.8" width="5.2" height="5.2" rx="1.5"></rect><rect x="9" y="1.8" width="5.2" height="5.2" rx="1.5"></rect><rect x="1.8" y="9" width="5.2" height="5.2" rx="1.5"></rect><rect x="9" y="9" width="5.2" height="5.2" rx="1.5"></rect></svg>',
+  review: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="5.2" r="2.6"></circle><path d="M2.6 14c.6-3 2.6-4.4 5.4-4.4s4.8 1.4 5.4 4.4"></path></svg>',
+  medreview: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.2"></circle><path d="M8 5.3v5.4M5.3 8h5.4"></path></svg>',
+  qidp: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="2"></rect><path d="M2 6.4h12M5.4 1.6v2.8M10.6 1.6v2.8"></path></svg>',
+  sampling: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 12.8L12.8 3.2"></path><circle cx="4.6" cy="4.6" r="1.9"></circle><circle cx="11.4" cy="11.4" r="1.9"></circle></svg>',
+  locator: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 4.6c0-.8.6-1.4 1.4-1.4h2.9l1.4 1.9h5.3c.8 0 1.4.6 1.4 1.4v5.9c0 .8-.6 1.4-1.4 1.4H3.2c-.8 0-1.4-.6-1.4-1.4z"></path></svg>',
+  runs: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.2"></circle><path d="M8 4.6V8l2.4 1.5"></path></svg>',
+  policy: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.8h10c-1-1-1.5-2-1.5-3.9 0-2.4-1.2-4.3-3.5-4.3S4.5 5.5 4.5 7.9c0 1.9-.5 2.9-1.5 3.9z"></path><path d="M6.8 13.8a1.3 1.3 0 002.4 0"></path></svg>',
+  orgstaff: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="10" height="12" rx="1"></rect><path d="M6 5h1.2M8.8 5H10M6 7.8h1.2M8.8 7.8H10M7 14v-2.6h2V14"></path></svg>',
+  rubric: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 4.2h1.6M6.2 4.2h7.6M2.2 8h1.6M6.2 8h7.6M2.2 11.8h1.6M6.2 11.8h7.6"></path></svg>',
+  users: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5.4" r="2.4"></circle><path d="M1.6 13.4c.5-2.6 2.2-3.9 4.4-3.9s3.9 1.3 4.4 3.9"></path><path d="M11 3.4a2.2 2.2 0 010 4.1M12.2 9.9c1.3.5 2 1.7 2.2 3.5"></path></svg>'
+};
 var TABS = [
   ["dashboard", "Dashboard"], ["review", "Client Review"], ["medreview", "Medical Review"],
   ["qidp", "QIDP & ISP"], ["sampling", "Sampling"],
   ["locator", "Document Locator"], ["runs", "Audit Run"], ["policy", "Policy Updates"],
-  ["orgstaff", "Organization & Staff"], ["rubric", "Rubric Manager"]
+  ["orgstaff", "Organization & Staff"], ["rubric", "Rubric Manager"], ["users", "Users & Activity"]
 ];
 function renderNav() {
   var att = polAttention();
   var qAtt = qtrAttention();
   document.getElementById("navTabs").innerHTML = TABS.map(function (t) {
-    var label = t[1];
     var n = t[0] === "policy" ? att : t[0] === "qidp" ? qAtt : 0;
-    if (n) { label += ' <span class="badge alert" style="font-size:10.5px;padding:1px 6px">' + n + "</span>"; }
-    return '<button type="button" data-action="nav" data-tab="' + t[0] + '" class="' + (S.ui.tab === t[0] ? "active" : "") + '">' + label + "</button>";
+    return '<button type="button" data-action="nav" data-tab="' + t[0] + '" title="' + esc(t[1]) + '" class="' +
+      (S.ui.tab === t[0] ? "active" : "") + '"><span class="nav-ic">' + (NAV_ICONS[t[0]] || "") + "</span>" +
+      '<span class="nav-lbl">' + esc(t[1]) + "</span>" +
+      (n ? '<span class="badge alert nav-badge">' + n + "</span>" : "") + "</button>";
   }).join("");
 }
 function render() {
@@ -2930,8 +4440,10 @@ function render() {
   var v = document.getElementById("view");
   var fn = { dashboard: renderDashboard, review: renderReview, sampling: renderSampling,
              locator: renderLocator, runs: renderRuns, policy: renderPolicy, qidp: renderQidp,
-             medreview: renderMedReview, orgstaff: renderOrgStaff, rubric: renderRubric }[S.ui.tab] || renderDashboard;
+             medreview: renderMedReview, orgstaff: renderOrgStaff, rubric: renderRubric,
+             users: renderUsers }[S.ui.tab] || renderDashboard;
   v.innerHTML = fn();
+  formatDatesIn(v);
   if (S.ui.tab === "sampling") { updateSamplingTotals(); }
 }
 
@@ -2951,7 +4463,23 @@ function onClick(e) {
   var a = t.getAttribute("data-action");
   var d = t.dataset;
   switch (a) {
-    case "nav": S.ui.tab = d.tab; if (d.tab !== "runs") { S.ui.runView = null; } render(); break;
+    case "auth-pick": doAuthPick(d.id); break;
+    case "auth-add": doAuthAdd(); break;
+    case "auth-setup": doAuthSetup(); break;
+    case "auth-login": doAuthLogin(); break;
+    case "auth-change-forced": doAuthForcedChange(); break;
+    case "sign-out": doSignOut(); break;
+    case "add-user":
+      if (!Auth.isAdmin()) { safeAlert("Only an administrator can add users."); break; }
+      userModal(null); break;
+    case "edit-user":
+      if (!Auth.isAdmin()) { safeAlert("Only an administrator can manage users."); break; }
+      userModal(Auth.byId(d.id)); break;
+    case "save-user": saveUserFromModal(d.id, d.new === "true"); break;
+    case "change-my-password": changePasswordModal(); break;
+    case "save-my-password": saveOwnPassword(); break;
+    case "export-activity": exportActivityCsv(); break;
+    case "nav": S.ui.tab = d.tab; if (d.tab !== "runs") { S.ui.runView = null; } render(); Auth.touch(); break;
     case "close-modal": closeModal(); break;
     case "open-settings": settingsModal(); break;
     case "save-settings":
@@ -2976,15 +4504,23 @@ function onClick(e) {
                  .catch(function () { out.textContent = "✗ HTTP " + r.status; }); }
       }).catch(function (err) { out.textContent = "✗ Network error (offline?): " + err.message; });
     })(); break;
+    case "sb-test": sbTest(); break;
+    case "sb-connect": sbConnect(); break;
+    case "sb-push": sbPush(); break;
+    case "sb-disconnect": sbDisconnect(); break;
+    case "sync-now": refreshFromStore("manual"); break;
     case "export-all": exportAll(); break;
     case "import-all": pickFile(importAll); break;
     case "clear-all":
-      if (safeConfirm("Delete ALL data (rubric resets to the pre-loaded official set)? Export a backup first.")) {
+      if (!Auth.isAdmin()) { safeAlert("Only an administrator can clear all data."); break; }
+      if (safeConfirm("Delete ALL data (rubric resets to the pre-loaded official set)? This also deletes every user account and the activity log — the next person to open the system creates the first administrator again. Export a backup first.")) {
         (async function () {
           for (var i = 0; i < S.clients.length; i++) { await Store.del(K.rec + S.clients[i].id); }
           await Store.del(K.rubric); await Store.del(K.clients); await Store.del(K.staff);
           await Store.del(K.org); await Store.del(K.fire); await Store.del(K.census); await Store.del(K.settings);
           await Store.del(K.policy); await Store.del(K.qadoc); await Store.del(K.runs); await Store.del(K.qtr);
+          await Store.del(K.users); await Store.del(K.audit);
+          Auth.signOut();
           window.location.reload();
         })();
       }
@@ -2999,6 +4535,22 @@ function onClick(e) {
     })(); break;
     case "import-roster": rosterImportModal(); break;
     case "qtr-mark": qtrModal(d.client, d.period); break;
+    case "qidp-print": (function () {
+      var cls = "print-only-" + (d.which === "isp" ? "isp" : "quarterly");
+      document.body.classList.add(cls);
+      var clear = function () { document.body.classList.remove(cls); };
+      try {
+        window.addEventListener("afterprint", function once() {
+          window.removeEventListener("afterprint", once); clear();
+        });
+        window.print();
+      } catch (e) {
+        clear();
+        safeAlert("Printing is blocked in this viewer — open the downloaded file in a browser to print.");
+        return;
+      }
+      setTimeout(clear, 1500);
+    })(); break;
     case "save-qtr": saveQtrFromModal(d.client, d.period); break;
     case "run-live-generate": (function () {
       var picked = Object.keys(S.ui.runPick || {}).filter(function (id) {
@@ -3007,7 +4559,9 @@ function onClick(e) {
       if (!picked.length) { safeAlert("Check at least one sampled person first."); return; }
       var label = document.getElementById("run-label").value.trim() || ("PCR sample " + todayStr());
       saveRun({ id: "run-" + Date.now().toString(36), type: "live", label: label, date: todayStr(),
-                startedAt: new Date().toISOString(), participants: picked });
+                startedAt: new Date().toISOString(), participants: picked,
+                createdBy: actorName(), createdById: actorId() });
+      logAct("run", "Generated a LIVE production pack (" + picked.length + " people): " + label);
       toast("Production pack generated — records due by " + runDueTime(runById(S.ui.runView)));
     })(); break;
     case "run-drill-generate": (function () {
@@ -3017,7 +4571,9 @@ function onClick(e) {
       });
       if (!picked.length) { safeAlert("Add people (and census numbers on the Sampling tab) before running a drill."); return; }
       saveRun({ id: "run-" + Date.now().toString(36), type: "drill", label: "Preparation drill " + todayStr(),
-                date: todayStr(), startedAt: new Date().toISOString(), participants: picked });
+                date: todayStr(), startedAt: new Date().toISOString(), participants: picked,
+                createdBy: actorName(), createdById: actorId() });
+      logAct("run", "Ran a preparation drill (" + picked.length + " people)");
     })(); break;
     case "run-open": S.ui.runView = d.id; render(); break;
     case "run-back": S.ui.runView = null; render(); break;
@@ -3045,8 +4601,11 @@ function onClick(e) {
         requiresQAUpdate: document.getElementById("pu-qa").checked
       };
       var existing = S.policy.updates.filter(function (x) { return x.id === d.id; })[0];
+      data.enteredBy = actorName();
+      data.enteredAt = new Date().toISOString();
       if (existing) { Object.assign(existing, data); } else { S.policy.updates.push(data); }
       persist(K.policy, S.policy);
+      logAct("policy", (existing ? "Edited" : "Logged") + " policy update: " + title);
       closeModal(); render();
     })(); break;
     case "del-policy-update":
@@ -3063,8 +4622,11 @@ function onClick(e) {
       var u = S.policy.updates.filter(function (x) { return x.id === d.id; })[0];
       if (!u) { return; }
       u.ackBy = name;
+      u.ackById = (name === actorName()) ? actorId() : "";
       u.ackDate = todayStr();
+      u.ackAt = new Date().toISOString();
       persist(K.policy, S.policy);
+      logAct("policy", "Acknowledged policy update: " + (u.title || u.id));
       closeModal(); render();
       toast("Acknowledged");
     })(); break;
@@ -3115,11 +4677,14 @@ function onClick(e) {
       hms.forEach(function (h) {
         var recs = S.records[h.id] || (S.records[h.id] = {});
         var dst = recs[d.ind] || (recs[d.ind] = {});
-        ["rating", "gateAnswer", "verifiedBy", "verifiedDate", "evidenceLocation", "notes"].forEach(function (k) {
+        ["rating", "gateAnswer", "evidenceLocation", "notes"].forEach(function (k) {
           if (src[k] !== undefined) { dst[k] = src[k]; }
         });
+        /* whoever copies it is the one asserting it holds for the housemate */
+        Object.assign(dst, src.rating ? actorStamp() : clearedStamp());
         persist(K.rec + h.id, recs);
       });
+      logAct("rating", "Copied " + d.ind + " from " + c.name + " to " + hms.length + " housemate(s) at " + (c.location || "the same home"));
       toast("Copied to " + hms.length + " housemate(s)");
       render();
     })(); break;
@@ -3133,12 +4698,22 @@ function onClick(e) {
       var rec = (S.records[d.client] || {})[d.ind] || {};
       /* "none" returns the question to its default, not-yet-scored state. */
       var val = (d.val === "none" || rec.rating === d.val) ? null : d.val;
-      var patch = { rating: val };
-      if (val && !rec.verifiedDate) { patch.verifiedDate = todayStr(); }
+      /* the click IS the verification: stamp who and exactly when, or wipe it on un-rate */
+      var patch = Object.assign({ rating: val }, val ? actorStamp() : clearedStamp());
       updRec(d.client, d.ind, patch);
+      var c = clientById(d.client);
+      logAct("rating", (c ? c.name : d.client) + " · " + d.ind + " → " + (val ? ratingLabel(val) : "not yet scored"));
       render();
+      Auth.touch();
     })(); break;
-    case "gate": updRec(d.client, d.ind, { gateAnswer: d.val }); render(); break;
+    case "gate": (function () {
+      updRec(d.client, d.ind, { gateAnswer: d.val, gateBy: actorName(), gateById: actorId(),
+                                gateAt: new Date().toISOString() });
+      var c = clientById(d.client);
+      logAct("gate", (c ? c.name : d.client) + " · " + d.ind + " → " + String(d.val).toUpperCase());
+      render();
+      Auth.touch();
+    })(); break;
     case "toggle-intent":
       S.ui.openIntents = S.ui.openIntents || {};
       S.ui.openIntents[d.ind] = !S.ui.openIntents[d.ind];
@@ -3146,8 +4721,12 @@ function onClick(e) {
     case "org-rate": (function () {
       var tool = S.org[d.tool] || (S.org[d.tool] = {});
       var rec = tool[d.item] || (tool[d.item] = {});
-      rec.rating = rec.rating === d.val ? null : d.val;
-      persist(K.org, S.org); render();
+      rec.rating = d.val === "none" ? null : (rec.rating === d.val ? null : d.val);
+      Object.assign(rec, rec.rating ? actorStamp() : clearedStamp());
+      persist(K.org, S.org);
+      logAct("org", d.tool + " · " + d.item + " → " + (rec.rating ? ratingLabel(rec.rating) : "not yet scored"));
+      render();
+      Auth.touch();
     })(); break;
     case "add-staff": staffModal(null); break;
     case "edit-staff": staffModal(S.staff.roster.filter(function (s) { return s.id === d.id; })[0]); break;
@@ -3171,27 +4750,35 @@ function onClick(e) {
     case "save-streq": (function () {
       var recs = S.staff.records[d.staff] || (S.staff.records[d.staff] = {});
       var expEl = document.getElementById("sq-expires");
-      recs[d.req] = {
+      recs[d.req] = Object.assign({
         status: document.getElementById("sq-status").value,
         completed: document.getElementById("sq-completed").value,
         expires: expEl ? expEl.value : "",
         evidenceLocation: document.getElementById("sq-loc").value.trim()
-      };
-      persist(K.staff, S.staff); closeModal(); render();
+      }, actorStamp());
+      persist(K.staff, S.staff);
+      var stf = S.staff.roster.filter(function (x) { return x.id === d.staff; })[0];
+      logAct("staff", (stf ? stf.name : d.staff) + " · " + d.req + " → " + (recs[d.req].status || "not recorded"));
+      closeModal(); render();
     })(); break;
     case "fire-done":
-      S.fire.checks[d.item] = Object.assign(S.fire.checks[d.item] || {}, { lastDone: todayStr() });
-      persist(K.fire, S.fire); render(); break;
+      S.fire.checks[d.item] = Object.assign(S.fire.checks[d.item] || {}, { lastDone: todayStr() }, actorStamp());
+      persist(K.fire, S.fire);
+      logAct("fire", "Marked safety check " + d.item + " done today");
+      render(); break;
     case "add-drill": drillModal(); break;
     case "save-drill": (function () {
       var date = document.getElementById("dm-date").value;
       var site = document.getElementById("dm-site").value.trim();
       if (!date || !site) { return; }
       var issues = document.getElementById("dm-issues").value.trim();
-      S.fire.drills.push({ id: "d-" + Date.now().toString(36), date: date, site: site,
+      S.fire.drills.push(Object.assign({ id: "d-" + Date.now().toString(36), date: date, site: site,
         shift: document.getElementById("dm-shift").value, type: document.getElementById("dm-type").value,
-        evacMinutes: document.getElementById("dm-evac").value, issues: issues, passed: !issues });
-      persist(K.fire, S.fire); closeModal(); render();
+        evacMinutes: document.getElementById("dm-evac").value, issues: issues, passed: !issues },
+        { loggedBy: actorName(), loggedById: actorId(), loggedAt: new Date().toISOString() }));
+      persist(K.fire, S.fire);
+      logAct("fire", "Logged a " + document.getElementById("dm-type").value + " drill at " + site + " (" + date + ")");
+      closeModal(); render();
     })(); break;
     case "del-drill":
       S.fire.drills = S.fire.drills.filter(function (x) { return x.id !== d.id; });
@@ -3215,6 +4802,34 @@ function onChange(e) {
   if (!bind) { return; }
   var d = t.dataset;
   switch (bind) {
+    case "act-user": S.ui.actUser = t.value; render(); break;
+    case "isp-sched": (function () {
+      var c = clientById(d.client);
+      var period = annualPeriod();
+      if (!c || !period || !(c.ispDate || "").trim()) { return; }
+      var key = qtrKey(c.id, c.ispDate, period.key);
+      var entry = S.qtr[key] || (S.qtr[key] = {});
+      entry.scheduledDate = t.value;
+      entry.scheduledBy = t.value ? actorName() : "";
+      entry.scheduledAt = t.value ? new Date().toISOString() : "";
+      persist(K.qtr, S.qtr);
+      logAct("qidp", c.name + " · ISP meeting " + (t.value ? "scheduled for " + t.value : "unscheduled"));
+      render();
+    })(); break;
+    case "qtr-filed": (function () {
+      var c = clientById(d.client);
+      if (!c || !(c.ispDate || "").trim()) { return; }
+      var key = qtrKey(c.id, c.ispDate, d.period);
+      var entry = S.qtr[key] || (S.qtr[key] = {});
+      entry.done = t.checked;
+      entry.doneDate = t.checked ? (entry.doneDate || todayStr()) : "";
+      entry.confirmedBy = t.checked ? actorName() : "";
+      entry.confirmedById = t.checked ? actorId() : "";
+      entry.confirmedAt = t.checked ? new Date().toISOString() : "";
+      persist(K.qtr, S.qtr);
+      logAct("qidp", c.name + " · " + d.period + " → " + (t.checked ? "confirmed filed in MCIS" : "unmarked"));
+      render();
+    })(); break;
     case "review-client": S.ui.reviewClient = t.value || null; render(); break;
     /* Live inside the client modal: suggest the living arrangement that usually goes with the
        chosen service line, and only surface IHS intensity when it applies. Both stay editable. */
@@ -3293,6 +4908,8 @@ function onChange(e) {
     case "rec-field": (function () {
       var patch = {};
       patch[d.field] = t.value;
+      /* a hand-typed verifier name is an override; record who typed it */
+      if (d.field === "verifiedBy") { patch.verifiedById = ""; patch.verifiedAt = new Date().toISOString(); }
       updRec(d.client, d.ind, patch);
       if (d.field === "evidenceLocation") { render(); }
     })(); break;
@@ -3303,8 +4920,10 @@ function onChange(e) {
       persist(K.org, S.org);
     })(); break;
     case "fire-date":
-      S.fire.checks[d.item] = Object.assign(S.fire.checks[d.item] || {}, { lastDone: t.value });
-      persist(K.fire, S.fire); render(); break;
+      S.fire.checks[d.item] = Object.assign(S.fire.checks[d.item] || {}, { lastDone: t.value }, actorStamp());
+      persist(K.fire, S.fire);
+      logAct("fire", "Set safety check " + d.item + " last done " + (t.value || "(blank)"));
+      render(); break;
     case "locator-filter": S.ui.locatorFilter = t.value;
       document.getElementById("locatorBody").innerHTML = locatorBodyHtml(); break;
     case "rubric-sl": S.ui.rubricFilterSL = t.value; render(); break;
@@ -3338,10 +4957,30 @@ function applyTheme() {
   document.title = PROVIDER_CONFIG.meta.appTitle;
   document.getElementById("brandName").textContent = PROVIDER_CONFIG.meta.appTitle;
   document.getElementById("brandSub").textContent = PROVIDER_CONFIG.meta.subtitle;
+  document.getElementById("brandMark").textContent = brandMark();
+  var syncBtn = document.getElementById("syncBtn");
+  if (syncBtn) { syncBtn.hidden = Store.getMode() !== "supabase"; }
+  var soLbl = document.getElementById("signOutLbl");
+  if (soLbl) { soLbl.textContent = Auth.pwRequired() ? "Sign out" : "Switch person"; }
+  var soBtn = soLbl && soLbl.closest("button");
+  if (soBtn) { soBtn.setAttribute("title", soLbl.textContent); }
 }
 function showStorageNote() {
   var mode = Store.getMode();
   var el = document.getElementById("storageNote");
+  var err = Store.lastError();
+  if (mode === "supabase") {
+    el.classList.remove("on");
+    el.querySelector(".inner").textContent = "";
+    return;
+  }
+  if (err) {
+    el.classList.add("on");
+    el.querySelector(".inner").textContent =
+      "Supabase is configured but unreachable (" + err + ") — working from this browser's own copy instead. " +
+      "Fix it in Settings before entering more, or this machine will drift from the shared record.";
+    return;
+  }
   if (mode === "memory") {
     el.classList.add("on");
     el.querySelector(".inner").textContent =
@@ -3352,16 +4991,72 @@ function showStorageNote() {
       "Saving to this browser only. In the shared claude.ai runtime all QA staff see one dataset; here, use Export/Import to sync devices.";
   }
 }
+var appLoaded = false;
+var syncing = false;
+/* Two people on one dataset: whoever comes back to the tab picks up what the
+   other one saved while it was in the background. */
+var lastStamp = "";
+async function refreshFromStore(reason) {
+  if (Store.getMode() !== "supabase" || syncing || !appLoaded || !Auth.current()) { return; }
+  syncing = true;
+  try {
+    if (reason !== "manual") {
+      /* Do not redraw the screen under someone's cursor unless the shared
+         record actually moved — a poll that always re-renders would fight
+         whoever is mid-edit. */
+      var stamp = await Supa.latestStamp();
+      if (stamp && stamp === lastStamp) { syncing = false; return; }
+      lastStamp = stamp;
+    }
+    Store.invalidate();
+    await loadAll();
+    try { lastStamp = await Supa.latestStamp(); } catch (e) {}
+    render();
+    if (reason === "manual") { toast("Refreshed from the shared record"); }
+  } catch (e) {
+    if (reason === "manual") { safeAlert("Could not refresh: " + e.message); }
+  }
+  syncing = false;
+}
+var pollTimer = null;
+function startSharedPoll() {
+  clearInterval(pollTimer);
+  if (Store.getMode() !== "supabase") { return; }
+  pollTimer = setInterval(function () {
+    if (!document.hidden) { refreshFromStore("poll"); }
+  }, 45000);
+}
+async function enterApp() {
+  hideAuthGate();
+  var syncBtn = document.getElementById("syncBtn");
+  if (syncBtn) { syncBtn.hidden = Store.getMode() !== "supabase"; }
+  if (!appLoaded) { await loadAll(); appLoaded = true; }
+  startSharedPoll();
+  renderUserChip();
+  render();
+}
+function onKeydown(e) {
+  if (e.key !== "Enter" || !gateOpen()) { return; }
+  var btn = document.getElementById("auth-primary");
+  if (btn) { e.preventDefault(); btn.click(); }
+}
 async function boot() {
   try {
-    Store.init();
+    await Store.init();
     applyTheme();
     showStorageNote();
-    await loadAll();
     document.addEventListener("click", onClick);
     document.addEventListener("change", onChange);
     document.addEventListener("input", onInput);
-    render();
+    document.addEventListener("keydown", onKeydown);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) { refreshFromStore("focus"); }
+    });
+    await Auth.load();
+    Auth.restore();
+    var me = Auth.current();
+    if (!me || me.mustChange) { showAuthGate(); return; }
+    await enterApp();
   } catch (err) {
     document.getElementById("view").innerHTML =
       '<div class="empty">Startup error: ' + esc(err && err.message) + "</div>";
