@@ -364,12 +364,19 @@ var PROVIDER_CONFIG = {
     providerName: "Hope Found, Inc.",
     appTitle: "PCR Audit-Readiness System",
     mark: "HF",
-    /* Passwords are off while the team gets used to the tool: people pick their
-       name and go, and every answer is still stamped with who recorded it. Flip
-       this to true to require a password — nothing else has to change, and the
-       accounts already on file keep their roles. Off, this is attribution, not
-       access control: anyone who can open the app can pick any name. */
-    requirePassword: false,
+    /* How people get in:
+         "none"     — pick your name from a list. Attribution, not access
+                      control: anyone who can open the app can pick any name.
+         "local"    — a password per person, hashed in this app's own list.
+                      Keeps strangers out of the app, but the data table is
+                      still reachable with the Supabase anon key alone.
+         "supabase" — the real one. Sign in against the Supabase project with
+                      an email and password; every data request carries that
+                      person's token, and the table's policies only accept
+                      authenticated requests, so the anon key opens nothing
+                      on its own. Requires a connected project (Settings) and
+                      the authenticated policies from supabase-setup.sql. */
+    authMode: "supabase",
     subtitle: "Hope Found, Inc. — DC DDA Person-Centered Review preparation",
     reviewName: "Person-Centered Review (PCR)",
     auditor: "Qlarant (DC DDS/DDA)"
@@ -728,13 +735,23 @@ var Supa = (function () {
   function current() { return cfg; }
   function configured() { return !!(cfg && cfg.url && cfg.anonKey); }
   function base() { return String(cfg.url).replace(/\/+$/, "") + "/rest/v1/" + TABLE; }
+  /* The bearer is the signed-in person's token when there is one, so RLS can
+     tell who is asking. Falling back to the anon key keeps the unauthenticated
+     modes working; with authenticated-only policies that fallback simply gets
+     refused, which is the point. */
+  var bearer = null;
+  function setBearer(t) { bearer = t; }
   function headers(extra) {
-    var h = { apikey: cfg.anonKey, Authorization: "Bearer " + cfg.anonKey,
+    var h = { apikey: cfg.anonKey, Authorization: "Bearer " + (bearer || cfg.anonKey),
               "Content-Type": "application/json" };
     if (extra) { Object.keys(extra).forEach(function (k) { h[k] = extra[k]; }); }
     return h;
   }
   async function req(url, opts) {
+    if (Auth.viaSupabase()) {
+      var t = await SupaAuth.accessToken();
+      if (t) { bearer = t; if (opts && opts.headers) { opts.headers.Authorization = "Bearer " + t; } }
+    }
     var res = await fetch(url, opts);
     if (!res.ok) {
       var detail = "";
@@ -792,9 +809,142 @@ var Supa = (function () {
     }
   }
   return { load: load, current: current, configured: configured, writeCred: writeCred,
+           setBearer: setBearer,
            fetchAll: fetchAll, getOne: getOne, setOne: setOne, delOne: delOne, probe: probe,
            latestStamp: latestStamp,
            table: TABLE };
+})();
+
+/* =====================================================================
+   SUPABASE AUTH
+   The real gate. Each person signs in against the Supabase project and
+   every request to the data table carries their access token, so the
+   anon key on its own opens nothing once the table's policies are
+   restricted to authenticated requests (see supabase-setup.sql).
+   The session lives in THIS browser only, never in the shared dataset.
+   ===================================================================== */
+var SupaAuth = (function () {
+  var SESS_KEY = "pcr:sbsession";
+  var sess = null;
+
+  function read() {
+    try {
+      var raw = window.localStorage.getItem(SESS_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+  function write(v) {
+    sess = v;
+    try {
+      if (v) { window.localStorage.setItem(SESS_KEY, JSON.stringify(v)); }
+      else { window.localStorage.removeItem(SESS_KEY); }
+    } catch (e) {}
+  }
+  function authBase() {
+    var c = Supa.current();
+    return String(c.url).replace(/\/+$/, "") + "/auth/v1";
+  }
+  function anonHeaders(extra) {
+    var c = Supa.current();
+    var h = { apikey: c.anonKey, "Content-Type": "application/json" };
+    if (extra) { Object.keys(extra).forEach(function (k) { h[k] = extra[k]; }); }
+    return h;
+  }
+  async function call(path, opts) {
+    var res = await fetch(authBase() + path, opts);
+    var body = null;
+    try { body = await res.json(); } catch (e) {}
+    if (!res.ok) {
+      var msg = (body && (body.error_description || body.msg || body.message || body.error)) ||
+                ("HTTP " + res.status);
+      throw new Error(msg);
+    }
+    return body;
+  }
+  function store(tok) {
+    /* expires_at comes back in seconds; keep it that way and compare in seconds. */
+    var expires = tok.expires_at || (Math.floor(Date.now() / 1000) + (tok.expires_in || 3600));
+    write({ access_token: tok.access_token, refresh_token: tok.refresh_token,
+            expires_at: expires, user: tok.user || (sess && sess.user) || null });
+    return sess;
+  }
+  async function signIn(email, password) {
+    if (!Supa.configured()) { return { ok: false, error: "No Supabase project is connected yet." }; }
+    try {
+      var tok = await call("/token?grant_type=password", {
+        method: "POST", headers: anonHeaders(),
+        body: JSON.stringify({ email: String(email).trim(), password: password })
+      });
+      store(tok);
+      return { ok: true, user: tok.user };
+    } catch (e) {
+      /* GoTrue says "Invalid login credentials" for both a wrong password and
+         an unknown address, which is the correct thing to pass along as-is. */
+      return { ok: false, error: e.message };
+    }
+  }
+  async function refresh() {
+    if (!sess || !sess.refresh_token) { return false; }
+    try {
+      var tok = await call("/token?grant_type=refresh_token", {
+        method: "POST", headers: anonHeaders(),
+        body: JSON.stringify({ refresh_token: sess.refresh_token })
+      });
+      store(tok);
+      return true;
+    } catch (e) { write(null); return false; }
+  }
+  /* Every data request goes through here, so an expiring token renews itself
+     rather than surfacing as a mystery 401 halfway through a review. */
+  async function accessToken() {
+    if (!sess) { return null; }
+    var now = Math.floor(Date.now() / 1000);
+    if (sess.expires_at && sess.expires_at - now < 60) {
+      if (!(await refresh())) { return null; }
+    }
+    return sess.access_token;
+  }
+  async function restore() {
+    sess = read();
+    if (!sess) { return null; }
+    var tok = await accessToken();
+    if (!tok) { return null; }
+    try {
+      var u = await call("/user", { headers: anonHeaders({ Authorization: "Bearer " + tok }) });
+      sess.user = u;
+      write(sess);
+      return sess;
+    } catch (e) { write(null); return null; }
+  }
+  async function signOut() {
+    var tok = sess && sess.access_token;
+    write(null);
+    if (!tok) { return; }
+    try { await call("/logout", { method: "POST", headers: anonHeaders({ Authorization: "Bearer " + tok }) }); }
+    catch (e) {}
+  }
+  function user() { return sess ? sess.user : null; }
+  function signedIn() { return !!(sess && sess.access_token); }
+  async function sendReset(email) {
+    if (!Supa.configured()) { return { ok: false, error: "No Supabase project is connected yet." }; }
+    try {
+      await call("/recover", { method: "POST", headers: anonHeaders(),
+        body: JSON.stringify({ email: String(email).trim() }) });
+      return { ok: true };
+    } catch (e) { return { ok: false, error: e.message }; }
+  }
+  async function updatePassword(newPw) {
+    var tok = await accessToken();
+    if (!tok) { return { ok: false, error: "Your session has expired — sign in again." }; }
+    try {
+      await call("/user", { method: "PUT",
+        headers: anonHeaders({ Authorization: "Bearer " + tok }),
+        body: JSON.stringify({ password: newPw }) });
+      return { ok: true };
+    } catch (e) { return { ok: false, error: e.message }; }
+  }
+  return { signIn: signIn, signOut: signOut, restore: restore, accessToken: accessToken,
+           user: user, signedIn: signedIn, sendReset: sendReset, updatePassword: updatePassword };
 })();
 
 /* =====================================================================
@@ -1061,7 +1211,12 @@ var Hash = (function () {
 var Auth = (function () {
   var SESSION_HOURS = 12;
   var MIN_PW = 8;
-  function pwRequired() { return PROVIDER_CONFIG.meta.requirePassword !== false; }
+  function mode() {
+    var m = PROVIDER_CONFIG.meta.authMode;
+    return (m === "local" || m === "supabase") ? m : "none";
+  }
+  function pwRequired() { return mode() !== "none"; }
+  function viaSupabase() { return mode() === "supabase"; }
   var users = [];
   var me = null;
 
@@ -1103,7 +1258,7 @@ var Auth = (function () {
     try { await load(); } catch (e) {}
     var u = byName(name);
     if (!u || u.active === false) { return { ok: false, error: "No active account under that name." }; }
-    if (pwRequired()) {
+    if (mode() === "local") {
       var ok = await Hash.verify(password, u.cred);
       if (!ok) { return { ok: false, error: "Incorrect password." }; }
     }
@@ -1123,7 +1278,7 @@ var Auth = (function () {
     var name = String(data.name || "").trim();
     if (name.length < 2) { return "Enter the person's full name — it is how they sign in and what gets stamped on every answer."; }
     if (nameTaken(name)) { return "Someone is already on the list under that name. Names have to be unique, or the record cannot say who did what."; }
-    if (pwRequired()) {
+    if (mode() === "local") {
       if (String(data.password || "").length < MIN_PW) { return "Password must be at least " + MIN_PW + " characters."; }
       if (data.password !== data.confirm) { return "The two passwords do not match."; }
     }
@@ -1132,11 +1287,11 @@ var Auth = (function () {
   async function createUser(data) {
     var err = validateNew(data);
     if (err) { return { ok: false, error: err }; }
-    var cred = pwRequired() ? await Hash.make(data.password) : null;
+    var cred = mode() === "local" ? await Hash.make(data.password) : null;
     var u = { id: "u-" + Date.now().toString(36) + "-" + Hash.randomHex(3),
               name: String(data.name).trim().replace(/\s+/g, " "),
               role: data.role === "admin" ? "admin" : "staff", active: true,
-              cred: cred, pwVersion: 1, mustChange: pwRequired() && !!data.mustChange,
+              cred: cred, pwVersion: 1, mustChange: mode() === "local" && !!data.mustChange,
               createdAt: new Date().toISOString(), lastSignIn: "" };
     users.push(u);
     save();
@@ -1181,8 +1336,44 @@ var Auth = (function () {
     if (!ok) { return { ok: false, error: "Current password is incorrect." }; }
     return await setPassword(me.id, newPw, confirmPw, false);
   }
+  /* Supabase owns who may sign in; the roster still owns the display name and
+     the role, because that name is what every past answer was stamped with.
+     Linking by name where one matches means a team that started on the name
+     picker keeps its history instead of growing a second profile per person. */
+  async function linkSupabaseUser(su) {
+    if (!su || !su.id) { return { ok: false, error: "Supabase did not return a user." }; }
+    var meta = su.user_metadata || {};
+    var fullName = String(meta.full_name || meta.name || "").trim().replace(/\s+/g, " ");
+    var email = String(su.email || "").trim();
+    var prof = users.filter(function (u) { return u.authId === su.id; })[0];
+    if (!prof && fullName) {
+      var sameName = byName(fullName);
+      if (sameName && !sameName.authId) { prof = sameName; prof.authId = su.id; }
+    }
+    if (!prof) {
+      var name = fullName || (email ? email.split("@")[0] : "") || "Unnamed";
+      if (nameTaken(name)) { name = name + " (" + email + ")"; }
+      prof = { id: "u-" + Date.now().toString(36) + "-" + Hash.randomHex(3),
+               name: name, authId: su.id, email: email,
+               role: adminCount() === 0 ? "admin" : "staff", active: true,
+               cred: null, pwVersion: 1, mustChange: false,
+               createdAt: new Date().toISOString(), lastSignIn: "" };
+      users.push(prof);
+    }
+    if (prof.active === false) {
+      return { ok: false, error: "This account has been taken off the list by an administrator." };
+    }
+    prof.email = email || prof.email;
+    prof.authId = su.id;
+    prof.lastSignIn = new Date().toISOString();
+    me = prof;
+    save();
+    return { ok: true, user: prof, isNew: !prof.createdAt };
+  }
+  function clearCurrent() { me = null; }
   return { load: load, save: save, all: all, replaceAll: replaceAll, byId: byId, byName: byName,
-           pwRequired: pwRequired,
+           pwRequired: pwRequired, mode: mode, viaSupabase: viaSupabase,
+           linkSupabaseUser: linkSupabaseUser, clearCurrent: clearCurrent,
            needsSetup: needsSetup, current: current, isAdmin: isAdmin, restore: restore, touch: touch,
            signIn: signIn, signOut: signOut, createUser: createUser, updateUser: updateUser,
            setPassword: setPassword, changeOwnPassword: changeOwnPassword, adminCount: adminCount,
@@ -2440,6 +2631,7 @@ function settingsModal() {
     (me ? " (" + (admin ? "administrator" : "QA staff") + ")" : "") +
     (Auth.pwRequired() ? ' &nbsp;<button class="intent-toggle" type="button" data-action="change-my-password">Change my password</button>' : "") +
     ' &nbsp;<button class="intent-toggle" type="button" data-action="sign-out">' + (Auth.pwRequired() ? "Sign out" : "Switch person") + "</button>" +
+    (Auth.viaSupabase() ? '<br><span class="small">Signed in through Supabase' + (Auth.current() && Auth.current().email ? " as " + esc(Auth.current().email) : "") + ". The records table only answers authenticated requests.</span>" : "") +
     '<br><span class="small">Everything you rate is stamped with this name. Manage the team under <strong>Users &amp; Activity</strong>.</span></div>' +
     '<div class="note-box"><strong>Storage:</strong> ' + esc(modeLabel) +
     (Store.lastError() ? '<br><span class="small" style="color:var(--gap)">Supabase is configured but unreachable: ' + esc(Store.lastError()) + "</span>" : "") +
@@ -3902,6 +4094,9 @@ function saveQtrFromModal(clientId, periodKey) {
 
 /* ============================ SIGN-IN GATE ============================ */
 var authErr = "";
+/* A rejected password re-renders the card, which would otherwise throw away
+   the address they just typed and make them enter it twice. */
+var authEmail = "";
 function authGateEl() { return document.getElementById("authGate"); }
 function gateOpen() { return authGateEl().classList.contains("on"); }
 function showAuthGate() {
@@ -3910,6 +4105,7 @@ function showAuthGate() {
   renderAuthGate();
 }
 function hideAuthGate() {
+  authEmail = "";
   document.body.classList.remove("locked");
   authGateEl().classList.remove("on");
   document.getElementById("authCard").innerHTML = "";
@@ -3927,6 +4123,15 @@ function renderAuthGate() {
     esc(PROVIDER_CONFIG.meta.providerName) + "</div>" +
     '<div class="small muted">' + esc(PROVIDER_CONFIG.meta.subtitle || "") + "</div></div></div>";
   var html;
+  if (Auth.viaSupabase()) {
+    card.innerHTML = mark + supabaseGateHtml(errHtml);
+    setTimeout(function () {
+      var f = (authEmail ? card.querySelector("#au-pw") : null) ||
+              card.querySelector("#au-email") || card.querySelector("input");
+      if (f) { try { f.focus(); } catch (e) {} }
+    }, 30);
+    return;
+  }
   if (!Auth.pwRequired()) {
     card.innerHTML = mark + pickerHtml(errHtml);
     setTimeout(function () {
@@ -3994,12 +4199,96 @@ function pickerHtml(errHtml) {
     'Passwords are switched off for now — anyone who can open the app can pick any name, so this is a record of who did what, not a lock on who gets in.</div>';
   return html;
 }
+/* Work entered before this machine was switched to Supabase sign-in is still
+   sitting in its localStorage, and the gate would otherwise keep its owner
+   from ever reaching it. Handing someone their own browser's data back is not
+   a way past the gate — it never touches the shared record. */
+function strandedLocalKeys() {
+  var out = [];
+  try {
+    for (var i = 0; i < window.localStorage.length; i++) {
+      var k = window.localStorage.key(i);
+      if (k && k.indexOf("pcr:") === 0 && k !== "pcr:supabase" && k !== "pcr:sbsession") { out.push(k); }
+    }
+  } catch (e) {}
+  return out;
+}
+function rescueLocalBackup() {
+  var keys = strandedLocalKeys(), out = { exportedAt: new Date().toISOString(), strandedLocalCopy: true };
+  keys.forEach(function (k) {
+    try { out[k] = JSON.parse(window.localStorage.getItem(k)); } catch (e) {}
+  });
+  var text = JSON.stringify(out, null, 1);
+  download("pcr-local-copy-" + todayStr() + ".json", text);
+  showTextModal("This browser's own copy", text, "pcr-local-copy-" + todayStr() + ".json");
+}
+function supabaseGateHtml(errHtml) {
+  var stranded = strandedLocalKeys().length;
+  var rescue = stranded ? '<div class="auth-note">This browser still holds ' + stranded +
+    " record(s) saved before sign-in was switched on. They are not in the shared project yet." +
+    ' <button class="intent-toggle" type="button" data-action="rescue-local">Download them first</button>,' +
+    " then hand the file to an administrator to import once you are in.</div>" : "";
+  if (!Supa.configured()) {
+    return "<h2>Not connected yet</h2>" +
+      '<div class="auth-sub">This app signs people in through a Supabase project, and no project is connected in this browser yet.</div>' +
+      '<div class="auth-note">Paste the project URL and anon key below — they come from Project Settings → API in Supabase. ' +
+      'An administrator can give you both; they are the same on every machine.</div>' +
+      '<div class="form-grid" style="margin-top:12px">' +
+      authField("sb-url", "Project URL", "text", ' placeholder="https://xxxxxxxx.supabase.co"') +
+      authField("sb-key", "Anon public key", "password", ' placeholder="eyJhbGciOi…"') +
+      "</div>" +
+      '<div id="sb-out" class="small" style="margin-top:6px"></div>' +
+      '<div class="auth-actions"><button class="btn" type="button" id="auth-primary" data-action="sb-gate-connect">Connect</button></div>' +
+      rescue;
+  }
+  return "<h2>Sign in</h2>" +
+    '<div class="auth-sub">Every Met / Not Met / N/A you record is stamped with your name and the moment you clicked it.</div>' + errHtml +
+    '<div class="form-grid">' +
+    authField("au-email", "Email", "email", ' autocomplete="username" placeholder="you@hopefound.org" value="' + esc(authEmail) + '"') +
+    authField("au-pw", "Password", "password", ' autocomplete="current-password"') +
+    "</div>" +
+    '<div class="auth-actions"><button class="btn" type="button" id="auth-primary" data-action="auth-supabase-login">Sign in</button></div>' +
+    '<div class="auth-note"><button class="intent-toggle" type="button" data-action="auth-forgot">Email me a reset link</button>' +
+    " &nbsp;·&nbsp; Accounts are created in the Supabase project, not here — ask an administrator to invite you.</div>" +
+    rescue;
+}
 function authVal(id) {
   var el = document.getElementById(id);
   return el ? el.value : "";
 }
 function authFail(msg) { authErr = msg; renderAuthGate(); }
 
+async function doSupabaseLogin() {
+  var email = authVal("au-email"), pw = authVal("au-pw");
+  authEmail = email;
+  if (!email || !pw) { authFail("Enter your email and password."); return; }
+  authErr = "";
+  var btn = document.getElementById("auth-primary");
+  if (btn) { btn.disabled = true; btn.textContent = "Signing in…"; }
+  var res = await SupaAuth.signIn(email, pw);
+  if (!res.ok) {
+    if (btn) { btn.disabled = false; btn.textContent = "Sign in"; }
+    authFail(res.error);
+    return;
+  }
+  await afterSupabaseSignIn();
+}
+async function doAuthForgot() {
+  var email = authVal("au-email");
+  authEmail = email;
+  if (!email) { authFail("Type your email address first, then ask for the link."); return; }
+  var res = await SupaAuth.sendReset(email);
+  authFail(res.ok
+    ? "If that address has an account, a reset link is on its way to it."
+    : res.error);
+}
+async function doGateConnect() {
+  var c = sbCredFromForm();
+  if (c.error) { sbOut(c.error, true); return; }
+  Supa.writeCred(c);
+  authErr = "";
+  renderAuthGate();
+}
 async function doAuthPick(id) {
   var u = Auth.byId(id);
   if (!u) { authFail("That name is no longer on the list."); return; }
@@ -4050,6 +4339,12 @@ async function doAuthForcedChange() {
 function doSignOut() {
   var me = Auth.current();
   if (me) { logAct("signin", "Signed out"); }
+  if (Auth.viaSupabase()) {
+    /* Reload rather than tear the shell down by hand: the whole dataset came
+       from a token that is about to stop working, so none of it should linger. */
+    SupaAuth.signOut().then(function () { window.location.reload(); });
+    return;
+  }
   Auth.signOut();
   closeModal();
   document.getElementById("view").innerHTML = "";
@@ -4153,10 +4448,13 @@ function renderUsers() {
   var admin = Auth.isAdmin();
   var html = '<h2 class="view-title">Users &amp; Activity</h2>' +
     '<p class="view-sub">Everyone picks their name before recording anything, so every answer carries the name of the person who made it and the moment they did \u2014 no one types a verifier name by hand.</p>' +
+    (Auth.viaSupabase() ? '<div class="note-box no-print"><strong>Accounts live in Supabase.</strong> People sign in with the email and password on their Supabase account, and the records table only answers authenticated requests \u2014 the anon key on its own opens nothing. To add someone: Supabase dashboard \u2192 Authentication \u2192 Users \u2192 <em>Add user</em>, and set <code>full_name</code> in their user metadata so their answers are stamped with a name rather than an email. They appear in the list below the first time they sign in; set their role here then. Turning an account off here stops them using this app but does not delete their Supabase login \u2014 remove that in the dashboard too.</div>' : "") +
     (Auth.pwRequired() ? "" : '<div class="note-box no-print"><strong>Passwords are off.</strong> People pick their name from a list and start working, which keeps the record of who did what without anyone memorising a password. It is not a lock on the door \u2014 anyone who can open the app can pick any name. To turn passwords on, set <code>requirePassword: true</code> in <code>PROVIDER_CONFIG.meta</code>: everyone listed here keeps their name and role, and an administrator sets each password from this screen.</div>');
 
   html += '<h3 class="section-title">Accounts</h3>';
-  if (admin) {
+  if (admin && Auth.viaSupabase()) {
+    html += '<div class="small muted" style="margin-bottom:10px">You are an administrator: you can change roles and take someone off the list. New people are invited from the Supabase dashboard.</div>';
+  } else if (admin) {
     html += '<div class="toolbar"><button class="btn secondary" type="button" data-action="add-user">+ Add user</button>' +
       '<div class="small muted" style="align-self:center">You are an administrator: you can add people, change roles, and ' +
       (Auth.pwRequired() ? "reset passwords" : "take someone off the list") + ".</div></div>";
@@ -4164,12 +4462,14 @@ function renderUsers() {
     html += '<div class="note-box">Only an administrator can add people' +
       (Auth.pwRequired() ? " or reset passwords" : "") + ". Ask one of the administrators listed below.</div>";
   }
-  html += '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Last here</th>' +
+  html += '<div class="table-wrap"><table><thead><tr><th>Name</th>' +
+    (Auth.viaSupabase() ? "<th>Email</th>" : "") + "<th>Role</th><th>Status</th><th>Last here</th>" +
     (admin ? "<th></th>" : "") + "</tr></thead><tbody>";
   Auth.all().slice().sort(function (a, b) { return a.name < b.name ? -1 : 1; }).forEach(function (u) {
     var isMe = me && u.id === me.id;
     html += "<tr" + (u.active === false ? ' class="flag-row"' : "") + "><td><strong>" + esc(u.name) + "</strong>" +
       (isMe ? " " + badge("neutral", "you") : "") + "</td>" +
+      (Auth.viaSupabase() ? "<td class='small muted'>" + esc(u.email || "\u2014") + "</td>" : "") +
       "<td>" + badge(u.role === "admin" ? "neutral" : "outline", u.role === "admin" ? "Administrator" : "QA staff") + "</td>" +
       "<td>" + (u.active === false ? badge("gap", "Deactivated") : badge("met", "Active")) +
       (u.mustChange ? " " + badge("warn", "must set password") : "") + "</td>" +
@@ -4286,8 +4586,9 @@ function changePasswordModal() {
   var min = Auth.minPassword();
   openModal("<h3>Change my password</h3>" +
     '<div class="auth-err" id="um-err"></div>' +
+    (Auth.viaSupabase() ? '<div class="small muted" style="margin-bottom:8px">This changes the password on your Supabase account, which is what you sign in with everywhere.</div>' : "") +
     '<div class="form-grid">' +
-    '<div class="full"><label>Current password</label><input type="password" id="cp-old" autocomplete="current-password"></div>' +
+    (Auth.viaSupabase() ? "" : '<div class="full"><label>Current password</label><input type="password" id="cp-old" autocomplete="current-password"></div>') +
     '<div class="full"><label>New password (at least ' + min + ' characters)</label><input type="password" id="cp-new" autocomplete="new-password"></div>' +
     '<div class="full"><label>Confirm new password</label><input type="password" id="cp-new2" autocomplete="new-password"></div>' +
     "</div>" +
@@ -4295,8 +4596,15 @@ function changePasswordModal() {
     '<button class="btn" type="button" data-action="save-my-password">Change password</button></div>');
 }
 async function saveOwnPassword() {
-  var res = await Auth.changeOwnPassword(document.getElementById("cp-old").value,
-    document.getElementById("cp-new").value, document.getElementById("cp-new2").value);
+  var nw = document.getElementById("cp-new").value, nw2 = document.getElementById("cp-new2").value;
+  var res;
+  if (Auth.viaSupabase()) {
+    if (String(nw).length < Auth.minPassword()) { umErr("Password must be at least " + Auth.minPassword() + " characters."); return; }
+    if (nw !== nw2) { umErr("The two passwords do not match."); return; }
+    res = await SupaAuth.updatePassword(nw);
+  } else {
+    res = await Auth.changeOwnPassword(document.getElementById("cp-old").value, nw, nw2);
+  }
   if (!res.ok) { umErr(res.error); return; }
   logAct("account", "Changed their own password");
   closeModal();
@@ -4463,6 +4771,10 @@ function onClick(e) {
   var a = t.getAttribute("data-action");
   var d = t.dataset;
   switch (a) {
+    case "auth-supabase-login": doSupabaseLogin(); break;
+    case "auth-forgot": doAuthForgot(); break;
+    case "sb-gate-connect": doGateConnect(); break;
+    case "rescue-local": rescueLocalBackup(); break;
     case "auth-pick": doAuthPick(d.id); break;
     case "auth-add": doAuthAdd(); break;
     case "auth-setup": doAuthSetup(); break;
@@ -5040,11 +5352,33 @@ function onKeydown(e) {
   var btn = document.getElementById("auth-primary");
   if (btn) { e.preventDefault(); btn.click(); }
 }
+/* With the table restricted to authenticated requests, the roster itself is
+   behind the gate — so in supabase mode nothing is read until sign-in lands. */
+async function afterSupabaseSignIn() {
+  Supa.setBearer(await SupaAuth.accessToken());
+  await Store.init();
+  showStorageNote();
+  if (Store.getMode() !== "supabase") {
+    authFail("Signed in, but the records table could not be reached" +
+      (Store.lastError() ? " (" + Store.lastError() + ")" : "") + ".");
+    return;
+  }
+  await Store.prefetch();
+  await Auth.load();
+  var linked = await Auth.linkSupabaseUser(SupaAuth.user());
+  if (!linked.ok) {
+    await SupaAuth.signOut();
+    Auth.clearCurrent();
+    authFail(linked.error);
+    return;
+  }
+  authErr = "";
+  await enterApp();
+  logAct("signin", "Signed in");
+}
 async function boot() {
   try {
-    await Store.init();
     applyTheme();
-    showStorageNote();
     document.addEventListener("click", onClick);
     document.addEventListener("change", onChange);
     document.addEventListener("input", onInput);
@@ -5052,6 +5386,16 @@ async function boot() {
     document.addEventListener("visibilitychange", function () {
       if (!document.hidden) { refreshFromStore("focus"); }
     });
+    if (Auth.viaSupabase()) {
+      Supa.load();
+      if (!Supa.configured()) { showAuthGate(); return; }
+      var sess = await SupaAuth.restore();
+      if (!sess) { showAuthGate(); return; }
+      await afterSupabaseSignIn();
+      return;
+    }
+    await Store.init();
+    showStorageNote();
     await Auth.load();
     Auth.restore();
     var me = Auth.current();
