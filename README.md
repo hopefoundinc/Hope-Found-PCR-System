@@ -204,6 +204,23 @@ the shared dataset (`pcr:users`) so the same credentials work on every device; t
 browser's `localStorage` under `pcr:session` and expires after 12 hours. Settings has a full JSON
 backup export/import.
 
+## Service lines
+
+Eleven, all config-driven: In-Home Supports (with a Standard / High Intensity attribute), Host
+Home, Supported Living, Individualized Day Supports, Companion, Residential Habilitation, Day
+Habilitation, Respite (Daily), Respite (Hourly), Supported Employment, Employment Readiness. The
+465-item official Qlarant rubric currently covers the first five; the newer six carry no indicators
+yet and report honestly as *not yet scored* everywhere until their official content is imported
+(a Rubric Manager JSON import, validated by `rubric.schema.json` — its `serviceLine` enum already
+accepts all eleven).
+
+**Service line vs. living arrangement** are separate on purpose and both matter. Service line picks
+which rubric and score a person falls under. Living arrangement is where they actually live, and
+independently filters which indicators apply (an indicator's `appliesTo`). They usually match for
+residential lines, and routinely diverge for Day Hab, Respite, IDS, and employment clients who live
+in a family home. Changing service line in the Edit person modal auto-suggests the usual living
+arrangement for that line and leaves it editable.
+
 ## Cross-system sync (interim, until a second Hope Found build exists)
 
 Person records (name, service line, living arrangement, home/location, flags, QIDP name, ISP date,
@@ -221,7 +238,7 @@ manual export/import for it — the person-record shape shouldn't need to change
 
 The app ships **pre-loaded with the official Qlarant-extracted rubric**
 ([`hopefound_pcr_rubric.json`](hopefound_pcr_rubric.json), 465 indicators, effective 2022-11-07
-across all five service lines — Companion included; no version dates are hardcoded anywhere, the
+across all eleven service lines — Companion included; no version dates are hardcoded anywhere, the
 `effectiveDate` field on each item is the only source). 30 indicators mapping directly to HCBS
 Settings Rule provisions (lease/eviction protections, lockable space, roommate and visitor choice,
 privacy, food access, own schedule, community activities of choice, day-activity autonomy) carry
