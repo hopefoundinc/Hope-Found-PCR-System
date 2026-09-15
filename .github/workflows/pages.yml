@@ -27,11 +27,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # enablement: true turns Pages on the first time this runs, so the
-      # site does not need anyone to flip a switch in repo settings.
+      # Pages has to be switched on once by a human, in
+      # Settings -> Pages -> Source: GitHub Actions. The Actions token is not
+      # allowed to create the site itself ("Resource not accessible by
+      # integration"), so enablement: true cannot bootstrap it — this step
+      # just picks up the site once it exists.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Stage the site
         run: |

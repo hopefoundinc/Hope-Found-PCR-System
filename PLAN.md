@@ -69,10 +69,16 @@ Every feature works fully offline with deterministic logic. AI mode is optional 
   moved, so it never redraws under an active cursor. Schema and policy: `supabase-setup.sql`.
 - `pcr:users` — accounts: `id, name, role (admin|staff), active, cred {salt, hash, algo},
   pwVersion, mustChange, createdAt, lastSignIn`. Shared, so credentials work on every device.
-  `PROVIDER_CONFIG.meta.requirePassword` gates the password step end to end: when false the gate is a
-  name picker, `cred` is null, `signIn` skips verification, and the password fields disappear from the
-  add/manage-user modal and Settings. Roles, the activity log and every stamp behave identically either
-  way, so turning it on later needs no data migration — only a password set per person.
+  `PROVIDER_CONFIG.meta.authMode` selects the gate: `"none"` (name picker), `"local"` (PBKDF2 password
+  in this list), or `"supabase"` (Supabase Auth, the default). In supabase mode Supabase owns *who may
+  sign in* while the roster still owns the *display name and role*, because that name is what every
+  past answer was stamped with; `linkSupabaseUser` ties an auth id to a profile, matching on
+  `full_name` where one already exists so a team that started on the name picker keeps its history.
+  Roles, the activity log and every stamp behave identically in all three modes.
+  Boot order differs in supabase mode: with the table restricted to authenticated requests the roster
+  itself is behind the gate, so `Store.init()`, `Auth.load()` and `loadAll()` all run *after* sign-in
+  (`afterSupabaseSignIn`). `SupaAuth` holds the session in this browser's `localStorage` under
+  `pcr:sbsession` and refreshes the token inside `Supa.req`, so a long review never 401s mid-save.
   There is no username: `name` is the credential and the stamp both, looked up case- and
   whitespace-insensitively, and enforced unique on create and on rename — a duplicate name would make
   the audit trail ambiguous about who did what.

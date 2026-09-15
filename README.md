@@ -146,21 +146,47 @@ If the network or key fails, the app falls back to the offline draft and keeps w
 
 ## Sign-in and attribution
 
-**Passwords are currently off** (`PROVIDER_CONFIG.meta.requirePassword: false`). The app opens on
-*Who's working today?* — pick your name from the list, or add yourself, and start. Nothing else
-changes: every answer is still stamped with the name of whoever recorded it. Be clear-eyed about
-what this is: with passwords off it is a **record of who did what, not a lock on who gets in** —
-anyone who can open the app can pick any name. Set `requirePassword: true` to turn the password
-screen back on; everyone already on the list keeps their name and role, and an administrator sets
-each password from Users & Activity.
+**Sign-in goes through Supabase Auth** (`PROVIDER_CONFIG.meta.authMode: "supabase"`). Each person
+signs in with the email and password on their Supabase account, every request to the records table
+carries that person's access token, and the table's policies only answer authenticated requests —
+so the anon key on its own opens nothing. Someone who finds the deployed URL and reads the key out
+of the page source gets zero rows, not the caseload.
 
-With passwords on, sign-in is **full name and password, no username**. Either way, the sign-in is
-what makes the audit trail automatic: **click Met / Not Met / N/A and the system stamps your name and the exact moment onto
+`authMode` has three settings, and they are honestly different things:
+
+| | what it is |
+|---|---|
+| `"none"` | Pick your name from a list. Attribution, not access control — anyone who can open the app can pick any name. |
+| `"local"` | A password per person, hashed in the app's own list. Keeps strangers out of the app, but the data table is still reachable with the anon key alone. |
+| `"supabase"` | The real one, and the default. Supabase owns who may sign in; the table refuses unauthenticated requests. |
+
+**Adding people** happens in the Supabase dashboard, not in the app: *Authentication → Users → Add
+user*, and set `full_name` in their user metadata so their answers are stamped with a name rather
+than an email (without it the app falls back to the part before the `@`, which an administrator can
+rename under Users & Activity). They appear in the roster the first time they sign in; set their
+role then. **Turn off public sign-ups** — *Authentication → Sign In / Providers → Email → disable
+"Allow new users to sign up"* — or anyone holding the anon key can register themselves and become
+authenticated. That step is what makes the policies mean what they say.
+
+Someone who already had answers stamped under the name picker keeps them: if their Supabase
+`full_name` matches a name already in the roster, the two are linked rather than a second profile
+being created. Taking someone off the list in the app stops them using it but does not delete their
+Supabase login — remove that in the dashboard too.
+
+Forgotten passwords go through Supabase's own reset email (*Email me a reset link* on the sign-in
+screen). **Change my password** in Settings updates the Supabase account.
+
+A browser that was used before sign-in was switched on still holds that work in its own storage, and
+the gate would otherwise keep its owner from ever reaching it — so the sign-in screen offers to
+download that browser's own copy as a backup file. That is not a way past the gate: it only ever
+touches storage the person already has, never the shared record.
+
+Either way, the sign-in is what makes the audit trail automatic: **click Met / Not Met / N/A and the system stamps your name and the exact moment onto
 that answer** — nobody types a verifier name by hand any more, and when several people split the
 checks it is always clear who did which.
 
-- **First run** — with no one on the list yet, the first person to add themselves becomes the
-  administrator, and adds the rest of the team under **Users & Activity**.
+- **First run** — the first person to sign in becomes the administrator; everyone after is QA staff
+  until an administrator changes them under **Users & Activity**.
 - **The full name is the account.** It is what you sign in with and what gets stamped on every
   answer, so no one keeps a separate username in their head and the two can never drift apart.
   Matching ignores capitals and stray spaces. Because a name has to identify one person, the system
@@ -210,13 +236,12 @@ has actually changed, so a poll never yanks the screen out from under someone mi
 last-one-wins per key, and records are bundled per person, so two people reviewing different people
 never collide; two people on the *same* person can overwrite each other.
 
-**Treat the anon key like a password.** It is a client-side credential: anyone holding it and the URL
-can read and write every record. That is why the app keeps it in each browser rather than in this
-repository — hand it to each machine once. It is not sufficient if the deployed URL is public, and
-these records hold client names plus medication and behaviour-plan flags. `supabase-setup.sql`
-spells out what tightening it looks like: Supabase Auth with `to authenticated` instead of `to anon`
-(pair that with `requirePassword: true`), and, for HIPAA coverage, a paid Supabase plan and a signed
-BAA with them.
+The anon key still has to be present — PostgREST needs it to route the request — but with the
+authenticated-only policies it is no longer the thing protecting the data; a real account is. Two
+gaps remain, stated rather than hidden: any signed-in person can read and write every record (
+per-person limits would need a column on the table and policies checking `auth.uid()`), and these
+records hold client names plus medication and behaviour-plan flags, so HIPAA coverage requires a
+paid Supabase plan and a signed BAA with them.
 
 If Supabase is configured but unreachable, the app says so in a banner and falls back to this
 browser's own copy rather than pretending to be in sync.
@@ -313,3 +338,21 @@ exclusions, staff roles/requirements, and fire checklist. Then import that agenc
 roster. No engine logic changes.
 
 See [`PLAN.md`](PLAN.md) for the full architecture.
+
+## Deploying
+
+The app is one static file, so there is no build step.
+
+**GitHub Pages** (what this repo is set up for). Switch it on once — repo **Settings → Pages →
+Source: GitHub Actions** — and [`.github/workflows/pages.yml`](.github/workflows/pages.yml) publishes
+on every push to the default branch. The site lands at
+`https://<owner>.github.io/Hope-Found-PCR-System/`. Pages has to be enabled by a person the first
+time: the Actions token is not permitted to create the site itself.
+
+**Anywhere else.** Because it is a single file with no dependencies, `index.html` also works served
+from any static host, dropped on a shared drive, or opened straight from disk. Connect the same
+Supabase project from each and they all read and write the same record.
+
+A public Pages URL makes the app reachable by anyone who finds it, which is why `authMode` defaults
+to `"supabase"`: without an account, a visitor gets the sign-in screen and the records table returns
+nothing. Set up the Supabase project **before** deploying, or nobody — including you — can get in.
